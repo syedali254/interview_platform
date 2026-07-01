@@ -1,0 +1,100 @@
+{
+  "session_id": "20260701_145440",
+  "timestamp": "2026-07-01T14:54:40.424073",
+  "overall_score": 0.0,
+  "recommendation": "Not Recommended",
+  "recommendation_detail": "Candidate has significant gaps in critical required skills.",
+  "graph_summary": {
+    "total": 11,
+    "matched": 5,
+    "gap": 4,
+    "extra": 2,
+    "completed": 8,
+    "remaining": 3
+  },
+  "verdict_table": [
+    {
+      "skill": "Python",
+      "importance": "must_have",
+      "node_type": "matched",
+      "claimed_proficiency": "advanced",
+      "status": "skipped",
+      "score": null,
+      "feedback": ""
+    },
+    {
+      "skill": "Django",
+      "importance": "must_have",
+      "node_type": "matched",
+      "claimed_proficiency": "intermediate",
+      "status": "skipped",
+      "score": null,
+      "feedback": ""
+    },
+    {
+      "skill": "FastAPI",
+      "importance": "must_have",
+      "node_type": "gap",
+      "claimed_proficiency": null,
+      "status": "skipped",
+      "score": null,
+      "feedback": ""
+    },
+    {
+      "skill": "PostgreSQL",
+      "importance": "must_have",
+      "node_type": "matched",
+      "claimed_proficiency": "intermediate",
+      "status": "skipped",
+      "score": null,
+      "feedback": ""
+    },
+    {
+      "skill": "Docker",
+      "importance": "must_have",
+      "node_type": "matched",
+      "claimed_proficiency": "intermediate",
+      "status": "skipped",
+      "score": null,
+      "feedback": ""
+    },
+    {
+      "skill": "AWS",
+      "importance": "must_have",
+      "node_type": "gap",
+      "claimed_proficiency": null,
+      "status": "skipped",
+      "score": null,
+      "feedback": ""
+    },
+    {
+      "skill": "Redis",
+      "importance": "nice_to_have",
+      "node_type": "matched",
+      "claimed_proficiency": "beginner",
+      "status": "skipped",
+      "score": null,
+      "feedback": ""
+    },
+    {
+      "skill": "Kubernetes",
+      "importance": "nice_to_have",
+      "node_type": "gap",
+      "claimed_proficiency": null,
+      "status": "skipped",
+      "score": null,
+      "feedback": ""
+    },
+    {
+      "skill": "CI/CD pipeline",
+      "importance": "nice_to_have",
+      "node_type": "gap",
+      "claimed_proficiency": null,
+      "status": "skipped",
+      "score": null,
+      "feedback": ""
+    }
+  ],
+  "session_results": [],
+  "total_questions_asked": 9
+}
