@@ -1,0 +1,18 @@
+python-dotenv>=1.0.0
+requests>=2.31.0
+networkx>=3.2
+streamlit>=1.35.0
+PyMuPDF>=1.24.0
+matplotlib>=3.8.0
+numpy>=1.26.0
+pandas>=2.1.0
+
+# Live Interview (M7-M10)
+# LiveKit for voice pipeline (self-hosted, free)
+# livekit-agents
+# livekit-plugins-silero
+# livekit-plugins-whisper
+# edge-tts
+
+# Ollama (local LLM)
+# Requests is already included above for Ollama API calls
