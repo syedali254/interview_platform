@@ -46,7 +46,7 @@ SCORE_WEAK_THRESHOLD = 40
 # ---------------------------------------------------------------------------
 # Interview settings
 # ---------------------------------------------------------------------------
-MAX_QUESTIONS_PER_SESSION = 12
+MAX_QUESTIONS_PER_SESSION = 5  # Increase for full adaptive interview
 MAX_FOLLOW_UP_QUESTIONS = 1
 DISAGREEMENT_THRESHOLD = 20
 SKILL_VERIFICATION_QUESTIONS = 3

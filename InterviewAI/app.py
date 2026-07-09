@@ -714,138 +714,17 @@ with tab4:
                     del st.session_state["interview_flow"]
                 st.rerun()
 
-# ─── Tab 5: Interview Room ────────────────────────────────────────────────────
+# ─── Tab 5: Interview Room (Legacy) ────────────────────────────────────────────
 with tab5:
-    st.markdown("## Interview Room")
-    st.caption("Live AI interview with voice interaction (M5)")
+    st.markdown("## Interview Room (Legacy)")
+    st.caption("Original static interview flow — kept for reference. Use Step 6 for adaptive interview.")
     st.markdown("---")
 
     if "interview_flow" not in st.session_state:
         st.info("⏳ Generate interview questions first (Step 4).")
     else:
         interview_flow = st.session_state["interview_flow"]
-
-        # Phase 1: Device Setup
-        if not st.session_state.get("devices_ready"):
-            st.markdown("### 🔧 Pre-Interview Device Check")
-            st.markdown("Test your microphone and camera before starting the interview.")
-            st.markdown("")
-
-            import streamlit.components.v1 as components
-            components.html(DEVICE_SETUP_HTML, height=420, scrolling=False)
-
-            st.markdown("---")
-            col_start, col_skip = st.columns(2)
-            with col_start:
-                if st.button("✅ Devices Ready — Start Interview", type="primary", use_container_width=True):
-                    st.session_state["devices_ready"] = True
-                    st.session_state["current_q_index"] = 0
-                    st.session_state["interview_answers"] = []
-                    st.session_state["mic_on"] = True
-                    st.session_state["cam_on"] = True
-                    add_log("Interview started - devices confirmed ready")
-                    st.rerun()
-            with col_skip:
-                if st.button("⏭ Skip Device Check", use_container_width=True):
-                    st.session_state["devices_ready"] = True
-                    st.session_state["current_q_index"] = 0
-                    st.session_state["interview_answers"] = []
-                    st.session_state["mic_on"] = True
-                    st.session_state["cam_on"] = True
-                    add_log("Interview started - device check skipped")
-                    st.rerun()
-
-        # Phase 2: Live Interview
-        else:
-            idx = st.session_state.get("current_q_index", 0)
-            total = len(interview_flow)
-
-            if idx < total:
-                current_q = interview_flow[idx]
-
-                # Progress
-                progress_pct = (idx / total)
-                st.progress(progress_pct, text=f"Question {idx + 1} of {total}")
-
-                # Question display
-                import streamlit.components.v1 as components
-                q_html = get_interview_question_html(
-                    question=current_q["question"],
-                    q_number=idx + 1,
-                    total=total,
-                    q_type=current_q["type"],
-                    skill=current_q.get("skill", ""),
-                )
-                components.html(q_html, height=350, scrolling=False)
-
-                # Controls
-                ctrl_html = get_controls_html(
-                    mic_on=st.session_state.get("mic_on", True),
-                    cam_on=st.session_state.get("cam_on", True),
-                )
-                components.html(ctrl_html, height=80, scrolling=False)
-
-                st.markdown("---")
-
-                # Answer input (text for now — voice will be added with Whisper)
-                st.markdown("#### 💬 Your Answer")
-                answer = st.text_area(
-                    "Type your answer (voice input coming in next iteration)",
-                    height=120,
-                    key=f"answer_{idx}",
-                    placeholder="Speak or type your answer here...",
-                )
-
-                # Navigation
-                nav_col1, nav_col2, nav_col3 = st.columns([1, 2, 1])
-                with nav_col1:
-                    if idx > 0:
-                        if st.button("⬅ Previous"):
-                            st.session_state["current_q_index"] = idx - 1
-                            st.rerun()
-                with nav_col2:
-                    # Mic/Cam toggles
-                    mic_col, cam_col = st.columns(2)
-                    with mic_col:
-                        if st.button("🎤 Toggle Mic"):
-                            st.session_state["mic_on"] = not st.session_state.get("mic_on", True)
-                            st.rerun()
-                    with cam_col:
-                        if st.button("📷 Toggle Cam"):
-                            st.session_state["cam_on"] = not st.session_state.get("cam_on", True)
-                            st.rerun()
-                with nav_col3:
-                    if st.button("Next ➡" if idx < total - 1 else "Finish ✅", type="primary"):
-                        # Save answer
-                        st.session_state["interview_answers"].append({
-                            "question": current_q["question"],
-                            "type": current_q["type"],
-                            "skill": current_q.get("skill", ""),
-                            "answer": answer,
-                        })
-                        add_log(f"Answer recorded for Q{idx + 1} ({current_q['type']})")
-                        st.session_state["current_q_index"] = idx + 1
-                        st.rerun()
-
-            else:
-                # Interview Complete
-                st.markdown("### 🎉 Interview Complete!")
-                st.balloons()
-                st.success(f"You answered {len(st.session_state.get('interview_answers', []))} questions.")
-
-                add_log(f"Interview COMPLETE - {len(st.session_state.get('interview_answers', []))} answers recorded")
-
-                st.markdown("---")
-                st.markdown("#### 📝 Recorded Answers")
-                for i, ans in enumerate(st.session_state.get("interview_answers", []), 1):
-                    with st.expander(f"Q{i} ({ans['type']}): {ans['question'][:60]}..."):
-                        st.markdown(f"**Answer:** {ans['answer'] or '*No answer provided*'}")
-
-                if st.button("🔄 Restart Interview"):
-                    st.session_state["devices_ready"] = False
-                    st.session_state["current_q_index"] = 0
-                    st.session_state["interview_answers"] = []
-                    st.rerun()
+        st.info(f"This is the old static flow with {len(interview_flow)} questions. Use **Step 6: Live Interview** for the adaptive interview with voice.")
 
 # ─── Tab 6: Live Interview (Adaptive) ─────────────────────────────────────────
 with tab6:
@@ -912,58 +791,66 @@ with tab6:
                             st.session_state["live_current_q"] = q_data
                             st.session_state["live_answered"] = False
                             st.session_state["live_current_result"] = None
+
+                            # Show greeting before first question
+                            if q_data['question_number'] == 1:
+                                greeting_html = """
+                                <div style="background:#ebf8ff;border:1px solid #bee3f8;border-radius:10px;padding:12px 18px;margin-bottom:12px;">
+                                    <strong>👋 Welcome!</strong> I'll ask you a few questions about your skills.
+                                    Just speak naturally after each question — recording starts automatically.
+                                </div>
+                                """
+                                st.markdown(greeting_html, unsafe_allow_html=True)
+
                             st.markdown(f"### Question {q_data['question_number']}")
                             if q_data["is_follow_up"]:
                                 st.markdown(f"*Follow-up on: **{q_data['skill']}***")
                             st.markdown(f"**{q_data['question']}**")
                             st.markdown(f"`{q_data['skill']}` · `{q_data['difficulty']}`")
 
-                            # ── Voice controls ──
+                            # ── Voice component with auto-record + silence detection ──
                             question_id = f"q_{q_data['question_number']}"
+                            safe_q = q_data['question'].replace("'", "\\'").replace("\n", " ")
                             voice_html = f"""
-                            <div id="voice-{question_id}" style="margin: 10px 0;">
-                                <button onclick="speakText('{q_data['question'].replace(chr(39), chr(92)+chr(39)).replace(chr(10), ' ')}')"
-                                        style="background:#2c5282;color:white;border:none;padding:8px 18px;border-radius:8px;cursor:pointer;margin-right:8px;">
-                                    🔊 Speak Question
+                            <div id="voice-{question_id}" style="margin: 8px 0;">
+                                <button onclick="speakText('{safe_q}')"
+                                        style="background:#2c5282;color:white;border:none;padding:6px 16px;border-radius:8px;cursor:pointer;margin-right:6px;font-size:0.85rem;">
+                                    🔊 Speak
+                                </button>
+                                <button id="replay-btn-{question_id}" onclick="speakText('{safe_q}')"
+                                        style="background:#4a5568;color:white;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;margin-right:6px;font-size:0.85rem;">
+                                    🔄 Replay
                                 </button>
                                 <button id="record-btn-{question_id}"
-                                        onclick="toggleRecording('{question_id}')"
-                                        style="background:#c53030;color:white;border:none;padding:8px 18px;border-radius:8px;cursor:pointer;">
-                                    🎤 Start Recording
+                                        onclick="manualStop('{question_id}')"
+                                        style="background:#e53e3e;color:white;border:none;padding:6px 16px;border-radius:8px;cursor:pointer;font-size:0.85rem;">
+                                    ⏹ Stop & Submit
                                 </button>
-                                <span id="rec-status-{question_id}" style="margin-left:10px;color:#718096;font-size:0.85rem;"></span>
+                                <span id="rec-status-{question_id}" style="margin-left:8px;color:#718096;font-size:0.8rem;">🎤 Auto-recording...</span>
                             </div>
                             <script>
-                                let recognition_{question_id} = null;
-                                let isRecording_{question_id} = false;
+                                let recognition_{question_id};
+                                let silenceTimer_{question_id};
+                                let finalTranscript_{question_id} = '';
+                                const SILENCE_DELAY = 2000;
 
                                 function speakText(text) {{
                                     const utterance = new SpeechSynthesisUtterance(text);
                                     utterance.rate = 0.9;
                                     utterance.pitch = 1.0;
+                                    utterance.volume = 1.0;
                                     speechSynthesis.cancel();
                                     speechSynthesis.speak(utterance);
+                                    return utterance;
                                 }}
 
-                                function toggleRecording(id) {{
-                                    const btn = document.getElementById('record-btn-' + id);
+                                function startRecording(id) {{
                                     const status = document.getElementById('rec-status-' + id);
                                     const textarea = document.querySelector('[data-testid="stTextArea"] textarea');
 
-                                    if (isRecording_{question_id}) {{
-                                        if (recognition_{question_id}) {{
-                                            recognition_{question_id}.stop();
-                                        }}
-                                        isRecording_{question_id} = false;
-                                        btn.innerHTML = '🎤 Start Recording';
-                                        btn.style.background = '#c53030';
-                                        status.textContent = '✅ Done';
-                                        return;
-                                    }}
-
                                     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                                     if (!SpeechRecognition) {{
-                                        status.textContent = '❌ Speech recognition not supported in this browser';
+                                        status.textContent = '❌ Speech recognition not supported';
                                         return;
                                     }}
 
@@ -973,42 +860,85 @@ with tab6:
                                     recognition_{question_id}.lang = 'en-US';
 
                                     recognition_{question_id}.onresult = function(event) {{
-                                        let transcript = '';
+                                        let interimTranscript = '';
                                         for (let i = event.resultIndex; i < event.results.length; i++) {{
-                                            transcript += event.results[i][0].transcript;
+                                            const transcript = event.results[i][0].transcript;
+                                            if (event.results[i].isFinal) {{
+                                                finalTranscript_{question_id} += transcript;
+                                            }} else {{
+                                                interimTranscript += transcript;
+                                            }}
                                         }}
+                                        const displayText = finalTranscript_{question_id} + interimTranscript;
                                         if (textarea) {{
-                                            textarea.value = transcript;
+                                            textarea.value = displayText;
                                             textarea.dispatchEvent(new Event('input', {{ bubbles: true }}));
                                             textarea.dispatchEvent(new Event('change', {{ bubbles: true }}));
                                         }}
-                                        status.textContent = '🎤 Listening... (' + transcript.slice(-40) + ')';
+                                        status.textContent = '🎤 ' + displayText.slice(-50);
+
+                                        // Reset silence timer on new speech
+                                        clearTimeout(silenceTimer_{question_id});
+                                        silenceTimer_{question_id} = setTimeout(() => {{
+                                            autoSubmit(id, displayText);
+                                        }}, SILENCE_DELAY);
                                     }};
 
                                     recognition_{question_id}.onerror = function(event) {{
-                                        status.textContent = '❌ Error: ' + event.error;
-                                        btn.innerHTML = '🎤 Start Recording';
-                                        btn.style.background = '#c53030';
-                                        isRecording_{question_id} = false;
-                                    }};
-
-                                    recognition_{question_id}.onend = function() {{
-                                        if (isRecording_{question_id}) {{
-                                            recognition_{question_id}.start();
+                                        if (event.error !== 'no-speech' && event.error !== 'aborted') {{
+                                            status.textContent = '❌ Error: ' + event.error;
                                         }}
                                     }};
 
+                                    recognition_{question_id}.onend = function() {{
+                                        // Auto-restart if not stopped manually and has content
+                                        if (finalTranscript_{question_id}.trim()) {{
+                                            clearTimeout(silenceTimer_{question_id});
+                                            silenceTimer_{question_id} = setTimeout(() => {{
+                                                autoSubmit(id, finalTranscript_{question_id});
+                                            }}, SILENCE_DELAY);
+                                        }}
+                                    }};
+
+                                    finalTranscript_{question_id} = '';
                                     recognition_{question_id}.start();
-                                    isRecording_{question_id} = true;
-                                    btn.innerHTML = '⏹ Stop Recording';
-                                    btn.style.background = '#2c5282';
-                                    status.textContent = '🎤 Speak now...';
                                 }}
 
-                                // Auto-speak on load
-                                setTimeout(() => {{
-                                    speakText('{q_data['question'].replace(chr(39), chr(92)+chr(39)).replace(chr(10), ' ')}');
-                                }}, 500);
+                                function manualStop(id) {{
+                                    clearTimeout(silenceTimer_{question_id});
+                                    if (recognition_{question_id}) {{
+                                        recognition_{question_id}.stop();
+                                    }}
+                                    const textarea = document.querySelector('[data-testid="stTextArea"] textarea');
+                                    const text = textarea ? textarea.value : finalTranscript_{question_id};
+                                    document.getElementById('rec-status-' + id).textContent = '✅ Done';
+                                    triggerSubmit();
+                                }}
+
+                                function autoSubmit(id, text) {{
+                                    if (recognition_{question_id}) {{
+                                        recognition_{question_id}.stop();
+                                    }}
+                                    document.getElementById('rec-status-' + id).textContent = '✅ Auto-submitting... (' + text.slice(-40) + ')';
+                                    triggerSubmit();
+                                }}
+
+                                function triggerSubmit() {{
+                                    // Find and click the Submit Answer button
+                                    const buttons = document.querySelectorAll('button');
+                                    for (const btn of buttons) {{
+                                        if (btn.textContent.includes('Submit Answer')) {{
+                                            setTimeout(() => btn.click(), 300);
+                                            break;
+                                        }}
+                                    }}
+                                }}
+
+                                // Auto-speak question then auto-start recording
+                                const utter = speakText('{safe_q}');
+                                utter.onend = function() {{
+                                    setTimeout(() => startRecording('{question_id}'), 500);
+                                }};
                             </script>
                             """
                             st.components.v1.html(voice_html, height=80, scrolling=False)
@@ -1016,9 +946,9 @@ with tab6:
                             # ── Answer input (auto-filled by speech) ──
                             answer = st.text_area(
                                 "Your Answer",
-                                height=150,
+                                height=120,
                                 key=f"live_answer_{q_data['question_number']}",
-                                placeholder="Type or speak your answer, then click Submit",
+                                placeholder="Speak naturally — recording starts automatically after the question",
                             )
 
                             if st.button("📤 Submit Answer", type="primary", use_container_width=True):
