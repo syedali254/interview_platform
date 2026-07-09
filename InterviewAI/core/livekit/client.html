@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InterviewAI — Voice Interview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0f172a; color: #e2e8f0;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh;
+  }
+  .container {
+    max-width: 600px; width: 90%; text-align: center;
+    padding: 2rem;
+  }
+  h1 { font-size: 1.5rem; margin-bottom: 0.5rem; color: #60a5fa; }
+  .status {
+    background: #1e293b; border-radius: 12px; padding: 2rem; margin: 1.5rem 0;
+    min-height: 120px; display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+  }
+  .status-text { font-size: 1.1rem; margin-top: 0.5rem; }
+  .transcript {
+    background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+    padding: 1rem; margin-top: 1rem; min-height: 60px;
+    font-size: 0.95rem; color: #94a3b8; text-align: left;
+  }
+  .btn {
+    background: #2563eb; color: white; border: none;
+    padding: 0.75rem 2rem; border-radius: 8px;
+    font-size: 1rem; cursor: pointer; margin: 0.5rem;
+  }
+  .btn:hover { background: #1d4ed8; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-danger { background: #dc2626; }
+  .btn-danger:hover { background: #b91c1c; }
+  .indicator {
+    width: 16px; height: 16px; border-radius: 50%;
+    display: inline-block; margin-right: 8px;
+  }
+  .indicator.connected { background: #22c55e; }
+  .indicator.disconnected { background: #ef4444; }
+  .indicator.listening { background: #f59e0b; animation: pulse 1s infinite; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .conn-status { font-size: 0.85rem; color: #64748b; margin: 1rem 0; }
+  .error { color: #f87171; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🎙 InterviewAI Live Voice</h1>
+  <p style="color:#94a3b8;font-size:0.9rem;">Full-duplex voice interview — just speak naturally</p>
+
+  <div class="status">
+    <div>
+      <span class="indicator disconnected" id="indicator"></span>
+      <span id="statusLabel" class="status-text">Connecting...</span>
+    </div>
+    <div class="transcript" id="transcript">Your conversation will appear here...</div>
+  </div>
+
+  <div class="conn-status" id="connStatus"></div>
+
+  <button class="btn" id="startBtn" disabled>🔌 Connecting to server...</button>
+  <button class="btn btn-danger" id="endBtn" disabled style="display:none;">⏹ End Interview</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
+<script>
+const startBtn = document.getElementById('startBtn');
+const endBtn = document.getElementById('endBtn');
+const indicator = document.getElementById('indicator');
+const statusLabel = document.getElementById('statusLabel');
+const transcript = document.getElementById('transcript');
+const connStatus = document.getElementById('connStatus');
+
+let room = null;
+let micTrack = null;
+
+async function getToken() {
+  const resp = await fetch('/token');
+  if (!resp.ok) throw new Error('Failed to get token');
+  return resp.json();
+}
+
+async function connect() {
+  try {
+    indicator.className = 'indicator disconnected';
+    statusLabel.textContent = 'Getting token...';
+    startBtn.disabled = true;
+
+    const { token, url, room: roomName } = await getToken();
+
+    connStatus.textContent = `Server: ${url}  |  Room: ${roomName}`;
+
+    room = new LivekitClient.Room({
+      adaptiveStream: true,
+      dynacast: true,
+    });
+
+    room.on('participantConnected', (p) => {
+      console.log('Participant joined:', p.identity);
+    });
+
+    room.on('trackSubscribed', (track, publication, participant) => {
+      if (track.kind === 'audio') {
+        const audio = new Audio();
+        audio.srcObject = new MediaStream([track.mediaStreamTrack]);
+        audio.autoplay = true;
+        audio.play();
+        console.log('Agent audio subscribed');
+      }
+    });
+
+    room.on('dataReceived', (payload, participant) => {
+      const text = new TextDecoder().decode(payload);
+      transcript.textContent = text;
+    });
+
+    room.on('disconnected', () => {
+      indicator.className = 'indicator disconnected';
+      statusLabel.textContent = 'Disconnected';
+      startBtn.disabled = false;
+      startBtn.textContent = '🔁 Reconnect';
+      endBtn.style.display = 'none';
+    });
+
+    await room.connect(url, token);
+
+    indicator.className = 'indicator connected';
+    statusLabel.textContent = '✅ Connected — speak naturally...';
+    transcript.textContent = 'Agent will greet you shortly...';
+
+    // Publish mic
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    micTrack = stream.getAudioTracks()[0];
+    await room.localParticipant.publishTrack(micTrack, { source: LivekitClient.TrackSource.MICROPHONE });
+
+    startBtn.style.display = 'none';
+    endBtn.style.display = 'inline-block';
+    endBtn.disabled = false;
+
+  } catch (err) {
+    indicator.className = 'indicator disconnected';
+    statusLabel.textContent = '❌ Connection failed';
+    connStatus.textContent = err.message;
+    connStatus.className = 'conn-status error';
+    startBtn.disabled = false;
+    startBtn.textContent = '🔄 Retry';
+  }
+}
+
+async function disconnect() {
+  if (micTrack) {
+    micTrack.stop();
+    micTrack = null;
+  }
+  if (room) {
+    room.disconnect();
+    room = null;
+  }
+  startBtn.style.display = 'inline-block';
+  endBtn.style.display = 'none';
+  startBtn.textContent = '🔁 Reconnect';
+  startBtn.disabled = false;
+}
+
+startBtn.addEventListener('click', connect);
+endBtn.addEventListener('click', disconnect);
+
+// Auto-connect on page load
+connect();
+</script>
+</body>
+</html>

@@ -57,6 +57,13 @@ def add_log(message: str, level: str = "INFO"):
         st.session_state["logs"] = st.session_state["logs"][-50:]
 
 
+# ─── Start background whisper server ────────────────────────────────────────
+from core.livekit.whisper_server import start_whisper_server, transcribe_url, tts_url, save_tts_audio, _audio_dir as tts_audio_dir
+WHISPER_SERVER_STARTED = False
+if not WHISPER_SERVER_STARTED:
+    start_whisper_server()
+    WHISPER_SERVER_STARTED = True
+
 # ─── Global Styles ────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -808,51 +815,76 @@ with tab6:
                             st.markdown(f"**{q_data['question']}**")
                             st.markdown(f"`{q_data['skill']}` · `{q_data['difficulty']}`")
 
-                            # ── Voice component with auto-record + silence detection ──
+                            # ── Generate edge-tts audio (server-side) ──
                             question_id = f"q_{q_data['question_number']}"
-                            safe_q = q_data['question'].replace("'", "\\'").replace("\n", " ")
+                            from core.livekit.voice import synthesize_speech
+                            tts_filename = f"q_{q_data['question_number']}_{q_data['skill']}.mp3"
+                            if not (tts_audio_dir / tts_filename).exists():
+                                audio_bytes = synthesize_speech(q_data['question'])
+                                save_tts_audio(audio_bytes, tts_filename)
+
+                            # ── Auto voice component (zero clicks) ──
+                            safe_q = q_data['question'].replace("'", "\\'").replace("\n", " ").replace('"', '&quot;')
+                            tts_url_str = tts_url(tts_filename)
                             voice_html = f"""
                             <div id="voice-{question_id}" style="margin: 8px 0;">
-                                <button onclick="speakText('{safe_q}')"
-                                        style="background:#2c5282;color:white;border:none;padding:6px 16px;border-radius:8px;cursor:pointer;margin-right:6px;font-size:0.85rem;">
-                                    🔊 Speak
-                                </button>
-                                <button id="replay-btn-{question_id}" onclick="speakText('{safe_q}')"
-                                        style="background:#4a5568;color:white;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;margin-right:6px;font-size:0.85rem;">
-                                    🔄 Replay
-                                </button>
-                                <button id="record-btn-{question_id}"
-                                        onclick="manualStop('{question_id}')"
-                                        style="background:#e53e3e;color:white;border:none;padding:6px 16px;border-radius:8px;cursor:pointer;font-size:0.85rem;">
-                                    ⏹ Stop & Submit
-                                </button>
-                                <span id="rec-status-{question_id}" style="margin-left:8px;color:#718096;font-size:0.8rem;">🎤 Auto-recording...</span>
+                                <span id="rec-status-{question_id}" style="color:#718096;font-size:0.85rem;">
+                                    ⏳ Loading question audio...
+                                </span>
                             </div>
                             <script>
+                                // ── State ──
                                 let recognition_{question_id};
+                                let mediaRecorder_{question_id};
+                                let audioChunks_{question_id} = [];
                                 let silenceTimer_{question_id};
                                 let finalTranscript_{question_id} = '';
+                                let isSubmitting_{question_id} = false;
+                                let recordingStarted_{question_id} = false;
                                 const SILENCE_DELAY = 2000;
 
-                                function speakText(text) {{
-                                    const utterance = new SpeechSynthesisUtterance(text);
-                                    utterance.rate = 0.9;
-                                    utterance.pitch = 1.0;
-                                    utterance.volume = 1.0;
+                                // ── Auto-speak question via edge-tts ──
+                                const status = document.getElementById('rec-status-{question_id}');
+                                const audio = new Audio('{tts_url_str}');
+                                audio.onended = function() {{
+                                    status.textContent = '🎤 Recording... (speak naturally)';
+                                    setTimeout(() => startVoice('{question_id}'), 300);
+                                }};
+                                audio.onerror = function() {{
+                                    status.textContent = '⚠️ edge-tts failed, trying browser speech...';
+                                    // Fallback to browser speech
+                                    const utter = new SpeechSynthesisUtterance('{safe_q}');
+                                    utter.rate = 0.9;
+                                    utter.onend = function() {{
+                                        setTimeout(() => startVoice('{question_id}'), 300);
+                                    }};
                                     speechSynthesis.cancel();
-                                    speechSynthesis.speak(utterance);
-                                    return utterance;
+                                    speechSynthesis.speak(utter);
+                                }};
+                                audio.play().catch(function(e) {{
+                                    status.textContent = '⚠️ Autoplay blocked, click to start...';
+                                    // Fallback to browser speech
+                                    const utter = new SpeechSynthesisUtterance('{safe_q}');
+                                    utter.rate = 0.9;
+                                    utter.onend = function() {{
+                                        setTimeout(() => startVoice('{question_id}'), 300);
+                                    }};
+                                    speechSynthesis.cancel();
+                                    speechSynthesis.speak(utter);
+                                }});
+
+                                // ── Start MediaRecorder + SpeechRecognition ──
+                                function startVoice(id) {{
+                                    if (recordingStarted_{question_id}) return;
+                                    recordingStarted_{question_id} = true;
+                                    startMediaRecorder(id);
+                                    startSpeechRec(id);
                                 }}
 
-                                function startRecording(id) {{
-                                    const status = document.getElementById('rec-status-' + id);
+                                function startSpeechRec(id) {{
                                     const textarea = document.querySelector('[data-testid="stTextArea"] textarea');
-
                                     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                                    if (!SpeechRecognition) {{
-                                        status.textContent = '❌ Speech recognition not supported';
-                                        return;
-                                    }}
+                                    if (!SpeechRecognition) return;
 
                                     recognition_{question_id} = new SpeechRecognition();
                                     recognition_{question_id}.continuous = true;
@@ -860,42 +892,40 @@ with tab6:
                                     recognition_{question_id}.lang = 'en-US';
 
                                     recognition_{question_id}.onresult = function(event) {{
-                                        let interimTranscript = '';
+                                        let interim = '';
                                         for (let i = event.resultIndex; i < event.results.length; i++) {{
-                                            const transcript = event.results[i][0].transcript;
+                                            const t = event.results[i][0].transcript;
                                             if (event.results[i].isFinal) {{
-                                                finalTranscript_{question_id} += transcript;
+                                                finalTranscript_{question_id} += t;
                                             }} else {{
-                                                interimTranscript += transcript;
+                                                interim += t;
                                             }}
                                         }}
-                                        const displayText = finalTranscript_{question_id} + interimTranscript;
+                                        const display = finalTranscript_{question_id} + interim;
                                         if (textarea) {{
-                                            textarea.value = displayText;
+                                            textarea.value = display;
                                             textarea.dispatchEvent(new Event('input', {{ bubbles: true }}));
                                             textarea.dispatchEvent(new Event('change', {{ bubbles: true }}));
                                         }}
-                                        status.textContent = '🎤 ' + displayText.slice(-50);
+                                        status.textContent = '🎤 ' + display.slice(-50);
 
-                                        // Reset silence timer on new speech
                                         clearTimeout(silenceTimer_{question_id});
                                         silenceTimer_{question_id} = setTimeout(() => {{
-                                            autoSubmit(id, displayText);
+                                            finishAndSubmit(id, display);
                                         }}, SILENCE_DELAY);
                                     }};
 
-                                    recognition_{question_id}.onerror = function(event) {{
-                                        if (event.error !== 'no-speech' && event.error !== 'aborted') {{
-                                            status.textContent = '❌ Error: ' + event.error;
+                                    recognition_{question_id}.onerror = function(e) {{
+                                        if (e.error !== 'no-speech' && e.error !== 'aborted') {{
+                                            status.textContent = '❌ ' + e.error;
                                         }}
                                     }};
 
                                     recognition_{question_id}.onend = function() {{
-                                        // Auto-restart if not stopped manually and has content
-                                        if (finalTranscript_{question_id}.trim()) {{
+                                        if (finalTranscript_{question_id}.trim() && !isSubmitting_{question_id}) {{
                                             clearTimeout(silenceTimer_{question_id});
                                             silenceTimer_{question_id} = setTimeout(() => {{
-                                                autoSubmit(id, finalTranscript_{question_id});
+                                                finishAndSubmit(id, finalTranscript_{question_id});
                                             }}, SILENCE_DELAY);
                                         }}
                                     }};
@@ -904,41 +934,78 @@ with tab6:
                                     recognition_{question_id}.start();
                                 }}
 
-                                function manualStop(id) {{
-                                    clearTimeout(silenceTimer_{question_id});
-                                    if (recognition_{question_id}) {{
-                                        recognition_{question_id}.stop();
-                                    }}
-                                    const textarea = document.querySelector('[data-testid="stTextArea"] textarea');
-                                    const text = textarea ? textarea.value : finalTranscript_{question_id};
-                                    document.getElementById('rec-status-' + id).textContent = '✅ Done';
-                                    triggerSubmit();
+                                function startMediaRecorder(id) {{
+                                    navigator.mediaDevices.getUserMedia({{ audio: true }}).then(function(stream) {{
+                                        mediaRecorder_{question_id} = new MediaRecorder(stream);
+                                        audioChunks_{question_id} = [];
+                                        mediaRecorder_{question_id}.ondataavailable = function(e) {{
+                                            if (e.data.size > 0) audioChunks_{question_id}.push(e.data);
+                                        }};
+                                        mediaRecorder_{question_id}.start();
+                                    }}).catch(function(e) {{
+                                        status.textContent = '🎤 Mic error: ' + e.message;
+                                    }});
                                 }}
 
-                                function autoSubmit(id, text) {{
-                                    if (recognition_{question_id}) {{
-                                        recognition_{question_id}.stop();
-                                    }}
-                                    document.getElementById('rec-status-' + id).textContent = '✅ Auto-submitting... (' + text.slice(-40) + ')';
-                                    triggerSubmit();
-                                }}
+                                // ── Finish: transcribe with Whisper + auto-submit ──
+                                function finishAndSubmit(id, fallbackText) {{
+                                    if (isSubmitting_{question_id}) return;
+                                    isSubmitting_{question_id} = true;
 
-                                function triggerSubmit() {{
-                                    // Find and click the Submit Answer button
-                                    const buttons = document.querySelectorAll('button');
-                                    for (const btn of buttons) {{
-                                        if (btn.textContent.includes('Submit Answer')) {{
-                                            setTimeout(() => btn.click(), 300);
-                                            break;
+                                    // Stop recognition
+                                    if (recognition_{question_id}) {{
+                                        try {{ recognition_{question_id}.stop(); }} catch(e) {{}}
+                                    }}
+
+                                    // Stop media recorder
+                                    if (mediaRecorder_{question_id} && mediaRecorder_{question_id}.state !== 'inactive') {{
+                                        mediaRecorder_{question_id}.stop();
+                                        // Stop all tracks
+                                        if (mediaRecorder_{question_id}.stream) {{
+                                            mediaRecorder_{question_id}.stream.getTracks().forEach(t => t.stop());
                                         }}
                                     }}
+
+                                    status.textContent = '⏳ Transcribing with Whisper...';
+
+                                    // Send audio to whisper server
+                                    const blob = new Blob(audioChunks_{question_id}, {{ type: 'audio/webm' }});
+                                    if (blob.size > 1000) {{
+                                        fetch('{transcribe_url()}', {{ method: 'POST', body: blob }})
+                                            .then(r => r.json())
+                                            .then(function(result) {{
+                                                const whisperText = result.text || fallbackText;
+                                                fillAndSubmit(id, whisperText);
+                                            }})
+                                            .catch(function() {{
+                                                // Fallback to browser speech text
+                                                fillAndSubmit(id, fallbackText);
+                                            }});
+                                    }} else {{
+                                        fillAndSubmit(id, fallbackText);
+                                    }}
                                 }}
 
-                                // Auto-speak question then auto-start recording
-                                const utter = speakText('{safe_q}');
-                                utter.onend = function() {{
-                                    setTimeout(() => startRecording('{question_id}'), 500);
-                                }};
+                                function fillAndSubmit(id, text) {{
+                                    const textarea = document.querySelector('[data-testid="stTextArea"] textarea');
+                                    if (textarea) {{
+                                        textarea.value = text;
+                                        textarea.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                                        textarea.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                                    }}
+                                    status.textContent = '✅ ' + text.slice(-60);
+
+                                    // Click submit button
+                                    setTimeout(function() {{
+                                        const buttons = document.querySelectorAll('button');
+                                        for (const btn of buttons) {{
+                                            if (btn.textContent.includes('Submit Answer')) {{
+                                                btn.click();
+                                                break;
+                                            }}
+                                        }}
+                                    }}, 800);
+                                }}
                             </script>
                             """
                             st.components.v1.html(voice_html, height=80, scrolling=False)
@@ -948,44 +1015,8 @@ with tab6:
                                 "Your Answer",
                                 height=120,
                                 key=f"live_answer_{q_data['question_number']}",
-                                placeholder="Speak naturally — recording starts automatically after the question",
+                                placeholder="Speak naturally — recording starts automatically",
                             )
-
-                            # ── Server-side TTS + Whisper transcription ──
-                            with st.expander("🎙 Server Voice (edge-tts + Whisper)", expanded=True):
-                                col_tts, col_info = st.columns([1, 2])
-                                with col_tts:
-                                    if st.button("🔊 Speak with edge-tts", key=f"tts_{q_data['question_number']}", use_container_width=True):
-                                        with st.spinner("Generating speech..."):
-                                            from core.livekit.voice import synthesize_speech
-                                            audio_bytes = synthesize_speech(q_data['question'])
-                                            st.audio(audio_bytes, format="audio/mp3", autoplay=True)
-                                with col_info:
-                                    st.caption("edge-tts: natural neural voices (needs internet)")
-                                    st.caption("Whisper: local transcription (offline, more accurate)")
-
-                                recorded = st.audio_input(
-                                    "🎤 Click to record answer, click again to stop → transcribed with Whisper",
-                                    key=f"whisper_rec_{q_data['question_number']}",
-                                )
-                                if recorded:
-                                    with st.spinner("Transcribing with Whisper..."):
-                                        try:
-                                            from core.livekit.voice import transcribe_audio
-                                            transcribed = transcribe_audio(recorded.getvalue())
-                                            if transcribed:
-                                                st.session_state[f"whisper_text_{q_data['question_number']}"] = transcribed
-                                                st.success(f"✅ Transcribed ({len(transcribed.split())} words)")
-                                        except Exception as e:
-                                            st.error(f"Whisper failed: {e}")
-
-                            # Fill text area from whisper if available
-                            whisper_key = f"whisper_text_{q_data['question_number']}"
-                            if whisper_key in st.session_state:
-                                whisper_text = st.session_state[whisper_key]
-                                if answer != whisper_text:
-                                    answer = whisper_text
-                                    st.rerun()
 
                             if st.button("📤 Submit Answer", type="primary", use_container_width=True):
                                 if answer.strip():
