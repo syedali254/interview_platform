@@ -1,146 +1,83 @@
-"""LiveKit voice adapter — self-hosted LiveKit server + Whisper STT + edge-tts.
-
-Architecture:
-  This module provides a VoiceAssistant class that uses LiveKit's VoicePipelineAgent
-  with local/self-hosted components:
-    - STT:  LiveKit WhisperSTT plugin (runs whisper locally)
-    - LLM:  custom OllamaLLM adapter (calls qwen2.5-coder via Ollama)
-    - TTS:  edge-tts (free, no API key)
-    - VAD:  Silero VAD (free, local)
-
-Prerequisites (to be installed):
-  $ pip install livekit-agents livekit-plugins-silero livekit-plugins-whisper livekit-plugins-deepgram
-  $ # Also need: edge-tts package for TTS fallback
+"""LiveKit voice agent — standalone mode (run separately from Streamlit).
 
 Usage:
-  from core.livekit.adapter import VoiceAssistant
-  assistant = VoiceAssistant()
-  await assistant.start_room(room_name="interview-123")
+  Terminal 1:  "%TEMP%\livekit\livekit-server.exe" --dev
+  Terminal 2:  python -m core.livekit.adapter
+
+Requires livekit-server running on localhost:7880.
 """
 
 import asyncio
-import json
-from typing import Optional
+import logging
+import sys
+from pathlib import Path
 
-from core.config import (
-    LIVEKIT_URL,
-    LIVEKIT_API_KEY,
-    LIVEKIT_API_SECRET,
-    LIVEKIT_ROOM_NAME,
-    OLLAMA_MODEL,
-    OLLAMA_ENDPOINT,
-)
-from core.pipeline.interview_loop import InterviewLoop
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+
+from core.config import LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET
+from core.llm import call_llm
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("livekit-adapter")
 
 
-class OllamaLLM:
-    """LiveKit-compatible LLM adapter for self-hosted Ollama."""
-
-    def __init__(self, model: str = OLLAMA_MODEL):
-        self.model = model
+class InterviewAILLM:
+    """LLM adapter for LiveKit that routes to InterviewAI's Gemini/Ollama."""
 
     async def chat(self, messages: list, temperature: float = 0.3) -> str:
-        import requests
-
         prompt = ""
         for msg in messages:
             role = msg.get("role", "user")
             content = msg.get("content", "")
             prompt += f"<|im_start|>{role}\n{content}<|im_end|>\n"
         prompt += "<|im_start|>assistant\n"
-
-        payload = {
-            "model": self.model,
-            "prompt": prompt,
-            "stream": False,
-            "options": {
-                "temperature": temperature,
-                "num_predict": 512,
-            },
-        }
-        resp = requests.post(OLLAMA_ENDPOINT, json=payload, timeout=60)
-        resp.raise_for_status()
-        return resp.json()["response"].strip()
+        return call_llm(prompt, temperature=temperature)
 
     async def generate_reply(self, messages: list) -> str:
         return await self.chat(messages)
 
 
-class VoiceAssistant:
-    """Self-hosted voice assistant for live audio interview using LiveKit."""
+async def entrypoint(ctx):
+    from livekit.agents import AutoSubscribe, AgentSession, Agent
+    from livekit.agents.llm import FunctionTool
+    from livekit.plugins import silero
 
-    def __init__(self, interview_loop: Optional[InterviewLoop] = None):
-        self.interview_loop = interview_loop
-        self._agent = None
-        self._room = None
+    logger.info(f"Connecting to room {ctx.room.name}")
+    await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
+    participant = await ctx.wait_for_participant()
+    logger.info(f"Participant joined: {participant.identity}")
 
-    async def start_room(self, room_name: str = LIVEKIT_ROOM_NAME):
-        """Start a LiveKit room and connect the voice pipeline agent.
+    session = AgentSession(
+        vad=silero.VAD.load(),
+        llm=InterviewAILLM(),
+    )
 
-        Uses:
-          - Silero VAD (local)
-          - Whisper STT (local via livekit-plugins-whisper or deepgram fallback)
-          - Ollama LLM (via custom adapter above)
-          - edge-tts for TTS (free, local)
-        """
-        try:
-            from livekit import api
-            from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, cli, llm
-            from livekit.agents.voice import VoicePipelineAgent
-            from livekit.plugins import silero, deepgram
-            from livekit.plugins import whisper
-        except ImportError:
-            raise ImportError(
-                "LiveKit dependencies not installed.\n"
-                "Run: pip install livekit-agents livekit-plugins-silero "
-                "livekit-plugins-whisper edge-tts\n"
-                "And start the LiveKit server: livekit-server --dev"
-            )
+    agent = Agent(
+        instructions=(
+            "You are a friendly technical interviewer. "
+            "Ask one question at a time. Wait for the answer. "
+            "Keep responses brief and conversational."
+        ),
+    )
 
-        # Try to import edge-tts for TTS; fallback to a simple message
-        try:
-            import edge_tts
-            _has_tts = True
-        except ImportError:
-            _has_tts = False
-            print("[WARN] edge-tts not installed — TTS disabled for LiveKit. Install: pip install edge-tts")
+    await session.start(agent=agent, room=ctx.room)
+    await session.generate_reply(instructions="Greet the candidate and introduce yourself")
+    await session.wait_for_idle()
 
-        # ── Build the voice pipeline ──
-        vad = silero.VAD()
-        stt = whisper.STT()  # local whisper
 
-        if _has_tts:
-            tts = None  # We'll use a custom TTS; for now LiveKit provides a fallback
-        else:
-            tts = None
+async def main():
+    from livekit.agents import WorkerOptions, cli
 
-        llm_adapter = OllamaLLM()
-
-        # Create the voice pipeline agent
-        self._agent = VoicePipelineAgent(
-            vad=vad,
-            stt=stt,
-            llm=llm_adapter,
-            tts=tts,
-            # min_endpointing_delay=0.5,
-        )
-
-        # Connect to LiveKit server
-        livekit_api = api.LiveKitAPI(
-            url=LIVEKIT_URL,
+    logger.info(f"Starting LiveKit agent — connecting to {LIVEKIT_URL}")
+    await cli.run_app(
+        WorkerOptions(
+            entrypoint_fnc=entrypoint,
+            api_url=LIVEKIT_URL,
             api_key=LIVEKIT_API_KEY,
             api_secret=LIVEKIT_API_SECRET,
         )
+    )
 
-        print(f"[LiveKit] Connected to {LIVEKIT_URL}")
-        print(f"[LiveKit] Room: {room_name}")
-        return self._agent
 
-    async def stop_room(self):
-        """Disconnect from the LiveKit room."""
-        if self._agent:
-            await self._agent.aclose()
-        print("[LiveKit] Disconnected.")
-
-    def is_connected(self) -> bool:
-        return self._agent is not None
+if __name__ == "__main__":
+    asyncio.run(main())

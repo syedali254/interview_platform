@@ -774,7 +774,7 @@ with tab6:
                     st.session_state["live_answers"] = []
                     st.session_state["live_current_result"] = None
                     st.session_state["live_q_history"] = []
-                    add_log("Live Interview: Voice mode started (browser speech)")
+                    add_log("Live Interview: Voice mode started")
                     st.rerun()
         else:
             loop = st.session_state["interview_loop"]
@@ -951,6 +951,42 @@ with tab6:
                                 placeholder="Speak naturally — recording starts automatically after the question",
                             )
 
+                            # ── Server-side TTS + Whisper transcription ──
+                            with st.expander("🎙 Server Voice (edge-tts + Whisper)", expanded=True):
+                                col_tts, col_info = st.columns([1, 2])
+                                with col_tts:
+                                    if st.button("🔊 Speak with edge-tts", key=f"tts_{q_data['question_number']}", use_container_width=True):
+                                        with st.spinner("Generating speech..."):
+                                            from core.livekit.voice import synthesize_speech
+                                            audio_bytes = synthesize_speech(q_data['question'])
+                                            st.audio(audio_bytes, format="audio/mp3", autoplay=True)
+                                with col_info:
+                                    st.caption("edge-tts: natural neural voices (needs internet)")
+                                    st.caption("Whisper: local transcription (offline, more accurate)")
+
+                                recorded = st.audio_input(
+                                    "🎤 Click to record answer, click again to stop → transcribed with Whisper",
+                                    key=f"whisper_rec_{q_data['question_number']}",
+                                )
+                                if recorded:
+                                    with st.spinner("Transcribing with Whisper..."):
+                                        try:
+                                            from core.livekit.voice import transcribe_audio
+                                            transcribed = transcribe_audio(recorded.getvalue())
+                                            if transcribed:
+                                                st.session_state[f"whisper_text_{q_data['question_number']}"] = transcribed
+                                                st.success(f"✅ Transcribed ({len(transcribed.split())} words)")
+                                        except Exception as e:
+                                            st.error(f"Whisper failed: {e}")
+
+                            # Fill text area from whisper if available
+                            whisper_key = f"whisper_text_{q_data['question_number']}"
+                            if whisper_key in st.session_state:
+                                whisper_text = st.session_state[whisper_key]
+                                if answer != whisper_text:
+                                    answer = whisper_text
+                                    st.rerun()
+
                             if st.button("📤 Submit Answer", type="primary", use_container_width=True):
                                 if answer.strip():
                                     eval_result = loop.submit_answer(q_data, answer.strip())
@@ -962,6 +998,8 @@ with tab6:
                                     })
                                     st.session_state["live_answered"] = True
                                     add_log(f"Live Q{q_data['question_number']} ({q_data['skill']}): scored {eval_result['score']:.1f} — {eval_result['verdict']}")
+                                    # Clean up whisper state
+                                    st.session_state.pop(whisper_key, None)
                                     st.rerun()
                                 else:
                                     st.warning("Please provide an answer before submitting.")
