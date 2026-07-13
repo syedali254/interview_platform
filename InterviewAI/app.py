@@ -8,6 +8,7 @@ import streamlit.components.v1 as components
 import subprocess
 import sys
 import os
+import json
 import tempfile
 import traceback
 from datetime import datetime
@@ -234,14 +235,13 @@ st.markdown("# 🧠 InterviewAI Platform")
 st.markdown("*Intelligent Multi-Agent Interview System — Pre-Interview Pipeline*")
 
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab_logs = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab_logs = st.tabs([
     "📥  Step 1: Upload",
     "📊  Step 2: Analysis",
     "🎯  Step 3: Skill Graph",
     "❓  Step 4: Questions",
-    "🎤  Step 5: Interview",
-    "🧪  Step 6: Live Interview",
-    "📋  Step 7: Report",
+    "🧪  Step 5: Live Interview",
+    "📋  Step 6: Report",
     "📋  Logs",
 ])
 
@@ -721,20 +721,8 @@ with tab4:
                     del st.session_state["interview_flow"]
                 st.rerun()
 
-# ─── Tab 5: Interview Room (Legacy) ────────────────────────────────────────────
+# ─── Tab 5: Live Interview (Adaptive) ─────────────────────────────────────────
 with tab5:
-    st.markdown("## Interview Room (Legacy)")
-    st.caption("Original static interview flow — kept for reference. Use Step 6 for adaptive interview.")
-    st.markdown("---")
-
-    if "interview_flow" not in st.session_state:
-        st.info("⏳ Generate interview questions first (Step 4).")
-    else:
-        interview_flow = st.session_state["interview_flow"]
-        st.info(f"This is the old static flow with {len(interview_flow)} questions. Use **Step 6: Live Interview** for the adaptive interview with voice.")
-
-# ─── Tab 6: Live Interview (Adaptive) ─────────────────────────────────────────
-with tab6:
     st.markdown("## 🧪 Adaptive Live Interview")
     st.caption("Dynamic question selection — LLM-as-Judge evaluation on each answer (M6-M10)")
     st.markdown("---")
@@ -744,7 +732,7 @@ with tab6:
     else:
         # Start / Reset
         if "interview_loop" not in st.session_state:
-            col_text, col_voice = st.columns(2)
+            col_text, col_voice, col_lk = st.columns(3)
 
             with col_text:
                 st.markdown("### 💬 Text Interview")
@@ -783,6 +771,76 @@ with tab6:
                     st.session_state["live_q_history"] = []
                     add_log("Live Interview: Voice mode started")
                     st.rerun()
+
+            with col_lk:
+                st.markdown("### 🎧 Full-Duplex Voice")
+                st.caption("Real-time AI conversation — Deepgram + Gemini + ElevenLabs")
+                st.info("🎥 Opens a browser page with live webcam + transcription")
+
+                if st.button("🎧 Launch Live Interview", type="primary", use_container_width=True):
+                    # Save context
+                    cv_text = st.session_state.get("cv_data", {}).get("full_text", "")
+                    jd_text = st.session_state.get("jd_data", {}).get("full_text", "")
+                    # Collect up to 5 questions from Step 4
+                    q_list = []
+                    iq = st.session_state.get("interview_questions", {})
+                    for section in ("opening", "technical", "behavioural", "closing"):
+                        for q in iq.get(section, []):
+                            q_list.append(q.get("question", ""))
+                            if len(q_list) >= 5:
+                                break
+                        if len(q_list) >= 5:
+                            break
+                    from core.livekit.launcher import launch
+                    url = launch(resume_text=cv_text, jd_text=jd_text, questions=q_list or None)
+                    if url:
+                        st.session_state["livekit_url"] = url
+                        st.session_state["livekit_launched"] = True
+                        add_log("Live Interview: LiveKit session launched")
+                        st.rerun()
+                    else:
+                        st.error("LiveKit server binary not found. Download from https://github.com/livekit/livekit/releases")
+            # ── Post-launch status ──
+            if st.session_state.get("livekit_launched"):
+                st.success(f"✅ Live Interview launched at [{st.session_state['livekit_url']}]({st.session_state['livekit_url']}) — open in your browser")
+                col_stop, col_import = st.columns(2)
+                with col_stop:
+                    if st.button("🛑 Stop LiveKit Session"):
+                        from core.livekit.launcher import cleanup
+                        cleanup()
+                        st.session_state["livekit_launched"] = False
+                        st.rerun()
+                with col_import:
+                    if st.button("📥 Import LiveKit Results"):
+                        transcript_dir = Path(tempfile.gettempdir()) / "interviewai_transcripts"
+                        files = list(transcript_dir.glob("*.json"))
+                        if files:
+                            latest = max(files, key=lambda f: f.stat().st_mtime)
+                            data = json.loads(latest.read_text())
+                            st.session_state["livekit_transcript"] = data
+                            st.session_state["live_answers"] = []
+                            # Convert conversation to answer format
+                            conv = data.get("conversation", [])
+                            for i, msg in enumerate(conv):
+                                if msg["role"] == "agent":
+                                    continue
+                                st.session_state["live_answers"].append({
+                                    "question": {"question_number": i//2+1, "question": conv[i-1]["text"] if i>0 else "N/A", "skill": "livekit", "difficulty": "medium"},
+                                    "answer": msg["text"],
+                                    "result": {"score": None, "verdict": "pending", "feedback": "Imported from LiveKit. Use Step 7 to generate report."},
+                                })
+                            add_log(f"LiveKit transcript imported: {len(conv)} messages")
+                            st.rerun()
+                        else:
+                            st.warning("No transcript found. Complete the LiveKit interview first.")
+                if "livekit_transcript" in st.session_state:
+                    data = st.session_state["livekit_transcript"]
+                    conv = data.get("conversation", [])
+                    st.info(f"📄 LiveKit transcript loaded: {len(conv)} messages ({len([m for m in conv if m['role']=='candidate'])} answers)")
+                    with st.expander("View Transcript"):
+                        for msg in conv:
+                            icon = "🤖" if msg["role"] == "agent" else "🧑"
+                            st.markdown(f"**{icon} {msg['role'].title()}:** {msg['text']}")
         else:
             loop = st.session_state["interview_loop"]
             result = st.session_state.get("live_current_result")
@@ -823,118 +881,78 @@ with tab6:
                                 audio_bytes = synthesize_speech(q_data['question'])
                                 save_tts_audio(audio_bytes, tts_filename)
 
-                            # ── Auto voice component (zero clicks) ──
+                            # ── Manual voice component (user controls recording) ──
                             safe_q = q_data['question'].replace("'", "\\'").replace("\n", " ").replace('"', '&quot;')
                             tts_url_str = tts_url(tts_filename)
+                            speech_avail = "SpeechRecognition" in dir(__builtins__) or True
                             voice_html = f"""
-                            <div id="voice-{question_id}" style="margin: 8px 0;">
-                                <span id="rec-status-{question_id}" style="color:#718096;font-size:0.85rem;">
-                                    ⏳ Loading question audio...
-                                </span>
+                            <div id="voice-{question_id}" style="margin: 8px 0; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                <button id="play-btn-{question_id}" style="padding:8px 18px;border-radius:8px;border:1px solid #3b82f6;background:#1e3a5f;color:white;cursor:pointer;font-size:0.9rem;">
+                                    ▶ Play Question
+                                </button>
+                                <button id="rec-btn-{question_id}" disabled style="padding:8px 18px;border-radius:8px;border:1px solid #64748b;background:#334155;color:#94a3b8;cursor:not-allowed;font-size:0.9rem;">
+                                    ⏺ Record Answer
+                                </button>
+                                <span id="rec-status-{question_id}" style="color:#718096;font-size:0.85rem;">⏳ Loading...</span>
+                            </div>
+                            <div id="mic-indicator-{question_id}" style="display:none;margin:6px 0;padding:8px 14px;border-radius:8px;background:#064e3b;color:#6ee7b7;font-size:0.85rem;">
+                                🔴 RECORDING — speak now
                             </div>
                             <script>
-                                // ── State ──
                                 let recognition_{question_id};
                                 let mediaRecorder_{question_id};
                                 let audioChunks_{question_id} = [];
-                                let silenceTimer_{question_id};
                                 let finalTranscript_{question_id} = '';
                                 let isSubmitting_{question_id} = false;
-                                let recordingStarted_{question_id} = false;
-                                const SILENCE_DELAY = 2000;
+                                let isRecording_{question_id} = false;
 
-                                // ── Auto-speak question via edge-tts ──
                                 const status = document.getElementById('rec-status-{question_id}');
+                                const playBtn = document.getElementById('play-btn-{question_id}');
+                                const recBtn = document.getElementById('rec-btn-{question_id}');
+                                const micIndicator = document.getElementById('mic-indicator-{question_id}');
                                 const audio = new Audio('{tts_url_str}');
-                                audio.onended = function() {{
-                                    status.textContent = '🎤 Recording... (speak naturally)';
-                                    setTimeout(() => startVoice('{question_id}'), 300);
-                                }};
-                                audio.onerror = function() {{
-                                    status.textContent = '⚠️ edge-tts failed, trying browser speech...';
-                                    // Fallback to browser speech
-                                    const utter = new SpeechSynthesisUtterance('{safe_q}');
-                                    utter.rate = 0.9;
-                                    utter.onend = function() {{
-                                        setTimeout(() => startVoice('{question_id}'), 300);
-                                    }};
-                                    speechSynthesis.cancel();
-                                    speechSynthesis.speak(utter);
-                                }};
-                                audio.play().catch(function(e) {{
-                                    status.textContent = '⚠️ Autoplay blocked, click to start...';
-                                    // Fallback to browser speech
-                                    const utter = new SpeechSynthesisUtterance('{safe_q}');
-                                    utter.rate = 0.9;
-                                    utter.onend = function() {{
-                                        setTimeout(() => startVoice('{question_id}'), 300);
-                                    }};
-                                    speechSynthesis.cancel();
-                                    speechSynthesis.speak(utter);
-                                }});
 
-                                // ── Start MediaRecorder + SpeechRecognition ──
-                                function startVoice(id) {{
-                                    if (recordingStarted_{question_id}) return;
-                                    recordingStarted_{question_id} = true;
-                                    startMediaRecorder(id);
-                                    startSpeechRec(id);
+                                // ── Play question ──
+                                playBtn.onclick = function() {{
+                                    audio.currentTime = 0;
+                                    audio.play().then(function() {{
+                                        playBtn.textContent = '🔊 Playing...';
+                                        playBtn.disabled = true;
+                                        status.textContent = '🔊 Speaking question...';
+                                    }}).catch(function() {{
+                                        status.textContent = '⚠️ Using browser speech...';
+                                        const utter = new SpeechSynthesisUtterance('{safe_q}');
+                                        utter.rate = 0.9;
+                                        utter.onend = function() {{
+                                            enableRecord();
+                                        }};
+                                        speechSynthesis.cancel();
+                                        speechSynthesis.speak(utter);
+                                    }});
+                                }};
+
+                                audio.onended = function() {{ enableRecord(); }};
+
+                                function enableRecord() {{
+                                    status.textContent = '🎤 Click "Record Answer" to speak';
+                                    recBtn.disabled = false;
+                                    recBtn.style.cssText = 'padding:8px 18px;border-radius:8px;border:1px solid #22c55e;background:#064e3b;color:#6ee7b7;cursor:pointer;font-size:0.9rem;';
+                                    playBtn.textContent = '✅ Played';
                                 }}
 
-                                function startSpeechRec(id) {{
-                                    const textarea = document.querySelector('[data-testid="stTextArea"] textarea');
-                                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                                    if (!SpeechRecognition) return;
+                                recBtn.onclick = function() {{
+                                    if (isRecording_{question_id}) stopAndSubmit();
+                                    else startRecording();
+                                }};
 
-                                    recognition_{question_id} = new SpeechRecognition();
-                                    recognition_{question_id}.continuous = true;
-                                    recognition_{question_id}.interimResults = true;
-                                    recognition_{question_id}.lang = 'en-US';
+                                function startRecording() {{
+                                    isRecording_{question_id} = true;
+                                    recBtn.textContent = '⏹ Stop & Submit';
+                                    recBtn.style.cssText = 'padding:8px 18px;border-radius:8px;border:1px solid #ef4444;background:#450a0a;color:#fca5a5;cursor:pointer;font-size:0.9rem;';
+                                    status.textContent = '🔴 Recording...';
+                                    playBtn.disabled = true;
+                                    micIndicator.style.display = 'block';
 
-                                    recognition_{question_id}.onresult = function(event) {{
-                                        let interim = '';
-                                        for (let i = event.resultIndex; i < event.results.length; i++) {{
-                                            const t = event.results[i][0].transcript;
-                                            if (event.results[i].isFinal) {{
-                                                finalTranscript_{question_id} += t;
-                                            }} else {{
-                                                interim += t;
-                                            }}
-                                        }}
-                                        const display = finalTranscript_{question_id} + interim;
-                                        if (textarea) {{
-                                            textarea.value = display;
-                                            textarea.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                                            textarea.dispatchEvent(new Event('change', {{ bubbles: true }}));
-                                        }}
-                                        status.textContent = '🎤 ' + display.slice(-50);
-
-                                        clearTimeout(silenceTimer_{question_id});
-                                        silenceTimer_{question_id} = setTimeout(() => {{
-                                            finishAndSubmit(id, display);
-                                        }}, SILENCE_DELAY);
-                                    }};
-
-                                    recognition_{question_id}.onerror = function(e) {{
-                                        if (e.error !== 'no-speech' && e.error !== 'aborted') {{
-                                            status.textContent = '❌ ' + e.error;
-                                        }}
-                                    }};
-
-                                    recognition_{question_id}.onend = function() {{
-                                        if (finalTranscript_{question_id}.trim() && !isSubmitting_{question_id}) {{
-                                            clearTimeout(silenceTimer_{question_id});
-                                            silenceTimer_{question_id} = setTimeout(() => {{
-                                                finishAndSubmit(id, finalTranscript_{question_id});
-                                            }}, SILENCE_DELAY);
-                                        }}
-                                    }};
-
-                                    finalTranscript_{question_id} = '';
-                                    recognition_{question_id}.start();
-                                }}
-
-                                function startMediaRecorder(id) {{
                                     navigator.mediaDevices.getUserMedia({{ audio: true }}).then(function(stream) {{
                                         mediaRecorder_{question_id} = new MediaRecorder(stream);
                                         audioChunks_{question_id} = [];
@@ -943,68 +961,92 @@ with tab6:
                                         }};
                                         mediaRecorder_{question_id}.start();
                                     }}).catch(function(e) {{
-                                        status.textContent = '🎤 Mic error: ' + e.message;
+                                        status.textContent = '❌ Mic error: ' + e.message;
+                                        micIndicator.style.display = 'none';
+                                        resetButtons();
                                     }});
+
+                                    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+                                    if (SR) {{
+                                        recognition_{question_id} = new SR();
+                                        recognition_{question_id}.continuous = true;
+                                        recognition_{question_id}.interimResults = true;
+                                        recognition_{question_id}.lang = 'en-US';
+                                        recognition_{question_id}.onresult = function(event) {{
+                                            let interim = '';
+                                            for (let i = event.resultIndex; i < event.results.length; i++) {{
+                                                const t = event.results[i][0].transcript;
+                                                if (event.results[i].isFinal) finalTranscript_{question_id} += t;
+                                                else interim += t;
+                                            }}
+                                            const display = finalTranscript_{question_id} + interim;
+                                            const ta = document.querySelector('[data-testid="stTextArea"] textarea');
+                                            if (ta) {{
+                                                ta.value = display;
+                                                ta.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                                                ta.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                                            }}
+                                            status.textContent = '🎤 ' + display.slice(-40);
+                                        }};
+                                        recognition_{question_id}.onerror = function() {{}};
+                                        recognition_{question_id}.start();
+                                    }}
                                 }}
 
-                                // ── Finish: transcribe with Whisper + auto-submit ──
-                                function finishAndSubmit(id, fallbackText) {{
+                                function stopAndSubmit() {{
                                     if (isSubmitting_{question_id}) return;
                                     isSubmitting_{question_id} = true;
 
-                                    // Stop recognition
                                     if (recognition_{question_id}) {{
                                         try {{ recognition_{question_id}.stop(); }} catch(e) {{}}
                                     }}
-
-                                    // Stop media recorder
                                     if (mediaRecorder_{question_id} && mediaRecorder_{question_id}.state !== 'inactive') {{
                                         mediaRecorder_{question_id}.stop();
-                                        // Stop all tracks
                                         if (mediaRecorder_{question_id}.stream) {{
                                             mediaRecorder_{question_id}.stream.getTracks().forEach(t => t.stop());
                                         }}
                                     }}
 
-                                    status.textContent = '⏳ Transcribing with Whisper...';
+                                    micIndicator.style.display = 'none';
+                                    status.textContent = '⏳ Transcribing with Deepgram...';
+                                    recBtn.disabled = true;
+                                    recBtn.textContent = '⏳ Transcribing...';
 
-                                    // Send audio to whisper server
+                                    const fallback = finalTranscript_{question_id} || '';
                                     const blob = new Blob(audioChunks_{question_id}, {{ type: 'audio/webm' }});
                                     if (blob.size > 1000) {{
                                         fetch('{transcribe_url()}', {{ method: 'POST', body: blob }})
                                             .then(r => r.json())
-                                            .then(function(result) {{
-                                                const whisperText = result.text || fallbackText;
-                                                fillAndSubmit(id, whisperText);
-                                            }})
-                                            .catch(function() {{
-                                                // Fallback to browser speech text
-                                                fillAndSubmit(id, fallbackText);
-                                            }});
+                                            .then(function(result) {{ fillAndSubmit(result.text || fallback); }})
+                                            .catch(function() {{ fillAndSubmit(fallback); }});
                                     }} else {{
-                                        fillAndSubmit(id, fallbackText);
+                                        fillAndSubmit(fallback);
                                     }}
                                 }}
 
-                                function fillAndSubmit(id, text) {{
-                                    const textarea = document.querySelector('[data-testid="stTextArea"] textarea');
-                                    if (textarea) {{
-                                        textarea.value = text;
-                                        textarea.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                                        textarea.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                                function fillAndSubmit(text) {{
+                                    const ta = document.querySelector('[data-testid="stTextArea"] textarea');
+                                    if (ta) {{
+                                        ta.value = text;
+                                        ta.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                                        ta.dispatchEvent(new Event('change', {{ bubbles: true }}));
                                     }}
                                     status.textContent = '✅ ' + text.slice(-60);
-
-                                    // Click submit button
                                     setTimeout(function() {{
-                                        const buttons = document.querySelectorAll('button');
-                                        for (const btn of buttons) {{
-                                            if (btn.textContent.includes('Submit Answer')) {{
-                                                btn.click();
-                                                break;
-                                            }}
+                                        const btns = document.querySelectorAll('button');
+                                        for (const btn of btns) {{
+                                            if (btn.textContent.includes('Submit Answer')) {{ btn.click(); break; }}
                                         }}
                                     }}, 800);
+                                }}
+
+                                function resetButtons() {{
+                                    playBtn.disabled = false;
+                                    playBtn.textContent = '▶ Play Question';
+                                    recBtn.disabled = true;
+                                    recBtn.textContent = '⏺ Record Answer';
+                                    recBtn.style.cssText = 'padding:8px 18px;border-radius:8px;border:1px solid #64748b;background:#334155;color:#94a3b8;cursor:not-allowed;font-size:0.9rem;';
+                                    isRecording_{question_id} = false;
                                 }}
                             </script>
                             """
@@ -1094,14 +1136,14 @@ with tab6:
                         st.session_state.pop(key, None)
                     st.rerun()
 
-# ─── Tab 7: Report ────────────────────────────────────────────────────────────
-with tab7:
+# ─── Tab 6: Report ────────────────────────────────────────────────────────────
+with tab6:
     st.markdown("## 📋 Final Assessment Report")
     st.caption("M11-M12: Comprehensive interview report with skill breakdown (generated from Live Interview)")
     st.markdown("---")
 
     if "interview_loop" not in st.session_state:
-        st.info("⏳ Complete a Live Interview session first (Step 6).")
+        st.info("⏳ Complete a Live Interview session first (Step 5).")
     else:
         loop = st.session_state["interview_loop"]
 

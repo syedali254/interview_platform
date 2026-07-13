@@ -1,59 +1,61 @@
-"""Server-side voice: faster-whisper STT + edge-tts TTS.
+"""Server-side voice: Deepgram STT + ElevenLabs TTS.
 
 Used by app.py Step 6 for accurate speech transcription.
 """
 
 import io
 import os
-import tempfile
-import wave
 from pathlib import Path
 
+import requests
+from dotenv import load_dotenv
 
-# ── Lazy-loaded whisper model ────────────────────────────────────────────
-_whisper_model = None
+load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
 
-
-def _get_whisper():
-    global _whisper_model
-    if _whisper_model is None:
-        from faster_whisper import WhisperModel
-        print("[Whisper] Loading model (base)...")
-        _whisper_model = WhisperModel("base", device="cpu", compute_type="int8")
-        print("[Whisper] Model loaded.")
-    return _whisper_model
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
+DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY", "")
+ELEVENLABS_VOICE_ID = "JBFqnCBsd6RMkjVDRZzb"   # Rachel
 
 
 def transcribe_audio(audio_bytes: bytes) -> str:
-    """Transcribe raw PCM audio bytes with faster-whisper."""
-    model = _get_whisper()
+    """Transcribe audio bytes with Deepgram REST API (nova-3)."""
+    if not DEEPGRAM_API_KEY:
+        return ""
 
-    # Save to temp WAV file (faster-whisper reads from file or numpy)
-    import soundfile as sf
-    import numpy as np
-
+    url = "https://api.deepgram.com/v1/listen?model=nova-3&language=en&punctuate=true"
+    headers = {
+        "Authorization": f"Token {DEEPGRAM_API_KEY}",
+        "Content-Type": "audio/webm",
+    }
     try:
-        data, samplerate = sf.read(io.BytesIO(audio_bytes))
+        resp = requests.post(url, headers=headers, data=audio_bytes, timeout=30)
+        if resp.status_code == 200:
+            data = resp.json()
+            return data["results"]["channels"][0]["alternatives"][0]["transcript"].strip()
     except Exception:
-        # Try as raw PCM (16-bit, 16kHz, mono)
-        data = np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32) / 32768.0
-        samplerate = 16000
-
-    segments, _ = model.transcribe(data, beam_size=5, language="en")
-    return " ".join(seg.text for seg in segments).strip()
+        pass
+    return ""
 
 
-def synthesize_speech(text: str, voice: str = "en-GB-SoniaNeural") -> bytes:
-    """Generate TTS audio bytes using edge-tts."""
-    import edge_tts
-    import asyncio
+def synthesize_speech(text: str) -> bytes:
+    """Generate TTS audio bytes using ElevenLabs API."""
+    if not ELEVENLABS_API_KEY:
+        return b""
 
-    async def _synth():
-        communicate = edge_tts.Communicate(text, voice=voice)
-        audio = b""
-        async for chunk in communicate.stream():
-            if chunk["type"] == "audio":
-                audio += chunk["data"]
-        return audio
-
-    return asyncio.run(_synth())
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVENLABS_VOICE_ID}"
+    headers = {
+        "xi-api-key": ELEVENLABS_API_KEY,
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "text": text,
+        "model_id": "eleven_turbo_v2_5",
+        "voice_settings": {"stability": 0.5, "similarity_boost": 0.75},
+    }
+    try:
+        resp = requests.post(url, headers=headers, json=payload, timeout=30)
+        if resp.status_code == 200:
+            return resp.content
+    except Exception:
+        pass
+    return b""

@@ -1,5 +1,7 @@
 import json
 import os
+import subprocess
+import sys
 import threading
 import tempfile
 import uuid
@@ -33,6 +35,19 @@ class WhisperHTTPHandler(BaseHTTPRequestHandler):
                 self._json_response({"text": text})
             except Exception as e:
                 self._json_response({"text": "", "error": str(e)}, 500)
+        elif self.path == "/save_transcript":
+            try:
+                length = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(length)
+                data = json.loads(body)
+                transcript_dir = Path(tempfile.gettempdir()) / "interviewai_transcripts"
+                transcript_dir.mkdir(exist_ok=True)
+                session = data.get("session", "unknown")
+                fp = transcript_dir / f"{session}.json"
+                fp.write_text(json.dumps(data, indent=2))
+                self._json_response({"saved": True, "path": str(fp)})
+            except Exception as e:
+                self._json_response({"saved": False, "error": str(e)}, 500)
         else:
             self._json_response({"error": "not found"}, 404)
 
@@ -65,19 +80,45 @@ class WhisperHTTPHandler(BaseHTTPRequestHandler):
 
     def _serve_token(self):
         try:
-            from livekit.api import AccessToken
+            import datetime
+            from livekit.api import AccessToken, VideoGrants
 
             room_name = f"interview-{uuid.uuid4().hex[:8]}"
             identity = f"candidate-{uuid.uuid4().hex[:6]}"
 
+            grants = VideoGrants(
+                room_join=True,
+                room=room_name,
+                can_publish=True,
+                can_subscribe=True,
+                can_publish_data=True,
+            )
             token = (
                 AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET)
                 .with_identity(identity)
                 .with_name("Interview Candidate")
-                .with_grants({"room_join": True, "room": room_name})
-                .with_room_config(room_name)
-                .with_ttl(3600)
+                .with_grants(grants)
+                .with_ttl(datetime.timedelta(hours=1))
                 .to_jwt()
+            )
+
+            # Start agent subprocess for this room (direct connection, no dispatch)
+            agent_script = _CLIENT_DIR / "run_agent.py"
+            agent_log = _CLIENT_DIR.parent.parent / "agent_debug.log"
+            env = os.environ.copy()
+            env["LIVEKIT_URL"] = LIVEKIT_WS_URL
+            env["LIVEKIT_API_KEY"] = LIVEKIT_API_KEY
+            env["LIVEKIT_API_SECRET"] = LIVEKIT_API_SECRET
+            env["PYTHONUNBUFFERED"] = "1"
+            # Pass pre-generated questions (set by launcher from Step 4)
+            if "INTERVIEW_QUESTIONS" in os.environ:
+                env["INTERVIEW_QUESTIONS"] = os.environ["INTERVIEW_QUESTIONS"]
+            log_fh = open(agent_log, "w")
+            subprocess.Popen(
+                [sys.executable, "-u", str(agent_script), room_name],
+                stdout=log_fh, stderr=subprocess.STDOUT,
+                env=env,
+                cwd=str(_CLIENT_DIR.parent.parent),
             )
 
             self._json_response({
@@ -108,20 +149,17 @@ class WhisperHTTPHandler(BaseHTTPRequestHandler):
         pass
 
 
-def start_whisper_server():
+def start_whisper_server(force_restart=False):
     global _server_instance
     if _server_instance is not None:
-        return _server_instance
+        if not force_restart:
+            return _server_instance
+        _server_instance.shutdown()
+        _server_instance = None
     server = HTTPServer(("localhost", _whisper_server_port), WhisperHTTPHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     _server_instance = server
-    # Pre-warm whisper model
-    try:
-        from .voice import transcribe_audio
-        transcribe_audio(b"")
-    except Exception:
-        pass
     return server
 
 

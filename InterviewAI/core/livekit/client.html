@@ -3,172 +3,360 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>InterviewAI — Voice Interview</title>
+<title>InterviewAI — Live Interview</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: #0f172a; color: #e2e8f0;
-    display: flex; justify-content: center; align-items: center;
-    min-height: 100vh;
+    height: 100vh; display: flex; flex-direction: column;
   }
-  .container {
-    max-width: 600px; width: 90%; text-align: center;
-    padding: 2rem;
+
+  /* ── Header ── */
+  .header {
+    background: #1e293b; padding: 12px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid #334155;
   }
-  h1 { font-size: 1.5rem; margin-bottom: 0.5rem; color: #60a5fa; }
-  .status {
-    background: #1e293b; border-radius: 12px; padding: 2rem; margin: 1.5rem 0;
-    min-height: 120px; display: flex; flex-direction: column;
-    justify-content: center; align-items: center;
+  .header h1 { font-size: 1.2rem; color: #60a5fa; }
+  .status-badge {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 14px; border-radius: 20px; font-size: 0.85rem;
   }
-  .status-text { font-size: 1.1rem; margin-top: 0.5rem; }
-  .transcript {
-    background: #0f172a; border: 1px solid #334155; border-radius: 8px;
-    padding: 1rem; margin-top: 1rem; min-height: 60px;
-    font-size: 0.95rem; color: #94a3b8; text-align: left;
+  .status-badge.connected { background: #064e3b; color: #6ee7b7; }
+  .status-badge.connecting { background: #451a03; color: #fdba74; }
+  .status-badge.disconnected { background: #450a0a; color: #fca5a5; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot.connected { background: #22c55e; }
+  .dot.connecting { background: #f59e0b; animation: pulse 1s infinite; }
+  .dot.disconnected { background: #ef4444; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ── Main layout ── */
+  .main {
+    flex: 1; display: flex; gap: 16px; padding: 16px;
+    min-height: 0;
+  }
+
+  /* ── Left: Camera ── */
+  .camera-panel {
+    flex: 0 0 400px; display: flex; flex-direction: column; gap: 12px;
+  }
+  .camera-feed {
+    flex: 1; background: #000; border-radius: 12px; overflow: hidden;
+    position: relative; min-height: 300px;
+  }
+  .camera-feed video {
+    width: 100%; height: 100%; object-fit: cover;
+  }
+  .camera-label {
+    position: absolute; bottom: 12px; left: 12px;
+    background: rgba(0,0,0,0.6); padding: 4px 12px; border-radius: 6px;
+    font-size: 0.8rem; color: #94a3b8;
+  }
+  .transcript-box {
+    background: #1e293b; border-radius: 10px; padding: 16px;
+    min-height: 100px; max-height: 160px; overflow-y: auto;
+    border: 1px solid #334155;
+  }
+  .transcript-box .label {
+    font-size: 0.75rem; color: #64748b; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 8px;
+  }
+  .transcript-box .text {
+    font-size: 0.95rem; line-height: 1.5; color: #f1f5f9;
+  }
+  .transcript-box .text.interim { color: #94a3b8; font-style: italic; }
+
+  /* ── Right: Conversation ── */
+  .conversation-panel {
+    flex: 1; display: flex; flex-direction: column; gap: 12px;
+  }
+  .question-display {
+    background: linear-gradient(135deg, #1e3a5f, #1e293b);
+    border-radius: 12px; padding: 20px; border: 1px solid #3b82f6;
+    min-height: 100px; display: flex; flex-direction: column; justify-content: center;
+  }
+  .question-display .label {
+    font-size: 0.7rem; color: #60a5fa; text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 8px;
+  }
+  .question-display .text {
+    font-size: 1.15rem; line-height: 1.6; color: #f8fafc;
+  }
+  .question-display .text.thinking {
+    color: #94a3b8; font-style: italic;
+  }
+  .chat-log {
+    flex: 1; background: #1e293b; border-radius: 10px; padding: 16px;
+    overflow-y: auto; border: 1px solid #334155;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .chat-log .label {
+    font-size: 0.75rem; color: #64748b; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 4px;
+  }
+  .chat-msg {
+    padding: 10px 14px; border-radius: 10px; max-width: 85%;
+    font-size: 0.9rem; line-height: 1.5;
+  }
+  .chat-msg.agent {
+    background: #1e3a5f; color: #e2e8f0; align-self: flex-start;
+    border: 1px solid #3b82f6;
+  }
+  .chat-msg.candidate {
+    background: #1a3a2a; color: #e2e8f0; align-self: flex-end;
+    border: 1px solid #22c55e;
+  }
+  .chat-msg .role {
+    font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 4px;
+  }
+  .chat-msg.agent .role { color: #60a5fa; }
+  .chat-msg.candidate .role { color: #4ade80; }
+
+  /* ── Controls ── */
+  .controls {
+    padding: 12px 24px; background: #1e293b;
+    border-top: 1px solid #334155;
+    display: flex; gap: 12px; align-items: center;
   }
   .btn {
-    background: #2563eb; color: white; border: none;
-    padding: 0.75rem 2rem; border-radius: 8px;
-    font-size: 1rem; cursor: pointer; margin: 0.5rem;
+    padding: 10px 24px; border: none; border-radius: 8px;
+    font-size: 0.9rem; cursor: pointer; font-weight: 500;
+    transition: all 0.2s;
   }
-  .btn:hover { background: #1d4ed8; }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .btn-danger { background: #dc2626; }
-  .btn-danger:hover { background: #b91c1c; }
-  .indicator {
-    width: 16px; height: 16px; border-radius: 50%;
-    display: inline-block; margin-right: 8px;
+  .btn-primary { background: #2563eb; color: white; }
+  .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+  .btn-danger { background: #dc2626; color: white; }
+  .btn-danger:hover:not(:disabled) { background: #b91c1c; }
+  .btn-secondary { background: #334155; color: #e2e8f0; }
+  .btn-secondary:hover:not(:disabled) { background: #475569; }
+  .mic-indicator {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.85rem; color: #94a3b8; margin-left: auto;
   }
-  .indicator.connected { background: #22c55e; }
-  .indicator.disconnected { background: #ef4444; }
-  .indicator.listening { background: #f59e0b; animation: pulse 1s infinite; }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
+  .mic-indicator.active { color: #22c55e; }
+  .mic-indicator .bar {
+    width: 4px; height: 16px; border-radius: 2px; background: #475569;
   }
-  .conn-status { font-size: 0.85rem; color: #64748b; margin: 1rem 0; }
-  .error { color: #f87171; }
+  .mic-indicator.active .bar {
+    background: #22c55e; animation: micPulse 0.8s ease-in-out infinite;
+  }
+  @keyframes micPulse { 0%,100%{height:8px} 50%{height:20px} }
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>🎙 InterviewAI Live Voice</h1>
-  <p style="color:#94a3b8;font-size:0.9rem;">Full-duplex voice interview — just speak naturally</p>
 
-  <div class="status">
-    <div>
-      <span class="indicator disconnected" id="indicator"></span>
-      <span id="statusLabel" class="status-text">Connecting...</span>
+<!-- ── Header ── -->
+<div class="header">
+  <h1>🎙 InterviewAI — Live Voice Interview</h1>
+  <div class="status-badge disconnected" id="statusBadge">
+    <span class="dot disconnected" id="statusDot"></span>
+    <span id="statusText">Disconnected</span>
+  </div>
+</div>
+
+<!-- ── Main ── -->
+<div class="main">
+  <!-- Left: Camera -->
+  <div class="camera-panel">
+    <div class="camera-feed">
+      <video id="webcam" autoplay playsinline muted></video>
+      <div class="camera-label">📷 You (Candidate)</div>
     </div>
-    <div class="transcript" id="transcript">Your conversation will appear here...</div>
+    <div class="transcript-box">
+      <div class="label">🎤 Real-time Transcription</div>
+      <div class="text" id="transcriptText">Waiting for speech...</div>
+    </div>
   </div>
 
-  <div class="conn-status" id="connStatus"></div>
+  <!-- Right: Conversation -->
+  <div class="conversation-panel">
+    <div class="question-display">
+      <div class="label">📋 Current Question</div>
+      <div class="text thinking" id="questionText">Waiting for the interview to begin...</div>
+    </div>
+    <div class="chat-log" id="chatLog">
+      <div class="label">💬 Conversation History</div>
+    </div>
+  </div>
+</div>
 
-  <button class="btn" id="startBtn" disabled>🔌 Connecting to server...</button>
-  <button class="btn btn-danger" id="endBtn" disabled style="display:none;">⏹ End Interview</button>
+<!-- ── Controls ── -->
+<div class="controls">
+  <button class="btn btn-primary" id="startBtn">🔌 Connect</button>
+  <button class="btn btn-danger" id="endBtn" disabled>⏹ End Interview</button>
+  <div class="mic-indicator" id="micIndicator">
+    <span id="micLabel">🎤 Mic inactive</span>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
 <script>
-const startBtn = document.getElementById('startBtn');
-const endBtn = document.getElementById('endBtn');
-const indicator = document.getElementById('indicator');
-const statusLabel = document.getElementById('statusLabel');
-const transcript = document.getElementById('transcript');
-const connStatus = document.getElementById('connStatus');
+const $ = id => document.getElementById(id);
+const webcam = $('webcam');
+const statusBadge = $('statusBadge');
+const statusDot = $('statusDot');
+const statusText = $('statusText');
+const transcriptText = $('transcriptText');
+const questionText = $('questionText');
+const chatLog = $('chatLog');
+const startBtn = $('startBtn');
+const endBtn = $('endBtn');
+const micIndicator = $('micIndicator');
+const micLabel = $('micLabel');
 
 let room = null;
 let micTrack = null;
+let camStream = null;
+let conversationLog = [];
+const SESSION_ID = new URLSearchParams(location.search).get('session') || 'unknown';
+
+function setStatus(state, text) {
+  statusBadge.className = `status-badge ${state}`;
+  statusDot.className = `dot ${state}`;
+  statusText.textContent = text;
+}
+
+function addChat(role, text) {
+  const div = document.createElement('div');
+  div.className = `chat-msg ${role}`;
+  div.innerHTML = `<div class="role">${role === 'agent' ? '🤖 Interviewer' : '🧑 You'}</div>${text}`;
+  chatLog.appendChild(div);
+  chatLog.scrollTop = chatLog.scrollHeight;
+  conversationLog.push({ role, text, timestamp: new Date().toISOString() });
+}
+
+function setQuestion(text) {
+  questionText.className = 'text';
+  questionText.textContent = text || '—';
+}
+
+function setTranscript(text, isFinal) {
+  transcriptText.className = `text${isFinal ? '' : ' interim'}`;
+  transcriptText.textContent = text || 'Waiting for speech...';
+  if (isFinal) micLabel.textContent = '🎤 Mic active';
+}
+
+function setMicState(active) {
+  micIndicator.className = `mic-indicator${active ? ' active' : ''}`;
+  micLabel.textContent = active ? '🎤 Listening...' : '🎤 Mic inactive';
+}
 
 async function getToken() {
   const resp = await fetch('/token');
-  if (!resp.ok) throw new Error('Failed to get token');
+  if (!resp.ok) throw new Error(`Token error: ${resp.status}`);
   return resp.json();
 }
 
 async function connect() {
   try {
-    indicator.className = 'indicator disconnected';
-    statusLabel.textContent = 'Getting token...';
+    setStatus('connecting', 'Connecting...');
     startBtn.disabled = true;
 
-    const { token, url, room: roomName } = await getToken();
-
-    connStatus.textContent = `Server: ${url}  |  Room: ${roomName}`;
+    const { token, url, room: roomName, identity } = await getToken();
+    console.log(`Connecting to ${url} room ${roomName} as ${identity}`);
 
     room = new LivekitClient.Room({
       adaptiveStream: true,
       dynacast: true,
     });
 
-    room.on('participantConnected', (p) => {
-      console.log('Participant joined:', p.identity);
-    });
+    // ── Get webcam first ──
+    camStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    webcam.srcObject = camStream;
+    micTrack = camStream.getAudioTracks()[0];
 
-    room.on('trackSubscribed', (track, publication, participant) => {
-      if (track.kind === 'audio') {
-        const audio = new Audio();
-        audio.srcObject = new MediaStream([track.mediaStreamTrack]);
-        audio.autoplay = true;
-        audio.play();
-        console.log('Agent audio subscribed');
-      }
-    });
-
-    room.on('dataReceived', (payload, participant) => {
-      const text = new TextDecoder().decode(payload);
-      transcript.textContent = text;
+    // ── Set up event listeners BEFORE connecting ──
+    room.on('dataReceived', (payload) => {
+      try {
+        const msg = JSON.parse(new TextDecoder().decode(payload));
+        switch (msg.type) {
+          case 'question':
+            setQuestion(msg.text);
+            addChat('agent', msg.text);
+            break;
+          case 'transcript':
+            setTranscript(msg.text, msg.is_final);
+            if (msg.is_final && msg.text.trim()) {
+              addChat('candidate', msg.text);
+            }
+            break;
+          case 'status':
+            if (msg.text === 'listening') setMicState(true);
+            else if (msg.text === 'thinking') {
+              setMicState(false);
+              setQuestion('🤔 Thinking...');
+            }
+            break;
+        }
+      } catch(e) {}
     });
 
     room.on('disconnected', () => {
-      indicator.className = 'indicator disconnected';
-      statusLabel.textContent = 'Disconnected';
+      setStatus('disconnected', 'Disconnected');
+      setQuestion('Interview ended');
+      if (camStream) camStream.getTracks().forEach(t => t.stop());
       startBtn.disabled = false;
+      endBtn.disabled = true;
       startBtn.textContent = '🔁 Reconnect';
-      endBtn.style.display = 'none';
     });
 
+    // ── Handle agent audio/video tracks ──
+    room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
+      console.log(`Track subscribed: ${track.kind} from ${participant.identity}`);
+      if (track.kind === 'audio') {
+        const audioEl = track.attach();
+        audioEl.id = 'agent-audio-' + participant.identity;
+        document.body.appendChild(audioEl);
+      }
+    });
+
+    room.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
+      track.detach().forEach(el => el.remove());
+    });
+
+    // Connect FIRST, then publish tracks
     await room.connect(url, token);
 
-    indicator.className = 'indicator connected';
-    statusLabel.textContent = '✅ Connected — speak naturally...';
-    transcript.textContent = 'Agent will greet you shortly...';
+    const videoTrack = camStream.getVideoTracks()[0];
+    await room.localParticipant.publishTrack(micTrack, { source: 'microphone' });
+    await room.localParticipant.publishTrack(videoTrack, { source: 'camera' });
 
-    // Publish mic
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    micTrack = stream.getAudioTracks()[0];
-    await room.localParticipant.publishTrack(micTrack, { source: LivekitClient.TrackSource.MICROPHONE });
-
-    startBtn.style.display = 'none';
-    endBtn.style.display = 'inline-block';
+    setStatus('connected', 'Connected — Interview in progress');
+    setQuestion('⏳ Starting interview...');
+    setTranscript('Speak when the agent asks a question', false);
+    setMicState(false);
     endBtn.disabled = false;
+    startBtn.textContent = '✅ Connected';
 
   } catch (err) {
-    indicator.className = 'indicator disconnected';
-    statusLabel.textContent = '❌ Connection failed';
-    connStatus.textContent = err.message;
-    connStatus.className = 'conn-status error';
+    console.error(err);
+    setStatus('disconnected', `Error: ${err.message}`);
     startBtn.disabled = false;
     startBtn.textContent = '🔄 Retry';
+    if (camStream) camStream.getTracks().forEach(t => t.stop());
   }
 }
 
-async function disconnect() {
-  if (micTrack) {
-    micTrack.stop();
-    micTrack = null;
-  }
-  if (room) {
-    room.disconnect();
-    room = null;
-  }
-  startBtn.style.display = 'inline-block';
-  endBtn.style.display = 'none';
-  startBtn.textContent = '🔁 Reconnect';
+function disconnect() {
+  if (camStream) camStream.getTracks().forEach(t => t.stop());
+  if (room) room.disconnect();
+  room = null;
+  camStream = null;
+  micTrack = null;
+  setStatus('disconnected', 'Disconnected');
   startBtn.disabled = false;
+  endBtn.disabled = true;
+  startBtn.textContent = '🔁 Reconnect';
+  // Save transcript
+  fetch('/save_transcript', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ session: SESSION_ID, conversation: conversationLog }),
+  }).catch(() => {});
 }
 
 startBtn.addEventListener('click', connect);
