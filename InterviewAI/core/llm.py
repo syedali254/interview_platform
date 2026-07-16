@@ -1,40 +1,15 @@
-"""Unified LLM client — routes to Ollama or Gemini based on config."""
+"""Unified LLM client — calls Gemini AI."""
 
 import json
 
 import requests
 
 from core.config import (
-    LLM_PROVIDER,
-    OLLAMA_ENDPOINT,
-    OLLAMA_MODEL,
     LLM_TEMPERATURE,
     LLM_MAX_TOKENS,
-    LLM_MAX_RETRIES,
     GEMINI_API_KEY,
     GEMINI_ENDPOINT,
 )
-
-
-def _call_ollama(prompt: str, temperature: float = None, max_tokens: int = None) -> str:
-    payload = {
-        "model": OLLAMA_MODEL,
-        "prompt": prompt,
-        "stream": False,
-        "options": {
-            "temperature": temperature or LLM_TEMPERATURE,
-            "num_predict": max_tokens or LLM_MAX_TOKENS,
-        },
-    }
-    for attempt in range(LLM_MAX_RETRIES + 1):
-        try:
-            resp = requests.post(OLLAMA_ENDPOINT, json=payload, timeout=120)
-            if resp.status_code == 200:
-                return resp.json()["response"].strip()
-        except Exception as e:
-            if attempt == LLM_MAX_RETRIES:
-                raise RuntimeError(f"Ollama call failed after {LLM_MAX_RETRIES} retries: {e}")
-    raise RuntimeError("Ollama call failed — unexpected error.")
 
 
 def _call_gemini(prompt: str, temperature: float = None, max_tokens: int = None) -> str:
@@ -67,8 +42,6 @@ def _call_gemini(prompt: str, temperature: float = None, max_tokens: int = None)
 
 
 def call_llm(prompt: str, temperature: float = None, max_tokens: int = None) -> str:
-    if LLM_PROVIDER == "ollama":
-        return _call_ollama(prompt, temperature, max_tokens)
     return _call_gemini(prompt, temperature, max_tokens)
 
 

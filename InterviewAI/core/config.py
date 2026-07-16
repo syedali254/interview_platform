@@ -9,7 +9,7 @@ _env_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(_env_path)
 
 # ---------------------------------------------------------------------------
-# Gemini (fallback to Ollama if key missing)
+# Gemini
 # ---------------------------------------------------------------------------
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
@@ -21,21 +21,11 @@ if GEMINI_API_KEY:
     )
 else:
     GEMINI_ENDPOINT = ""
-    print("[INFO] GEMINI_API_KEY not set — using Ollama for LLM.")
+    print("[WARN] GEMINI_API_KEY not set — LLM calls will fail.")
 
-# ---------------------------------------------------------------------------
-# Ollama (local, no API key needed)
-# ---------------------------------------------------------------------------
-OLLAMA_ENDPOINT = os.getenv("OLLAMA_ENDPOINT", "http://localhost:11434/api/generate")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b-instruct")
 LLM_TEMPERATURE = 0.3
 LLM_MAX_TOKENS = 8192
 LLM_MAX_RETRIES = 2
-
-# ---------------------------------------------------------------------------
-# LLM provider selection
-# ---------------------------------------------------------------------------
-LLM_PROVIDER = "ollama" if not GEMINI_API_KEY else os.getenv("LLM_PROVIDER", "gemini")
 
 # ---------------------------------------------------------------------------
 # Scoring thresholds
