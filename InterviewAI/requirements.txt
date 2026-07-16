@@ -6,14 +6,4 @@ PyMuPDF>=1.24.0
 matplotlib>=3.8.0
 numpy>=1.26.0
 pandas>=2.1.0
-
-# Live Interview (M7-M10)
-faster-whisper>=1.0.0
-edge-tts>=6.0.0
-# LiveKit for voice pipeline (self-hosted, free)
-# livekit-agents
-# livekit-plugins-silero
-# livekit-plugins-whisper
-
-# Ollama (local LLM)
-# Requests is already included above for Ollama API calls
+json_repair>=0.30.0
