@@ -3,13 +3,9 @@ import os
 import subprocess
 import sys
 import threading
-import tempfile
 import uuid
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
-
-_audio_dir = Path(tempfile.gettempdir()) / "interviewai_tts"
-_audio_dir.mkdir(exist_ok=True)
 
 _whisper_server_port = 18765
 _server_instance = None
@@ -26,16 +22,7 @@ class WhisperHTTPHandler(BaseHTTPRequestHandler):
         self._respond(200, b"", {"Content-Type": "text/plain"})
 
     def do_POST(self):
-        if self.path == "/transcribe":
-            try:
-                length = int(self.headers.get("Content-Length", 0))
-                audio_data = self.rfile.read(length)
-                from .voice import transcribe_audio
-                text = transcribe_audio(audio_data) if audio_data else ""
-                self._json_response({"text": text})
-            except Exception as e:
-                self._json_response({"text": "", "error": str(e)}, 500)
-        elif self.path == "/save_transcript":
+        if self.path == "/save_transcript":
             try:
                 length = int(self.headers.get("Content-Length", 0))
                 body = self.rfile.read(length)
@@ -56,17 +43,6 @@ class WhisperHTTPHandler(BaseHTTPRequestHandler):
             self._serve_client()
         elif self.path == "/token":
             self._serve_token()
-        elif self.path.startswith("/tts/"):
-            filename = self.path[5:]
-            filepath = _audio_dir / filename
-            if filepath.exists():
-                data = filepath.read_bytes()
-                self._respond(200, data, {
-                    "Content-Type": "audio/mpeg",
-                    "Content-Length": str(len(data)),
-                })
-            else:
-                self._respond(404, b"Not found")
         else:
             self._respond(404, b"Not found")
 
@@ -161,17 +137,3 @@ def start_whisper_server(force_restart=False):
     thread.start()
     _server_instance = server
     return server
-
-
-def save_tts_audio(audio_bytes: bytes, filename: str) -> Path:
-    fp = _audio_dir / filename
-    fp.write_bytes(audio_bytes)
-    return fp
-
-
-def tts_url(filename: str) -> str:
-    return f"http://localhost:{_whisper_server_port}/tts/{filename}"
-
-
-def transcribe_url() -> str:
-    return f"http://localhost:{_whisper_server_port}/transcribe"
