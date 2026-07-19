@@ -1,0 +1,14 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.log
+*.docx
+*.pdf
+.streamlit/
+data/uploads/
+dist/
+build/
+*.egg-info/
