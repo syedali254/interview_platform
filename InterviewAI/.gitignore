@@ -10,4 +10,4 @@ venv/
 dist/
 build/
 *.log
-*.docx
+
