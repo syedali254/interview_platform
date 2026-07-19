@@ -1,0 +1,14 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+.env
+*.log
+*.pdf
+data/uploads/
+.streamlit/
+.DS_Store
+.gitignore
+docker-compose.yml
+README.md
+generate_guide.py
