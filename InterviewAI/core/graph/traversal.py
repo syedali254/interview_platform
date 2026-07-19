@@ -7,7 +7,6 @@ Strategies:
   - spaced:    spaced repetition — re-ask weak skills at intervals
 """
 
-import random
 from typing import Optional
 
 from core.graph.state import InterviewState

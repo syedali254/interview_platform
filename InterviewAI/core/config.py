@@ -25,7 +25,6 @@ else:
 
 LLM_TEMPERATURE = 0.3
 LLM_MAX_TOKENS = 8192
-LLM_MAX_RETRIES = 2
 
 # ---------------------------------------------------------------------------
 # Scoring thresholds
@@ -38,22 +37,7 @@ SCORE_WEAK_THRESHOLD = 40
 # ---------------------------------------------------------------------------
 MAX_QUESTIONS_PER_SESSION = 3  # Increase later as needed
 MAX_FOLLOW_UP_QUESTIONS = 1
-DISAGREEMENT_THRESHOLD = 20
 SKILL_VERIFICATION_QUESTIONS = 3
-
-# ---------------------------------------------------------------------------
-# Track weighting for final score fusion
-# ---------------------------------------------------------------------------
-TRACK_A_WEIGHT = 0.6
-TRACK_B_WEIGHT = 0.4
-
-# ---------------------------------------------------------------------------
-# LiveKit (self-hosted, free)
-# ---------------------------------------------------------------------------
-LIVEKIT_URL = os.getenv("LIVEKIT_URL", "ws://localhost:7880")
-LIVEKIT_API_KEY = os.getenv("LIVEKIT_API_KEY", "devkey")
-LIVEKIT_API_SECRET = os.getenv("LIVEKIT_API_SECRET", "devsecret")
-LIVEKIT_ROOM_NAME = os.getenv("LIVEKIT_ROOM_NAME", "interview-room")
 
 # ---------------------------------------------------------------------------
 # Graph state statuses for live interview

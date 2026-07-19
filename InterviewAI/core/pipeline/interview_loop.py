@@ -11,7 +11,7 @@ from typing import Optional
 
 from core.graph.state import InterviewState
 from core.graph.traversal import pick_next_skill, decide_follow_up
-from core.evaluator.evaluator import evaluate_answer, generate_reference_answer
+from core.evaluator.evaluator import evaluate_answer
 from core.agents.question_agent import generate_position_question
 from core.config import MAX_QUESTIONS_PER_SESSION
 

@@ -4,8 +4,6 @@ Run: streamlit run app.py
 """
 
 import streamlit as st
-import streamlit.components.v1 as components
-import subprocess
 import sys
 import os
 import json
@@ -18,12 +16,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from core.agents.cv_agent import parse_cv_text, parse_cv_pdf
 from core.agents.jd_agent import parse_job_description
-from core.agents.question_agent import generate_interview_questions, build_interview_flow, generate_position_question
+from core.agents.question_agent import generate_interview_questions, build_interview_flow
 from core.graph.skill_graph import SkillGraph, build_graph
 from core.graph.state import InterviewState
 from core.graph.traversal import pick_next_skill, decide_follow_up
-from core.evaluator.evaluator import evaluate_answer
-from core.report.generator import get_score_label
 from core.pipeline.interview_loop import InterviewLoop
 from core.report.generator import generate_report
 from core.graph.visualize import (

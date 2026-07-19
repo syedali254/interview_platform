@@ -8,7 +8,6 @@ Produces a structured report with:
 """
 
 from datetime import datetime
-from typing import Optional
 
 from core.config import SCORE_STRONG_THRESHOLD, SCORE_WEAK_THRESHOLD
 from core.pipeline.interview_loop import InterviewLoop
@@ -88,10 +87,3 @@ def _generate_summary_text(score: float, verdict: str, strengths: list, gaps: li
     parts.append("See breakdown below for details.")
     return " ".join(parts)
 
-
-def get_score_label(score: float) -> str:
-    if score >= SCORE_STRONG_THRESHOLD:
-        return "Strong"
-    elif score >= SCORE_WEAK_THRESHOLD:
-        return "Needs Improvement"
-    return "Significant Gap"

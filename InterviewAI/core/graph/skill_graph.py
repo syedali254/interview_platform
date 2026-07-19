@@ -5,7 +5,6 @@ Maps candidate CV skills and job requirements to the ESCO taxonomy, then perform
 gap analysis and generates interview topics.
 """
 
-import os
 import networkx as nx
 import pandas as pd
 from difflib import get_close_matches

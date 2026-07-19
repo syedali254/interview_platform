@@ -2,6 +2,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import threading
 import uuid
 from http.server import HTTPServer, BaseHTTPRequestHandler
