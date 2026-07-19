@@ -97,6 +97,7 @@ class WhisperHTTPHandler(BaseHTTPRequestHandler):
                 env=env,
                 cwd=str(_CLIENT_DIR.parent.parent),
             )
+            log_fh.close()
 
             self._json_response({
                 "token": token,

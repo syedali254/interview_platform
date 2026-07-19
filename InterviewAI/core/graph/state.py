@@ -14,7 +14,6 @@ from core.config import (
     STATUS_VERIFIED_STRONG,
     STATUS_VERIFIED_WEAK,
     STATUS_CONFIRMED_GAP,
-    STATUS_SKIPPED,
     SCORE_STRONG_THRESHOLD,
     SCORE_WEAK_THRESHOLD,
     SKILL_VERIFICATION_QUESTIONS,
@@ -32,15 +31,11 @@ class SkillNodeState:
     feedback: list = field(default_factory=list)
 
     @property
-    def verdict(self) -> str:
-        return self.status
-
-    @property
     def avg_score(self) -> float:
         return sum(self.scores) / len(self.scores) if self.scores else 0.0
 
     def is_verified(self) -> bool:
-        return self.status in (STATUS_VERIFIED_STRONG, STATUS_VERIFIED_WEAK, STATUS_CONFIRMED_GAP, STATUS_SKIPPED)
+        return self.status in (STATUS_VERIFIED_STRONG, STATUS_VERIFIED_WEAK, STATUS_CONFIRMED_GAP)
 
     def needs_more_questions(self) -> bool:
         return self.questions_asked < SKILL_VERIFICATION_QUESTIONS and not self.is_verified()
@@ -62,10 +57,6 @@ class SkillNodeState:
                 self.status = STATUS_CONFIRMED_GAP
             else:
                 self.status = STATUS_PENDING
-
-    def skip(self):
-        self.status = STATUS_SKIPPED
-
 
 class InterviewState:
     """Tracks state across all skills during a live interview session."""
@@ -107,11 +98,6 @@ class InterviewState:
             node.record_answer(score)
             if feedback:
                 node.feedback.append(feedback)
-
-    def skip_skill(self, skill: str):
-        node = self.nodes.get(skill)
-        if node:
-            node.skip()
 
     def is_complete(self) -> bool:
         return len(self.incomplete_skills) == 0

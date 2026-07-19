@@ -1,4 +1,4 @@
-"""M6: Core evaluation module — Track A LLM-as-Judge (ported from interview_platform + Ollama)."""
+"""M6: Core evaluation module — Track A LLM-as-Judge."""
 
 from datetime import datetime
 
@@ -86,8 +86,6 @@ def track_a_evaluate(question, candidate_answer, skill, reference_answer):
         ("technical_accuracy", "Is the information technically correct?"),
         ("completeness", "completeness (0-25): Does the answer cover the essential points needed to demonstrate genuine understanding? Award full marks for concise answers that hit the key concepts. Do NOT penalize for brevity — a focused 80 word answer covering core concepts scores higher than a 200 word answer with filler. Only deduct points if genuinely important concepts are completely missing."),
     ]
-
-    required = ["technical_accuracy", "completeness", "clarity", "relevance", "total", "one_line_feedback"]
 
     def run_eval(criteria_order):
         user = _build_eval_prompt(question, skill, reference_answer, candidate_answer, criteria_order)

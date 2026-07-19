@@ -17,22 +17,17 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from core.agents.cv_agent import parse_cv_text, parse_cv_pdf
 from core.agents.jd_agent import parse_job_description
 from core.agents.question_agent import generate_interview_questions, build_interview_flow
-from core.graph.skill_graph import SkillGraph, build_graph
-from core.graph.state import InterviewState
-from core.graph.traversal import pick_next_skill, decide_follow_up
+from core.graph.skill_graph import build_graph
 from core.pipeline.interview_loop import InterviewLoop
 from core.report.generator import generate_report
+from core.config import GEMINI_API_KEY, GEMINI_MODEL, GEMINI_ENDPOINT
 from core.graph.visualize import (
     render_candidate_graph,
     render_job_graph,
     render_gap_graph,
     render_full_graph,
 )
-from core.interview.room_components import (
-    DEVICE_SETUP_HTML,
-    get_interview_question_html,
-    get_controls_html,
-)
+
 
 # ─── Page Config ──────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -56,10 +51,7 @@ def add_log(message: str, level: str = "INFO"):
 
 # ─── Start background web server (serves LiveKit client + tokens) ──────────
 from core.livekit.whisper_server import start_whisper_server
-WHISPER_SERVER_STARTED = False
-if not WHISPER_SERVER_STARTED:
-    start_whisper_server()
-    WHISPER_SERVER_STARTED = True
+start_whisper_server()
 
 # ─── Global Styles ────────────────────────────────────────────────────────────
 st.markdown("""
@@ -190,7 +182,6 @@ with st.sidebar:
     st.markdown("### System Status")
 
     # Show API config status
-    from core.config import GEMINI_API_KEY
     if GEMINI_API_KEY:
         st.markdown("✅ Gemini API Key loaded")
     else:
@@ -1072,7 +1063,6 @@ with tab_logs:
                 st.markdown(f"- `{key}`: `{val}`")
     with debug_col2:
         st.markdown("**API Config:**")
-        from core.config import GEMINI_API_KEY, GEMINI_MODEL, GEMINI_ENDPOINT
         st.markdown(f"- Model: `{GEMINI_MODEL}`")
         st.markdown(f"- Key: `{'***' + GEMINI_API_KEY[-4:] if GEMINI_API_KEY else 'NOT SET'}`")
         st.markdown(f"- Endpoint: `.../{GEMINI_MODEL}:generateContent`")

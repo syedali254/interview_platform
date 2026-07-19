@@ -1,10 +1,7 @@
-"""M6b: Graph traversal strategies for adaptive interview flow.
+"""M6b: Graph traversal — chooses next skill during interview.
 
-Strategies:
-  - adaptive:  reorder remaining skills by score + priority (lowest first)
-  - bfs:       breadth-first (cover categories in parallel)
-  - dfs:       depth-first (deep-dive one category at a time)
-  - spaced:    spaced repetition — re-ask weak skills at intervals
+Strategy: adaptive — picks the lowest-scored incomplete skill first,
+avoiding repeating the same skill consecutively.
 """
 
 from typing import Optional
@@ -14,31 +11,12 @@ from core.graph.state import InterviewState
 
 def pick_next_skill(
     state: InterviewState,
-    strategy: str = "adaptive",
     last_skill: Optional[str] = None,
 ) -> Optional[str]:
     incomplete = state.incomplete_skills
     if not incomplete:
         return None
 
-    if strategy == "adaptive":
-        return _adaptive_pick(state, incomplete, last_skill)
-    elif strategy == "bfs":
-        return _bfs_pick(state, incomplete)
-    elif strategy == "dfs":
-        return _dfs_pick(state, incomplete, last_skill)
-    elif strategy == "spaced":
-        return _spaced_pick(state, incomplete)
-    else:
-        return _adaptive_pick(state, incomplete, last_skill)
-
-
-def _adaptive_pick(
-    state: InterviewState,
-    incomplete: list,
-    last_skill: Optional[str] = None,
-) -> str:
-    """Pick the lowest-scored skill first, but avoid repeating the same skill."""
     scored = []
     for skill in incomplete:
         node = state.get_node(skill)
@@ -50,32 +28,6 @@ def _adaptive_pick(
 
     scored.sort(key=lambda x: (x[0], x[1], x[2]))
     return scored[0][3]
-
-
-def _bfs_pick(state: InterviewState, incomplete: list) -> str:
-    """Pick the first incomplete skill; simple round-robin style."""
-    return incomplete[0]
-
-
-def _dfs_pick(
-    state: InterviewState,
-    incomplete: list,
-    last_skill: Optional[str] = None,
-) -> str:
-    """Stick with the same skill until verified, then move on."""
-    if last_skill and last_skill in incomplete:
-        return last_skill
-    return _bfs_pick(state, incomplete)
-
-
-def _spaced_pick(
-    state: InterviewState,
-    incomplete: list,
-) -> str:
-    """Prefer skills with fewer questions asked so far (spaced repetition)."""
-    scored = [(state.get_node(s).questions_asked, s) for s in incomplete]
-    scored.sort(key=lambda x: x[0])
-    return scored[0][1]
 
 
 def decide_follow_up(

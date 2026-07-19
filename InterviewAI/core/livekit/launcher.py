@@ -14,7 +14,6 @@ HERE = Path(__file__).resolve().parent
 BASE = HERE.parent.parent
 LIVEKIT_BIN = Path(tempfile.gettempdir()) / "livekit" / "livekit-server.exe"
 LIVEKIT_CONFIG = HERE / "livekit.yaml"
-AGENT_SCRIPT = HERE / "run_agent.py"
 
 _processes: list[subprocess.Popen] = []
 
@@ -67,54 +66,6 @@ def start_web_server():
     return True
 
 
-_agent_pid: int | None = None
-
-
-def is_agent_running() -> bool:
-    global _agent_pid
-    if _agent_pid is None:
-        return False
-    try:
-        proc = subprocess.Popen(["tasklist", "/FI", f"PID eq {_agent_pid}"],
-                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-        out, _ = proc.communicate()
-        return str(_agent_pid) in out.decode()
-    except:
-        return False
-
-
-def start_agent(resume_text="", jd_text="", room_name=""):
-    """Start the agent subprocess with resume+JD context and target room."""
-    global _agent_pid
-    if is_agent_running():
-        log("Agent already running")
-        return
-
-    env = os.environ.copy()
-    env["RESUME_TEXT"] = resume_text[:3000]
-    env["JD_TEXT"] = jd_text[:3000]
-    env["LIVEKIT_URL"] = env.get("LIVEKIT_URL", "ws://localhost:7880")
-    env["LIVEKIT_API_KEY"] = env.get("LIVEKIT_API_KEY", "devkey")
-    env["LIVEKIT_API_SECRET"] = env.get("LIVEKIT_API_SECRET", "secret")
-
-    log(f"Starting voice agent for room: {room_name}")
-    proc = subprocess.Popen(
-        [sys.executable, str(AGENT_SCRIPT), room_name],
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        env=env, cwd=BASE,
-    )
-    _processes.append(proc)
-    _agent_pid = proc.pid
-    for i in range(6):
-        time.sleep(0.5)
-        if proc.poll() is not None:
-            out = proc.stdout.read().decode(errors="replace") if proc.stdout else ""
-            log(f"Agent exited prematurely with code {proc.returncode}: {out[:500]}")
-            return None
-    log(f"Agent PID {proc.pid}")
-    return proc
-
-
 def launch(resume_text="", jd_text="", questions=None):
     """Launch all LiveKit services and return the client URL.
     
@@ -136,7 +87,6 @@ def launch(resume_text="", jd_text="", questions=None):
 
 
 def cleanup():
-    global _agent_pid
     for proc in _processes:
         if proc.poll() is None:
             try:
@@ -145,7 +95,6 @@ def cleanup():
             except:
                 proc.kill()
     _processes.clear()
-    _agent_pid = None
 
 
 atexit.register(cleanup)

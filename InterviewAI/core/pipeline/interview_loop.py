@@ -37,7 +37,7 @@ class InterviewLoop:
         if self.is_complete:
             return None
 
-        skill = pick_next_skill(self.state, strategy="adaptive", last_skill=self.last_skill)
+        skill = pick_next_skill(self.state, last_skill=self.last_skill)
         if not skill:
             return None
 
