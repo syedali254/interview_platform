@@ -394,7 +394,6 @@ with tab1:
             progress.progress(100, text="Pipeline complete!")
             add_log("Pipeline COMPLETE. All modules passed.")
             st.success("✅ Pipeline complete! Check the **Analysis** and **Skill Graph** tabs.")
-            st.balloons()
     else:
         st.info("👆 Provide both a CV and Job Description above, then click **Run Full Pipeline**.")
 
@@ -890,8 +889,7 @@ with tab5:
                             st.session_state["live_current_result"] = None
                             st.rerun()
                 else:
-                    st.success("🎉 Adaptive interview complete!")
-                    st.balloons()
+                    st.success("✅ Adaptive interview complete!")
                     st.markdown("Go to **Step 7: Report** tab to view the full assessment.")
 
             with col_eval:
