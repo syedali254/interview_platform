@@ -258,9 +258,10 @@ async def run_interview(room_name: str):
             interim_results=True, api_key=deepgram_key,
         )
         tts = elevenlabs.TTS(
-            model="eleven_turbo_v2_5",
+            model="eleven_flash_v2_5",
             voice_id="JBFqnCBsd6RMkjVDRZzb",
             api_key=elevenlabs_key,
+            streaming_latency=4,
         )
 
         agent = InterviewAgent(
