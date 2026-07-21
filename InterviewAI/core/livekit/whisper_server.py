@@ -87,9 +87,12 @@ class WhisperHTTPHandler(BaseHTTPRequestHandler):
             env["LIVEKIT_API_KEY"] = LIVEKIT_API_KEY
             env["LIVEKIT_API_SECRET"] = LIVEKIT_API_SECRET
             env["PYTHONUNBUFFERED"] = "1"
-            # Pass pre-generated questions (set by launcher from Step 4)
             if "INTERVIEW_QUESTIONS" in os.environ:
                 env["INTERVIEW_QUESTIONS"] = os.environ["INTERVIEW_QUESTIONS"]
+            if "CV_DATA" in os.environ:
+                env["CV_DATA"] = os.environ["CV_DATA"]
+            if "JD_DATA" in os.environ:
+                env["JD_DATA"] = os.environ["JD_DATA"]
             log_fh = open(agent_log, "w")
             subprocess.Popen(
                 [sys.executable, "-u", str(agent_script), room_name],

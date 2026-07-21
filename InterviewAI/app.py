@@ -744,10 +744,10 @@ with tab5:
                 st.info("🎥 Opens a browser page with live webcam + transcription")
 
                 if st.button("🎧 Launch Live Interview", type="primary", use_container_width=True):
-                    # Save context
                     cv_text = st.session_state.get("cv_data", {}).get("full_text", "")
                     jd_text = st.session_state.get("jd_data", {}).get("full_text", "")
-                    # Collect up to 5 questions from Step 4
+                    cv_data = st.session_state.get("cv_data", {})
+                    jd_data = st.session_state.get("jd_data", {})
                     q_list = []
                     iq = st.session_state.get("interview_questions", {})
                     for section in ("opening", "technical", "behavioural", "closing"):
@@ -758,7 +758,8 @@ with tab5:
                         if len(q_list) >= 5:
                             break
                     from core.livekit.launcher import launch
-                    url = launch(resume_text=cv_text, jd_text=jd_text, questions=q_list or None)
+                    url = launch(resume_text=cv_text, jd_text=jd_text, questions=q_list or None,
+                                 cv_data=cv_data, jd_data=jd_data)
                     if url:
                         st.session_state["livekit_url"] = url
                         st.session_state["livekit_launched"] = True

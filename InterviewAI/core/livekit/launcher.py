@@ -66,18 +66,24 @@ def start_web_server():
     return True
 
 
-def launch(resume_text="", jd_text="", questions=None):
+def launch(resume_text="", jd_text="", questions=None, cv_data=None, jd_data=None):
     """Launch all LiveKit services and return the client URL.
     
     Args:
         resume_text: candidate resume text
         jd_text: job description text
         questions: list of question strings (max 5) from Step 4
+        cv_data: parsed CV data dict (skills, name, etc.)
+        jd_data: parsed JD data dict (job_title, skills, etc.)
     """
     os.environ["RESUME_TEXT"] = (resume_text or "")[:3000]
     os.environ["JD_TEXT"] = (jd_text or "")[:3000]
     if questions:
         os.environ["INTERVIEW_QUESTIONS"] = json.dumps(questions[:5])
+    if cv_data:
+        os.environ["CV_DATA"] = json.dumps(cv_data)
+    if jd_data:
+        os.environ["JD_DATA"] = json.dumps(jd_data)
 
     if not start_livekit_server():
         return None
