@@ -264,6 +264,10 @@ async def run_interview(room_name: str):
             streaming_latency=4,
         )
 
+        turn_cfg = {
+            "endpointing": {"min_delay": 1.5, "max_delay": 4.0},
+            "interruption": {"enabled": False},
+        }
         agent = InterviewAgent(
             questions=questions,
             cv_data=cv_data,
@@ -272,9 +276,12 @@ async def run_interview(room_name: str):
             stt=stt,
             llm=llm_placeholder,
             tts=tts,
+            turn_handling=turn_cfg,
         )
 
-        session = AgentSession()
+        session = AgentSession(
+            turn_handling=turn_cfg,
+        )
 
         @session.on("conversation_item_added")
         def _on_item(ev):
