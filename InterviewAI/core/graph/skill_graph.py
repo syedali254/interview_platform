@@ -214,6 +214,8 @@ class SkillGraph:
     def add_candidate_skills(self, skills: list):
         """Map and add candidate's skills to the graph."""
         for skill_text in skills:
+            if not isinstance(skill_text, str):
+                continue
             uri = self.match_skill(skill_text)
             if uri and uri in self.G:
                 self.G.nodes[uri]["has"] = True
@@ -228,6 +230,8 @@ class SkillGraph:
     def add_job_skills(self, required: list, nice_to_have: list = None):
         """Map and add job requirement skills to the graph."""
         for skill_text in required:
+            if not isinstance(skill_text, str):
+                continue
             uri = self.match_skill(skill_text)
             if uri and uri in self.G:
                 self.G.nodes[uri]["required"] = True
@@ -239,6 +243,8 @@ class SkillGraph:
                 self._required_uris.add(custom_uri)
 
         for skill_text in (nice_to_have or []):
+            if not isinstance(skill_text, str):
+                continue
             uri = self.match_skill(skill_text)
             if uri and uri in self.G:
                 self.G.nodes[uri]["nice"] = True
