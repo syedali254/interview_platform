@@ -117,6 +117,10 @@ def _download_livekit() -> bool:
 
 
 def start_livekit_server() -> bool:
+    if os.environ.get("LIVEKIT_SERVER_EXTERNAL") == "1":
+        log("External LiveKit server configured — skipping local start")
+        return True
+
     if _port_open(7880):
         log("LiveKit server already running")
         return True

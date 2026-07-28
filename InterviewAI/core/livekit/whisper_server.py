@@ -16,6 +16,7 @@ _CLIENT_DIR = Path(__file__).resolve().parent
 LIVEKIT_API_KEY = os.environ.get("LIVEKIT_API_KEY", "devkey")
 LIVEKIT_API_SECRET = os.environ.get("LIVEKIT_API_SECRET", "secret")
 LIVEKIT_WS_URL = os.environ.get("LIVEKIT_URL", "ws://localhost:7880")
+LIVEKIT_PUBLIC_URL = os.environ.get("LIVEKIT_PUBLIC_URL", LIVEKIT_WS_URL)
 
 
 class WhisperHTTPHandler(BaseHTTPRequestHandler):
@@ -104,7 +105,7 @@ class WhisperHTTPHandler(BaseHTTPRequestHandler):
 
             self._json_response({
                 "token": token,
-                "url": LIVEKIT_WS_URL,
+                "url": LIVEKIT_PUBLIC_URL,
                 "room": room_name,
                 "identity": identity,
             })
