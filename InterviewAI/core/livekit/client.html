@@ -55,10 +55,10 @@
   .connection-log .entry.active { color: #fbbf24; }
 
   .interview-panel { flex: 1; display: none; gap: 16px; min-height: 0; }
-  .camera-panel { flex: 0 0 400px; display: flex; flex-direction: column; gap: 12px; }
+  .camera-panel { flex: 0 0 420px; display: flex; flex-direction: column; gap: 10px; }
   .camera-feed {
     flex: 1; background: #000; border-radius: 12px; overflow: hidden;
-    position: relative; min-height: 300px;
+    position: relative; min-height: 260px;
   }
   .camera-feed video { width: 100%; height: 100%; object-fit: cover; }
   .camera-label {
@@ -66,20 +66,50 @@
     background: rgba(0,0,0,0.6); padding: 4px 12px; border-radius: 6px;
     font-size: 0.8rem; color: #94a3b8;
   }
+
   .transcript-box {
-    background: #1e293b; border-radius: 10px; padding: 16px;
-    min-height: 80px; max-height: 140px; overflow-y: auto;
+    background: #1e293b; border-radius: 10px; padding: 12px;
+    min-height: 60px; max-height: 100px; overflow-y: auto;
     border: 1px solid #334155;
   }
-  .transcript-box .label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-  .transcript-box .text { font-size: 0.95rem; line-height: 1.5; color: #f1f5f9; }
+  .transcript-box .label { font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .transcript-box .text { font-size: 0.9rem; line-height: 1.4; color: #f1f5f9; }
   .transcript-box .text.interim { color: #94a3b8; font-style: italic; }
+
+  .mood-panel {
+    background: #1e293b; border-radius: 10px; padding: 12px;
+    border: 1px solid #334155;
+  }
+  .mood-panel .label { font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .mood-row { display: flex; align-items: center; gap: 12px; }
+  .mood-emoji { font-size: 2rem; width: 44px; text-align: center; }
+  .mood-details { flex: 1; }
+  .mood-name { font-size: 0.95rem; font-weight: 600; }
+  .mood-bar-bg {
+    background: #334155; border-radius: 4px; height: 6px; margin-top: 4px; overflow: hidden;
+  }
+  .mood-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+  .mood-pct { font-size: 0.8rem; color: #94a3b8; min-width: 36px; text-align: right; }
+  .mood-loading { font-size: 0.85rem; color: #94a3b8; font-style: italic; }
+  .mood-timeline-label { font-size: 0.65rem; color: #64748b; margin-top: 8px; margin-bottom: 4px; }
+  .mood-timeline {
+    display: flex; gap: 3px; flex-wrap: wrap; max-height: 28px; overflow: hidden;
+  }
+  .mood-timeline .dot {
+    width: 20px; height: 20px; border-radius: 4px; display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; cursor: default; position: relative;
+  }
+  .mood-timeline .dot:hover::after {
+    content: attr(data-tip); position: absolute; top: -22px; left: 50%; transform: translateX(-50%);
+    background: #0f172a; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; white-space: nowrap;
+    z-index: 10; border: 1px solid #334155;
+  }
 
   .conversation-panel { flex: 1; display: flex; flex-direction: column; gap: 12px; }
   .question-display {
     background: linear-gradient(135deg, #1e3a5f, #1e293b);
     border-radius: 12px; padding: 20px; border: 1px solid #3b82f6;
-    min-height: 80px; display: flex; flex-direction: column; justify-content: center;
+    min-height: 70px; display: flex; flex-direction: column; justify-content: center;
   }
   .question-display .label { font-size: 0.7rem; color: #60a5fa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
   .question-display .text { font-size: 1.15rem; line-height: 1.6; color: #f8fafc; }
@@ -116,7 +146,7 @@
 <body>
 
 <div class="header">
-  <h1>🎙 InterviewAI — Live Voice Interview</h1>
+  <h1>InterviewAI — Live Voice Interview</h1>
   <div id="headerStatus" style="font-size:0.85rem;color:#94a3b8;">Not started</div>
 </div>
 
@@ -126,7 +156,7 @@
     <div class="icon">🎤</div>
     <h2>Ready for your interview?</h2>
     <p>Click below to start. Make sure your microphone and camera are connected.</p>
-    <button class="btn-start" id="startBtn">🎤 Start Interview</button>
+    <button class="btn-start" id="startBtn">Start Interview</button>
     <div class="connection-log" id="logPanel"></div>
   </div>
 
@@ -135,31 +165,46 @@
     <div class="camera-panel">
       <div class="camera-feed">
         <video id="webcam" autoplay playsinline muted></video>
-        <div class="camera-label">📷 You</div>
+        <div class="camera-label">You</div>
+      </div>
+      <div class="mood-panel" id="moodPanel">
+        <div class="label">Facial Expression</div>
+        <div class="mood-loading" id="moodLoading">Loading mood detection...</div>
+        <div class="mood-row" id="moodRow" style="display:none;">
+          <div class="mood-emoji" id="moodEmoji">😐</div>
+          <div class="mood-details">
+            <div class="mood-name" id="moodName">Neutral</div>
+            <div class="mood-bar-bg"><div class="mood-bar-fill" id="moodBar" style="width:0%;background:#94a3b8;"></div></div>
+          </div>
+          <div class="mood-pct" id="moodPct">0%</div>
+        </div>
+        <div class="mood-timeline-label">Timeline</div>
+        <div class="mood-timeline" id="moodTimeline"></div>
       </div>
       <div class="transcript-box">
-        <div class="label">🎤 Your Speech</div>
+        <div class="label">Your Speech</div>
         <div class="text" id="transcriptText">Waiting...</div>
       </div>
     </div>
     <div class="conversation-panel">
       <div class="question-display">
-        <div class="label">📋 Question</div>
+        <div class="label">Question</div>
         <div class="text thinking" id="questionText">Interview starting...</div>
       </div>
       <div class="chat-log" id="chatLog">
-        <div class="label">💬 Conversation</div>
+        <div class="label">Conversation</div>
       </div>
     </div>
   </div>
 </div>
 
 <div class="controls" id="controls" style="display:none;">
-  <button class="btn-end" id="endBtn">⏹ End Interview</button>
-  <div class="mic-indicator" id="micIndicator"><span id="micLabel">🎤 Mic inactive</span></div>
+  <button class="btn-end" id="endBtn">End Interview</button>
+  <div class="mic-indicator" id="micIndicator"><span id="micLabel">Mic inactive</span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const webcam = $('webcam');
@@ -175,10 +220,29 @@ const micLabel = $('micLabel');
 const micIndicator = $('micIndicator');
 const headerStatus = $('headerStatus');
 const logPanel = $('logPanel');
+const moodEmoji = $('moodEmoji');
+const moodName = $('moodName');
+const moodBar = $('moodBar');
+const moodPct = $('moodPct');
+const moodRow = $('moodRow');
+const moodLoading = $('moodLoading');
+const moodTimeline = $('moodTimeline');
+
+const EMOJI_MAP = {
+  neutral: '😐', happy: '😊', sad: '😢', angry: '😠',
+  fearful: '😨', disgusted: '🤢', surprised: '😲',
+};
+const COLOR_MAP = {
+  neutral: '#94a3b8', happy: '#4ade80', sad: '#60a5fa', angry: '#ef4444',
+  fearful: '#f59e0b', disgusted: '#a855f7', surprised: '#fbbf24',
+};
 
 let room = null;
 let camStream = null;
 let conversationLog = [];
+let moodLog = [];
+let moodInterval = null;
+let moodModelLoaded = false;
 
 function addLog(text, type) {
   logPanel.style.display = 'block';
@@ -192,7 +256,7 @@ function addLog(text, type) {
 function addChat(role, text) {
   const div = document.createElement('div');
   div.className = `chat-msg ${role}`;
-  div.innerHTML = `<div class="role">${role === 'agent' ? '🤖 Interviewer' : '🧑 You'}</div>${text}`;
+  div.innerHTML = `<div class="role">${role === 'agent' ? 'Interviewer' : 'You'}</div>${text}`;
   chatLog.appendChild(div);
   chatLog.scrollTop = chatLog.scrollHeight;
   conversationLog.push({ role, text, timestamp: new Date().toISOString() });
@@ -206,6 +270,95 @@ function setQuestion(text) {
 function setTranscript(text, isFinal) {
   transcriptText.className = `text${isFinal ? '' : ' interim'}`;
   transcriptText.textContent = text || 'Waiting...';
+}
+
+function addMoodDot(emotion, confidence) {
+  const dot = document.createElement('div');
+  dot.className = 'dot';
+  dot.textContent = EMOJI_MAP[emotion] || '😐';
+  dot.style.background = (COLOR_MAP[emotion] || '#94a3b8') + '33';
+  dot.dataset.tip = `${emotion} ${Math.round(confidence)}%`;
+  moodTimeline.appendChild(dot);
+  moodTimeline.scrollLeft = moodTimeline.scrollWidth;
+}
+
+function updateMoodDisplay(emotion, confidence) {
+  moodEmoji.textContent = EMOJI_MAP[emotion] || '😐';
+  moodName.textContent = emotion.charAt(0).toUpperCase() + emotion.slice(1);
+  const pct = Math.round(confidence * 100);
+  moodBar.style.width = pct + '%';
+  moodBar.style.background = COLOR_MAP[emotion] || '#94a3b8';
+  moodPct.textContent = pct + '%';
+  if (moodRow.style.display === 'none') moodRow.style.display = 'flex';
+}
+
+async function loadFaceModels() {
+  try {
+    const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
+    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
+    moodModelLoaded = true;
+    moodLoading.textContent = 'Mood detection ready';
+    setTimeout(() => { moodLoading.style.display = 'none'; }, 1000);
+    addLog('Facial expression model loaded', 'success');
+  } catch (err) {
+    moodLoading.textContent = 'Mood detection unavailable (model load failed)';
+    addLog('Face model error: ' + err.message, 'error');
+  }
+}
+
+async function detectMood() {
+  if (!moodModelLoaded || !webcam.videoWidth) return;
+  try {
+    const det = await faceapi
+      .detectSingleFace(webcam, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.3 }))
+      .withFaceExpressions();
+    if (det && det.expressions) {
+      const sorted = Object.entries(det.expressions).sort((a, b) => b[1] - a[1]);
+      const [emotion, confidence] = sorted[0];
+      if (confidence > 0.2) {
+        updateMoodDisplay(emotion, confidence);
+        addMoodDot(emotion, confidence);
+        moodLog.push({
+          emotion, confidence: Math.round(confidence * 100),
+          time: new Date().toISOString(),
+          elapsed: Math.floor((Date.now() - moodLog[0]?.start || Date.now()) / 1000) + 's',
+        });
+      }
+    }
+  } catch (e) {
+    // skip frame on error
+  }
+}
+
+function startMoodDetection() {
+  if (moodInterval) clearInterval(moodInterval);
+  moodLog = [{ start: Date.now() }];
+  moodTimeline.innerHTML = '';
+  moodRow.style.display = 'none';
+  loadFaceModels();
+  moodInterval = setInterval(detectMood, 2000);
+}
+
+function stopMoodDetection() {
+  if (moodInterval) { clearInterval(moodInterval); moodInterval = null; }
+}
+
+function getMoodSummary() {
+  const entries = moodLog.filter(m => m.emotion);
+  if (entries.length === 0) return { summary: 'No data', dominant: 'unknown', timeline: [] };
+  const counts = {};
+  for (const m of entries) { counts[m.emotion] = (counts[m.emotion] || 0) + 1; }
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const dominant = sorted[0][0];
+  const pct = Math.round(sorted[0][1] / entries.length * 100);
+  return {
+    dominant, confidence_pct: pct,
+    breakdown: counts,
+    total_readings: entries.length,
+    timeline: entries,
+    summary: `${dominant} (${pct}% of ${entries.length} readings)`,
+  };
 }
 
 async function getToken() {
@@ -225,19 +378,19 @@ function switchToInterview() {
 async function connect() {
   try {
     startBtn.disabled = true;
-    startBtn.textContent = '⏳ Connecting...';
+    startBtn.textContent = 'Connecting...';
     startBtn.className = 'btn-start connecting';
     addLog('Requesting interview token...', 'active');
 
     const { token, url, room: roomName, identity } = await getToken();
     addLog(`Connected to session: ${roomName}`, 'success');
 
-    startBtn.textContent = '⏳ Getting camera & mic...';
+    startBtn.textContent = 'Getting camera & mic...';
     camStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     webcam.srcObject = camStream;
     addLog('Camera and microphone ready', 'success');
 
-    startBtn.textContent = '⏳ Joining room...';
+    startBtn.textContent = 'Joining room...';
     room = new LivekitClient.Room({ adaptiveStream: true, dynacast: true });
 
     room.on('dataReceived', (payload) => {
@@ -257,11 +410,12 @@ async function connect() {
     });
 
     room.on('disconnected', () => {
+      stopMoodDetection();
       if (camStream) camStream.getTracks().forEach(t => t.stop());
       interviewPanel.style.display = 'none';
       welcomePanel.style.display = 'flex';
       controls.style.display = 'none';
-      startBtn.textContent = '🔄 Reconnect';
+      startBtn.textContent = 'Reconnect';
       startBtn.disabled = false;
       startBtn.className = 'btn-start';
       headerStatus.textContent = 'Disconnected';
@@ -285,16 +439,17 @@ async function connect() {
     await room.localParticipant.publishTrack(audioTrack, { source: 'microphone' });
     await room.localParticipant.publishTrack(videoTrack, { source: 'camera' });
 
-    startBtn.textContent = '✅ Interview Started';
+    startBtn.textContent = 'Interview Started';
     startBtn.className = 'btn-start connected';
     addLog('Interview started — AI agent speaking...', 'success');
-    setQuestion('⏳ AI agent is speaking...');
+    setQuestion('AI agent is speaking...');
     setTranscript('The AI is speaking — listen carefully', false);
     switchToInterview();
+    startMoodDetection();
 
   } catch (err) {
     console.error(err);
-    startBtn.textContent = '🔄 Retry';
+    startBtn.textContent = 'Retry';
     startBtn.className = 'btn-start error';
     startBtn.disabled = false;
     addLog(`Error: ${err.message}`, 'error');
@@ -303,14 +458,20 @@ async function connect() {
 }
 
 function disconnect() {
+  stopMoodDetection();
   if (camStream) camStream.getTracks().forEach(t => t.stop());
   if (room) room.disconnect();
   room = null;
   camStream = null;
+  const payload = {
+    session: 'manual',
+    conversation: conversationLog,
+    mood: getMoodSummary(),
+  };
   fetch('/save_transcript', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ session: 'manual', conversation: conversationLog }),
+    body: JSON.stringify(payload),
   }).catch(() => {});
 }
 
