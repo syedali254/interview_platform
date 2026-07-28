@@ -1,4 +1,4 @@
-"""Manages LiveKit processes for integration with Streamlit Step 6."""
+"""Manages LiveKit processes — auto-downloads server binary if missing."""
 
 import json
 import os
@@ -7,13 +7,44 @@ import time
 import subprocess
 import tempfile
 import socket
+import platform
+import urllib.request
+import urllib.error
+import hashlib
 from pathlib import Path
 import atexit
 
+LIVEKIT_VERSION = "1.6.1"
+
 HERE = Path(__file__).resolve().parent
 BASE = HERE.parent.parent
-LIVEKIT_BIN = Path(tempfile.gettempdir()) / "livekit" / "livekit-server.exe"
+
+# Binary path depends on platform
+_system = platform.system().lower()
+_machine = platform.machine().lower()
+
+if _system == "windows":
+    _bin_name = "livekit-server.exe"
+    _download_suffix = "windows_amd64.exe"
+elif _system == "linux":
+    _bin_name = "livekit-server"
+    _download_suffix = "linux_amd64.tar.gz"
+elif _system == "darwin":
+    if _machine in ("arm64", "aarch64"):
+        _download_suffix = "darwin_arm64.tar.gz"
+    else:
+        _download_suffix = "darwin_amd64.tar.gz"
+    _bin_name = "livekit-server"
+else:
+    _download_suffix = None
+    _bin_name = "livekit-server"
+
+LIVEKIT_BIN = Path(tempfile.gettempdir()) / "livekit" / _bin_name
 LIVEKIT_CONFIG = HERE / "livekit.yaml"
+LIVEKIT_DL_URL = (
+    f"https://github.com/livekit/livekit/releases/download/v{LIVEKIT_VERSION}/"
+    f"livekit-server_{_download_suffix}"
+) if _download_suffix else None
 
 _processes: list[subprocess.Popen] = []
 
@@ -33,14 +64,73 @@ def _port_open(port: int) -> bool:
         return False
 
 
+def _download_livekit() -> bool:
+    """Download the LiveKit server binary from GitHub releases."""
+    if not LIVEKIT_DL_URL:
+        log(f"Unsupported platform: {_system} {_machine}")
+        return False
+
+    LIVEKIT_BIN.parent.mkdir(parents=True, exist_ok=True)
+
+    log(f"Downloading LiveKit server v{LIVEKIT_VERSION} for {_system}...")
+    log(f"URL: {LIVEKIT_DL_URL}")
+
+    try:
+        req = urllib.request.Request(
+            LIVEKIT_DL_URL,
+            headers={"User-Agent": "InterviewAI/1.0"},
+        )
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            data = resp.read()
+    except Exception as e:
+        log(f"Download failed: {e}")
+        return False
+
+    if _download_suffix.endswith(".tar.gz"):
+        import tarfile
+        import io
+        try:
+            with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as tar:
+                members = tar.getmembers()
+                for m in members:
+                    if m.name.endswith(_bin_name) or "livekit-server" in m.name and not m.name.endswith(".yaml"):
+                        with tar.extractfile(m) as f:
+                            bin_data = f.read()
+                        LIVEKIT_BIN.write_bytes(bin_data)
+                        LIVEKIT_BIN.chmod(0o755)
+                        log(f"Extracted {m.name} -> {LIVEKIT_BIN}")
+                        return True
+                log("Binary not found in archive")
+                return False
+        except Exception as e:
+            log(f"Extraction failed: {e}")
+            return False
+    else:
+        try:
+            LIVEKIT_BIN.write_bytes(data)
+            LIVEKIT_BIN.chmod(0o755)
+            log(f"Saved to {LIVEKIT_BIN}")
+            return True
+        except Exception as e:
+            log(f"Save failed: {e}")
+            return False
+
+
 def start_livekit_server() -> bool:
     if _port_open(7880):
         log("LiveKit server already running")
         return True
+
     if not LIVEKIT_BIN.exists():
         log(f"LiveKit binary not found at {LIVEKIT_BIN}")
-        log("Download from https://github.com/livekit/livekit/releases")
-        return False
+        log("Attempting auto-download...")
+        if not _download_livekit():
+            log("Auto-download failed. Try manually:")
+            log(f"  {LIVEKIT_DL_URL}")
+            log("  Save to:", LIVEKIT_BIN)
+            return False
+        log("Download complete.")
+
     log("Starting LiveKit server...")
     proc = subprocess.Popen(
         [str(LIVEKIT_BIN), "--config", str(LIVEKIT_CONFIG)],
@@ -57,7 +147,6 @@ def start_livekit_server() -> bool:
 
 
 def start_web_server():
-    """Start the mini web server (tokens + client page + whisper STT)."""
     log("Starting/restarting web server...")
     from core.livekit.whisper_server import start_whisper_server
     start_whisper_server(force_restart=True)
@@ -67,15 +156,6 @@ def start_web_server():
 
 
 def launch(resume_text="", jd_text="", questions=None, cv_data=None, jd_data=None):
-    """Launch all LiveKit services and return the client URL.
-    
-    Args:
-        resume_text: candidate resume text
-        jd_text: job description text
-        questions: list of question strings (max 5) from Step 4
-        cv_data: parsed CV data dict (skills, name, etc.)
-        jd_data: parsed JD data dict (job_title, skills, etc.)
-    """
     os.environ["RESUME_TEXT"] = (resume_text or "")[:3000]
     os.environ["JD_TEXT"] = (jd_text or "")[:3000]
     if questions:
@@ -104,3 +184,17 @@ def cleanup():
 
 
 atexit.register(cleanup)
+
+
+if __name__ == "__main__":
+    url = launch()
+    if url:
+        print(f"\nInterviewAI LiveKit client: {url}")
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print("\nShutting down...")
+    else:
+        print("\nFailed to start. Check logs above.")
+        sys.exit(1)
