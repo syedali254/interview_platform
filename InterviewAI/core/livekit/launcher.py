@@ -163,7 +163,7 @@ def launch(resume_text="", jd_text="", questions=None, cv_data=None, jd_data=Non
     os.environ["RESUME_TEXT"] = (resume_text or "")[:3000]
     os.environ["JD_TEXT"] = (jd_text or "")[:3000]
     if questions:
-        os.environ["INTERVIEW_QUESTIONS"] = json.dumps(questions[:5])
+        os.environ["INTERVIEW_QUESTIONS"] = json.dumps(questions)
     if cv_data:
         os.environ["CV_DATA"] = json.dumps(cv_data)
     if jd_data:

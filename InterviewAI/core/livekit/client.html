@@ -5,478 +5,673 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>InterviewAI — Live Interview</title>
 <style>
+  :root {
+    --bg-primary: #0c0f1a;
+    --bg-secondary: #141829;
+    --bg-card: #1a1f36;
+    --border: #2a3050;
+    --accent: #6366f1;
+    --accent-glow: rgba(99, 102, 241, 0.3);
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --radius: 12px;
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #0f172a; color: #e2e8f0;
-    height: 100vh; display: flex; flex-direction: column;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-primary); color: var(--text-primary);
+    height: 100vh; overflow: hidden;
   }
+  .screen { display: none; height: 100vh; flex-direction: column; }
+  .screen.active { display: flex; }
 
-  .header {
-    background: #1e293b; padding: 12px 24px;
+  /* ── Setup Screen ── */
+  .setup-screen {
+    justify-content: center; align-items: center; gap: 32px;
+    background: radial-gradient(ellipse at center, #1a1f36 0%, #0c0f1a 70%);
+  }
+  .setup-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 40px; max-width: 600px; width: 90%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+  .setup-card h1 { font-size: 1.8rem; margin-bottom: 8px; color: var(--accent); }
+  .setup-card p { color: var(--text-secondary); margin-bottom: 24px; line-height: 1.6; }
+  .device-check { display: flex; gap: 24px; margin-bottom: 24px; }
+  .device-item {
+    flex: 1; background: var(--bg-secondary); border-radius: var(--radius);
+    padding: 16px; text-align: center; border: 2px solid var(--border);
+    transition: border-color 0.3s;
+  }
+  .device-item.ok { border-color: var(--success); }
+  .device-item.fail { border-color: var(--danger); }
+  .device-item .icon { font-size: 2rem; margin-bottom: 8px; }
+  .device-item .label { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; }
+  .device-item .status { font-size: 0.75rem; font-weight: 600; }
+  .device-item.ok .status { color: var(--success); }
+  .device-item.fail .status { color: var(--danger); }
+  .preview-row { display: flex; gap: 16px; margin-bottom: 24px; align-items: center; }
+  .cam-preview {
+    width: 200px; height: 150px; border-radius: var(--radius); background: #000;
+    overflow: hidden; border: 2px solid var(--border);
+  }
+  .cam-preview video { width: 100%; height: 100%; object-fit: cover; }
+  .mic-meter {
+    flex: 1; display: flex; flex-direction: column; gap: 8px;
+    background: var(--bg-secondary); padding: 16px; border-radius: var(--radius);
+  }
+  .mic-meter .label { font-size: 0.8rem; color: var(--text-secondary); }
+  .meter-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .meter-fill { height: 100%; background: var(--success); width: 0; transition: width 0.1s; border-radius: 4px; }
+  .error-msg {
+    background: rgba(239,68,68,0.1); border: 1px solid var(--danger);
+    border-radius: 8px; padding: 12px; color: var(--danger);
+    font-size: 0.85rem; margin-bottom: 16px; display: none;
+  }
+  .btn {
+    padding: 14px 32px; border: none; border-radius: 10px;
+    font-size: 1rem; cursor: pointer; font-weight: 600;
+    transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); color: white; width: 100%; justify-content: center; }
+  .btn-primary:hover:not(:disabled) { background: #5558e6; box-shadow: 0 4px 20px var(--accent-glow); }
+  .btn-secondary { background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); }
+  .btn-danger { background: var(--danger); color: white; }
+  .btn-sm { padding: 8px 16px; font-size: 0.85rem; }
+
+  /* ── Interview Screen ── */
+  .interview-screen { background: var(--bg-primary); }
+  .interview-header {
     display: flex; align-items: center; justify-content: space-between;
-    border-bottom: 1px solid #334155;
+    padding: 12px 24px; background: var(--bg-secondary); border-bottom: 1px solid var(--border);
   }
-  .header h1 { font-size: 1.2rem; color: #60a5fa; }
-
-  .main { flex: 1; display: flex; padding: 16px; min-height: 0; }
-
-  .welcome-panel {
-    flex: 1; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 24px;
+  .interview-header h2 { font-size: 1.1rem; color: var(--accent); }
+  .header-info { display: flex; gap: 16px; align-items: center; }
+  .badge {
+    padding: 4px 12px; border-radius: 16px; font-size: 0.75rem; font-weight: 600;
+    display: flex; align-items: center; gap: 6px;
   }
-  .welcome-panel .icon { font-size: 4rem; }
-  .welcome-panel h2 { font-size: 1.8rem; color: #f1f5f9; }
-  .welcome-panel p { color: #94a3b8; font-size: 1rem; max-width: 400px; text-align: center; line-height: 1.6; }
-  .btn-start {
-    padding: 16px 48px; border: none; border-radius: 12px;
-    font-size: 1.2rem; cursor: pointer; font-weight: 600;
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-    color: white; transition: all 0.3s;
+  .badge-connected { background: rgba(16,185,129,0.15); color: var(--success); }
+  .badge-phase { background: rgba(99,102,241,0.15); color: var(--accent); }
+  .badge-time { background: rgba(245,158,11,0.15); color: var(--warning); }
+  .interview-body { flex: 1; display: flex; gap: 16px; padding: 16px; min-height: 0; }
+  .left-panel { flex: 0 0 360px; display: flex; flex-direction: column; gap: 12px; }
+  .video-container {
+    position: relative; border-radius: var(--radius); overflow: hidden;
+    background: #000; aspect-ratio: 4/3; border: 2px solid var(--border);
   }
-  .btn-start:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(37,99,235,0.4); }
-  .btn-start:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
-  .btn-start.connecting { background: linear-gradient(135deg, #f59e0b, #d97706); animation: pulse 1.5s infinite; }
-  .btn-start.connected { background: linear-gradient(135deg, #22c55e, #16a34a); cursor: default; }
-  .btn-start.error { background: linear-gradient(135deg, #ef4444, #dc2626); }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
-
-  .connection-log {
-    background: #1e293b; border-radius: 10px; padding: 16px;
-    min-width: 350px; max-height: 200px; overflow-y: auto;
-    border: 1px solid #334155; display: none;
+  .video-container video { width: 100%; height: 100%; object-fit: cover; }
+  .video-overlay {
+    position: absolute; bottom: 8px; left: 8px; right: 8px;
+    display: flex; justify-content: space-between; align-items: center;
   }
-  .connection-log .entry {
-    padding: 6px 0; font-size: 0.85rem; color: #94a3b8;
-    border-bottom: 1px solid #1e293b;
+  .video-label {
+    background: rgba(0,0,0,0.7); padding: 4px 10px; border-radius: 6px;
+    font-size: 0.7rem; color: var(--text-secondary);
   }
-  .connection-log .entry.success { color: #4ade80; }
-  .connection-log .entry.error { color: #f87171; }
-  .connection-log .entry.active { color: #fbbf24; }
-
-  .interview-panel { flex: 1; display: none; gap: 16px; min-height: 0; }
-  .camera-panel { flex: 0 0 420px; display: flex; flex-direction: column; gap: 10px; }
-  .camera-feed {
-    flex: 1; background: #000; border-radius: 12px; overflow: hidden;
-    position: relative; min-height: 260px;
+  .emotion-badge {
+    background: rgba(0,0,0,0.7); padding: 4px 10px; border-radius: 6px;
+    font-size: 0.7rem; color: var(--warning);
   }
-  .camera-feed video { width: 100%; height: 100%; object-fit: cover; }
-  .camera-label {
-    position: absolute; bottom: 12px; left: 12px;
-    background: rgba(0,0,0,0.6); padding: 4px 12px; border-radius: 6px;
-    font-size: 0.8rem; color: #94a3b8;
+  .realtime-transcript {
+    background: var(--bg-card); border-radius: var(--radius); padding: 14px;
+    border: 1px solid var(--border); min-height: 80px; max-height: 120px; overflow-y: auto;
   }
-
-  .transcript-box {
-    background: #1e293b; border-radius: 10px; padding: 12px;
-    min-height: 60px; max-height: 100px; overflow-y: auto;
-    border: 1px solid #334155;
+  .realtime-transcript .label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .realtime-transcript .text { font-size: 0.9rem; color: var(--text-primary); line-height: 1.5; }
+  .realtime-transcript .text.interim { color: var(--text-secondary); font-style: italic; }
+  .right-panel { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .question-card {
+    background: linear-gradient(135deg, #1e2a4a, var(--bg-card));
+    border: 1px solid var(--accent); border-radius: var(--radius); padding: 20px;
+    min-height: 100px;
   }
-  .transcript-box .label { font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-  .transcript-box .text { font-size: 0.9rem; line-height: 1.4; color: #f1f5f9; }
-  .transcript-box .text.interim { color: #94a3b8; font-style: italic; }
-
-  .mood-panel {
-    background: #1e293b; border-radius: 10px; padding: 12px;
-    border: 1px solid #334155;
+  .question-card .label { font-size: 0.7rem; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .question-card .q-text { font-size: 1.1rem; line-height: 1.6; color: var(--text-primary); }
+  .chat-history {
+    flex: 1; background: var(--bg-card); border-radius: var(--radius);
+    padding: 16px; overflow-y: auto; border: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 10px;
   }
-  .mood-panel .label { font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-  .mood-row { display: flex; align-items: center; gap: 12px; }
-  .mood-emoji { font-size: 2rem; width: 44px; text-align: center; }
-  .mood-details { flex: 1; }
-  .mood-name { font-size: 0.95rem; font-weight: 600; }
-  .mood-bar-bg {
-    background: #334155; border-radius: 4px; height: 6px; margin-top: 4px; overflow: hidden;
-  }
-  .mood-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
-  .mood-pct { font-size: 0.8rem; color: #94a3b8; min-width: 36px; text-align: right; }
-  .mood-loading { font-size: 0.85rem; color: #94a3b8; font-style: italic; }
-  .mood-timeline-label { font-size: 0.65rem; color: #64748b; margin-top: 8px; margin-bottom: 4px; }
-  .mood-timeline {
-    display: flex; gap: 3px; flex-wrap: wrap; max-height: 28px; overflow: hidden;
-  }
-  .mood-timeline .dot {
-    width: 20px; height: 20px; border-radius: 4px; display: flex; align-items: center; justify-content: center;
-    font-size: 0.75rem; cursor: default; position: relative;
-  }
-  .mood-timeline .dot:hover::after {
-    content: attr(data-tip); position: absolute; top: -22px; left: 50%; transform: translateX(-50%);
-    background: #0f172a; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; white-space: nowrap;
-    z-index: 10; border: 1px solid #334155;
-  }
-
-  .conversation-panel { flex: 1; display: flex; flex-direction: column; gap: 12px; }
-  .question-display {
-    background: linear-gradient(135deg, #1e3a5f, #1e293b);
-    border-radius: 12px; padding: 20px; border: 1px solid #3b82f6;
-    min-height: 70px; display: flex; flex-direction: column; justify-content: center;
-  }
-  .question-display .label { font-size: 0.7rem; color: #60a5fa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-  .question-display .text { font-size: 1.15rem; line-height: 1.6; color: #f8fafc; }
-  .question-display .text.thinking { color: #94a3b8; font-style: italic; }
-
-  .chat-log {
-    flex: 1; background: #1e293b; border-radius: 10px; padding: 16px;
-    overflow-y: auto; border: 1px solid #334155;
-    display: flex; flex-direction: column; gap: 12px;
-  }
-  .chat-log .label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
   .chat-msg {
     padding: 10px 14px; border-radius: 10px; max-width: 85%;
-    font-size: 0.9rem; line-height: 1.5;
+    font-size: 0.85rem; line-height: 1.5;
   }
-  .chat-msg.agent { background: #1e3a5f; color: #e2e8f0; align-self: flex-start; border: 1px solid #3b82f6; }
-  .chat-msg.candidate { background: #1a3a2a; color: #e2e8f0; align-self: flex-end; border: 1px solid #22c55e; }
-  .chat-msg .role { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-  .chat-msg.agent .role { color: #60a5fa; }
-  .chat-msg.candidate .role { color: #4ade80; }
+  .chat-msg.agent { background: #1e2a4a; border: 1px solid var(--accent); align-self: flex-start; }
+  .chat-msg.candidate { background: #1a3a2a; border: 1px solid var(--success); align-self: flex-end; }
+  .chat-msg .role { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; margin-bottom: 3px; color: var(--text-muted); }
+  .warning-banner {
+    display: none; position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+    background: rgba(239,68,68,0.95); color: white; padding: 12px 24px;
+    border-radius: 10px; font-weight: 600; z-index: 999; animation: slideDown 0.3s;
+    box-shadow: 0 4px 20px rgba(239,68,68,0.4);
+  }
+  @keyframes slideDown { from { opacity:0; transform:translateX(-50%) translateY(-20px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+  .interview-controls {
+    padding: 12px 24px; background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+    display: flex; gap: 12px; align-items: center;
+  }
+  .interview-controls .spacer { flex: 1; }
 
-  .controls { padding: 12px 24px; background: #1e293b; border-top: 1px solid #334155; display: flex; gap: 12px; align-items: center; }
-  .btn-end {
-    padding: 10px 24px; border: none; border-radius: 8px;
-    font-size: 0.9rem; cursor: pointer; font-weight: 500;
-    background: #dc2626; color: white; transition: all 0.2s;
+  /* ── Dashboard Screen ── */
+  .dashboard-screen { overflow-y: auto; padding: 24px; gap: 24px; }
+  .dash-header { text-align: center; margin-bottom: 24px; }
+  .dash-header h1 { font-size: 2rem; color: var(--accent); margin-bottom: 4px; }
+  .dash-header p { color: var(--text-secondary); }
+  .metrics-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .metric-card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; text-align: center;
   }
-  .btn-end:hover { background: #b91c1c; }
-  .btn-end:disabled { opacity: 0.5; cursor: not-allowed; }
-  .mic-indicator { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: #94a3b8; margin-left: auto; }
-  .mic-indicator.active { color: #22c55e; }
+  .metric-card .value { font-size: 1.8rem; font-weight: 700; color: var(--accent); }
+  .metric-card .label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-top: 4px; }
+  .dash-section {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; margin-bottom: 20px;
+  }
+  .dash-section h3 { font-size: 1.1rem; margin-bottom: 12px; color: var(--text-primary); }
+  .transcript-item { padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .transcript-item:last-child { border-bottom: none; }
+  .transcript-item .role { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 2px; }
+  .transcript-item .msg { font-size: 0.9rem; line-height: 1.5; }
+  .event-item { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); align-items: center; }
+  .event-item .time { font-size: 0.75rem; color: var(--text-muted); min-width: 60px; }
+  .event-item .desc { font-size: 0.85rem; }
+  .emotion-bar { display: flex; gap: 4px; align-items: flex-end; height: 150px; padding-top: 20px; }
+  .emotion-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .emotion-col .bar { width: 100%; border-radius: 4px 4px 0 0; min-height: 4px; }
+  .emotion-col .lbl { font-size: 0.6rem; color: var(--text-muted); text-align: center; }
 </style>
 </head>
 <body>
 
-<div class="header">
-  <h1>InterviewAI — Live Voice Interview</h1>
-  <div id="headerStatus" style="font-size:0.85rem;color:#94a3b8;">Not started</div>
+<!-- ══════════ SETUP SCREEN ══════════ -->
+<div class="screen setup-screen active" id="setupScreen">
+  <div class="setup-card">
+    <h1>&#127897; InterviewAI</h1>
+    <p>Before we begin, let's make sure your camera and microphone are working properly. Click the button below to test your devices.</p>
+
+    <div class="device-check">
+      <div class="device-item" id="camCheck">
+        <div class="icon">&#128247;</div>
+        <div class="label">Camera</div>
+        <div class="status" id="camStatus">Not tested</div>
+      </div>
+      <div class="device-item" id="micCheck">
+        <div class="icon">&#127908;</div>
+        <div class="label">Microphone</div>
+        <div class="status" id="micStatus">Not tested</div>
+      </div>
+    </div>
+
+    <div class="preview-row">
+      <div class="cam-preview">
+        <video id="previewVideo" autoplay playsinline muted></video>
+      </div>
+      <div class="mic-meter">
+        <div class="label">&#127908; Mic Level</div>
+        <div class="meter-bar"><div class="meter-fill" id="meterFill"></div></div>
+        <div class="label" id="micLevelText" style="font-size:0.7rem">Click Test to start</div>
+      </div>
+    </div>
+
+    <div class="error-msg" id="setupError"></div>
+
+    <button class="btn btn-secondary btn-sm" id="testBtn" style="margin-bottom:12px; width:100%; justify-content:center">&#128260; Test Camera &amp; Mic</button>
+    <button class="btn btn-primary" id="beginBtn" disabled>&#9654; Begin Interview</button>
+  </div>
 </div>
 
-<div class="main">
-  <!-- Welcome Panel -->
-  <div class="welcome-panel" id="welcomePanel">
-    <div class="icon">🎤</div>
-    <h2>Ready for your interview?</h2>
-    <p>Click below to start. Make sure your microphone and camera are connected.</p>
-    <button class="btn-start" id="startBtn">Start Interview</button>
-    <div class="connection-log" id="logPanel"></div>
+<!-- ══════════ INTERVIEW SCREEN ══════════ -->
+<div class="screen interview-screen" id="interviewScreen">
+  <div class="warning-banner" id="warningBanner"></div>
+
+  <div class="interview-header">
+    <h2>&#127897; InterviewAI &#8212; Live Session</h2>
+    <div class="header-info">
+      <span class="badge badge-phase" id="phaseBadge">Greeting</span>
+      <span class="badge badge-time" id="timeBadge">&#9201; 0:00</span>
+      <span class="badge badge-connected" id="connBadge">&#9679; Connected</span>
+    </div>
   </div>
 
-  <!-- Interview Panel -->
-  <div class="interview-panel" id="interviewPanel">
-    <div class="camera-panel">
-      <div class="camera-feed">
-        <video id="webcam" autoplay playsinline muted></video>
-        <div class="camera-label">You</div>
-      </div>
-      <div class="mood-panel" id="moodPanel">
-        <div class="label">Facial Expression</div>
-        <div class="mood-loading" id="moodLoading">Loading mood detection...</div>
-        <div class="mood-row" id="moodRow" style="display:none;">
-          <div class="mood-emoji" id="moodEmoji">😐</div>
-          <div class="mood-details">
-            <div class="mood-name" id="moodName">Neutral</div>
-            <div class="mood-bar-bg"><div class="mood-bar-fill" id="moodBar" style="width:0%;background:#94a3b8;"></div></div>
-          </div>
-          <div class="mood-pct" id="moodPct">0%</div>
+  <div class="interview-body">
+    <div class="left-panel">
+      <div class="video-container">
+        <video id="interviewVideo" autoplay playsinline muted></video>
+        <div class="video-overlay">
+          <span class="video-label">You</span>
+          <span class="emotion-badge" id="emotionBadge">&#128528; Neutral</span>
         </div>
-        <div class="mood-timeline-label">Timeline</div>
-        <div class="mood-timeline" id="moodTimeline"></div>
       </div>
-      <div class="transcript-box">
-        <div class="label">Your Speech</div>
-        <div class="text" id="transcriptText">Waiting...</div>
+      <div class="realtime-transcript">
+        <div class="label">&#127908; Live Transcription</div>
+        <div class="text" id="liveTranscript">Waiting for speech...</div>
       </div>
     </div>
-    <div class="conversation-panel">
-      <div class="question-display">
-        <div class="label">Question</div>
-        <div class="text thinking" id="questionText">Interview starting...</div>
+
+    <div class="right-panel">
+      <div class="question-card">
+        <div class="label">&#128203; Current Question (Q<span id="qNum">0</span>)</div>
+        <div class="q-text" id="questionText">Waiting for the interview to begin...</div>
       </div>
-      <div class="chat-log" id="chatLog">
-        <div class="label">Conversation</div>
-      </div>
+      <div class="chat-history" id="chatHistory"></div>
     </div>
+  </div>
+
+  <div class="interview-controls">
+    <button class="btn btn-danger btn-sm" id="endBtn">&#9209; End Interview</button>
+    <div class="spacer"></div>
+    <span style="font-size:0.8rem; color: var(--text-muted)" id="statusLabel">&#127908; Listening</span>
   </div>
 </div>
 
-<div class="controls" id="controls" style="display:none;">
-  <button class="btn-end" id="endBtn">End Interview</button>
-  <div class="mic-indicator" id="micIndicator"><span id="micLabel">Mic inactive</span></div>
+<!-- ══════════ DASHBOARD SCREEN ══════════ -->
+<div class="screen dashboard-screen" id="dashboardScreen">
+  <div class="dash-header">
+    <h1>&#128202; Interview Summary</h1>
+    <p id="dashSubtitle">Session complete</p>
+  </div>
+
+  <div class="metrics-row" id="metricsRow"></div>
+
+  <div class="dash-section">
+    <h3>&#128172; Full Transcript</h3>
+    <div id="dashTranscript"></div>
+  </div>
+
+  <div class="dash-section">
+    <h3>&#127917; Emotion Timeline</h3>
+    <div class="emotion-bar" id="emotionChart"></div>
+  </div>
+
+  <div class="dash-section">
+    <h3>&#9888;&#65039; Distraction &amp; Warning Events</h3>
+    <div id="dashEvents"></div>
+  </div>
+
+  <div style="text-align:center; margin-top:24px;">
+    <button class="btn btn-secondary" onclick="location.reload()">&#128260; New Interview</button>
+  </div>
 </div>
 
+<!-- ══════════ SCRIPTS ══════════ -->
 <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 <script>
-const $ = id => document.getElementById(id);
-const webcam = $('webcam');
-const startBtn = $('startBtn');
-const endBtn = $('endBtn');
-const welcomePanel = $('welcomePanel');
-const interviewPanel = $('interviewPanel');
-const controls = $('controls');
-const chatLog = $('chatLog');
-const questionText = $('questionText');
-const transcriptText = $('transcriptText');
-const micLabel = $('micLabel');
-const micIndicator = $('micIndicator');
-const headerStatus = $('headerStatus');
-const logPanel = $('logPanel');
-const moodEmoji = $('moodEmoji');
-const moodName = $('moodName');
-const moodBar = $('moodBar');
-const moodPct = $('moodPct');
-const moodRow = $('moodRow');
-const moodLoading = $('moodLoading');
-const moodTimeline = $('moodTimeline');
-
-const EMOJI_MAP = {
-  neutral: '😐', happy: '😊', sad: '😢', angry: '😠',
-  fearful: '😨', disgusted: '🤢', surprised: '😲',
-};
-const COLOR_MAP = {
-  neutral: '#94a3b8', happy: '#4ade80', sad: '#60a5fa', angry: '#ef4444',
-  fearful: '#f59e0b', disgusted: '#a855f7', surprised: '#fbbf24',
-};
-
+// ── State ──
+let mediaStream = null;
+let audioCtx = null;
+let analyser = null;
+let micDetected = false;
+let camDetected = false;
 let room = null;
-let camStream = null;
-let conversationLog = [];
-let moodLog = [];
-let moodInterval = null;
-let moodModelLoaded = false;
+let sessionData = {
+  transcript: [],
+  emotions: [],
+  distractions: [],
+  startTime: null,
+  qCount: 0,
+  phase: 'setup'
+};
+let emotionInterval = null;
+let timerInterval = null;
+let faceApiLoaded = false;
+let meterRaf = null;
 
-function addLog(text, type) {
-  logPanel.style.display = 'block';
-  const div = document.createElement('div');
-  div.className = `entry ${type || ''}`;
-  div.textContent = text;
-  logPanel.appendChild(div);
-  logPanel.scrollTop = logPanel.scrollHeight;
+const $ = id => document.getElementById(id);
+
+// ── Setup Screen ──
+async function testDevices() {
+  $('setupError').style.display = 'none';
+  $('camStatus').textContent = 'Checking...';
+  $('micStatus').textContent = 'Checking...';
+  $('camCheck').className = 'device-item';
+  $('micCheck').className = 'device-item';
+  camDetected = false;
+  micDetected = false;
+  $('beginBtn').disabled = true;
+
+  try {
+    if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
+    mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    $('previewVideo').srcObject = mediaStream;
+
+    // Camera check
+    const videoTrack = mediaStream.getVideoTracks()[0];
+    if (videoTrack && videoTrack.readyState === 'live') {
+      camDetected = true;
+      $('camCheck').className = 'device-item ok';
+      $('camStatus').textContent = 'Working';
+    } else {
+      $('camCheck').className = 'device-item fail';
+      $('camStatus').textContent = 'Not detected';
+    }
+
+    // Mic check — detect audio level
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioCtx.createMediaStreamSource(mediaStream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    source.connect(analyser);
+
+    const dataArr = new Uint8Array(analyser.frequencyBinCount);
+    $('micLevelText').textContent = 'Speak something...';
+
+    function checkMic() {
+      analyser.getByteFrequencyData(dataArr);
+      const avg = dataArr.reduce((a, b) => a + b, 0) / dataArr.length;
+      const pct = Math.min(avg / 60 * 100, 100);
+      $('meterFill').style.width = pct + '%';
+      if (avg > 8 && !micDetected) {
+        micDetected = true;
+        $('micCheck').className = 'device-item ok';
+        $('micStatus').textContent = 'Working';
+        $('micLevelText').textContent = 'Audio detected!';
+        checkReady();
+      }
+      meterRaf = requestAnimationFrame(checkMic);
+    }
+    checkMic();
+
+    // Allow proceeding after 4s even without detected speech
+    setTimeout(() => {
+      if (!micDetected) {
+        micDetected = true;
+        $('micCheck').className = 'device-item ok';
+        $('micStatus').textContent = 'Ready';
+        $('micLevelText').textContent = 'Mic available';
+        checkReady();
+      }
+    }, 4000);
+
+    checkReady();
+  } catch (err) {
+    console.error('Device test failed:', err);
+    $('setupError').textContent = 'Permission denied: ' + err.message + '. Please allow camera & mic access and click Test again.';
+    $('setupError').style.display = 'block';
+    $('camCheck').className = 'device-item fail';
+    $('camStatus').textContent = 'Error';
+    $('micCheck').className = 'device-item fail';
+    $('micStatus').textContent = 'Error';
+  }
 }
 
-function addChat(role, text) {
-  const div = document.createElement('div');
-  div.className = `chat-msg ${role}`;
-  div.innerHTML = `<div class="role">${role === 'agent' ? 'Interviewer' : 'You'}</div>${text}`;
-  chatLog.appendChild(div);
-  chatLog.scrollTop = chatLog.scrollHeight;
-  conversationLog.push({ role, text, timestamp: new Date().toISOString() });
+function checkReady() {
+  if (camDetected && micDetected) {
+    $('beginBtn').disabled = false;
+  }
 }
 
-function setQuestion(text) {
-  questionText.className = 'text';
-  questionText.textContent = text || '—';
-}
+$('testBtn').addEventListener('click', testDevices);
+$('beginBtn').addEventListener('click', startInterview);
 
-function setTranscript(text, isFinal) {
-  transcriptText.className = `text${isFinal ? '' : ' interim'}`;
-  transcriptText.textContent = text || 'Waiting...';
-}
-
-function addMoodDot(emotion, confidence) {
-  const dot = document.createElement('div');
-  dot.className = 'dot';
-  dot.textContent = EMOJI_MAP[emotion] || '😐';
-  dot.style.background = (COLOR_MAP[emotion] || '#94a3b8') + '33';
-  dot.dataset.tip = `${emotion} ${Math.round(confidence)}%`;
-  moodTimeline.appendChild(dot);
-  moodTimeline.scrollLeft = moodTimeline.scrollWidth;
-}
-
-function updateMoodDisplay(emotion, confidence) {
-  moodEmoji.textContent = EMOJI_MAP[emotion] || '😐';
-  moodName.textContent = emotion.charAt(0).toUpperCase() + emotion.slice(1);
-  const pct = Math.round(confidence * 100);
-  moodBar.style.width = pct + '%';
-  moodBar.style.background = COLOR_MAP[emotion] || '#94a3b8';
-  moodPct.textContent = pct + '%';
-  if (moodRow.style.display === 'none') moodRow.style.display = 'flex';
-}
-
-async function loadFaceModels() {
+// ── Load face-api models ──
+async function loadFaceApi() {
   try {
     const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
-    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-    await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
-    moodModelLoaded = true;
-    moodLoading.textContent = 'Mood detection ready';
-    setTimeout(() => { moodLoading.style.display = 'none'; }, 1000);
-    addLog('Facial expression model loaded', 'success');
-  } catch (err) {
-    moodLoading.textContent = 'Mood detection unavailable (model load failed)';
-    addLog('Face model error: ' + err.message, 'error');
-  }
-}
-
-async function detectMood() {
-  if (!moodModelLoaded || !webcam.videoWidth) return;
-  try {
-    const det = await faceapi
-      .detectSingleFace(webcam, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.3 }))
-      .withFaceExpressions();
-    if (det && det.expressions) {
-      const sorted = Object.entries(det.expressions).sort((a, b) => b[1] - a[1]);
-      const [emotion, confidence] = sorted[0];
-      if (confidence > 0.2) {
-        updateMoodDisplay(emotion, confidence);
-        addMoodDot(emotion, confidence);
-        moodLog.push({
-          emotion, confidence: Math.round(confidence * 100),
-          time: new Date().toISOString(),
-          elapsed: Math.floor((Date.now() - moodLog[0]?.start || Date.now()) / 1000) + 's',
-        });
-      }
-    }
+    await faceApi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+    await faceApi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
+    faceApiLoaded = true;
+    console.log('face-api.js models loaded');
   } catch (e) {
-    // skip frame on error
+    console.warn('face-api.js failed to load (non-critical):', e);
   }
 }
+loadFaceApi();
 
-function startMoodDetection() {
-  if (moodInterval) clearInterval(moodInterval);
-  moodLog = [{ start: Date.now() }];
-  moodTimeline.innerHTML = '';
-  moodRow.style.display = 'none';
-  loadFaceModels();
-  moodInterval = setInterval(detectMood, 2000);
-}
+// ── Interview ──
+async function startInterview() {
+  $('setupScreen').classList.remove('active');
+  $('interviewScreen').classList.add('active');
+  if (meterRaf) cancelAnimationFrame(meterRaf);
 
-function stopMoodDetection() {
-  if (moodInterval) { clearInterval(moodInterval); moodInterval = null; }
-}
+  $('interviewVideo').srcObject = mediaStream;
+  sessionData.startTime = Date.now();
+  timerInterval = setInterval(updateTimer, 1000);
 
-function getMoodSummary() {
-  const entries = moodLog.filter(m => m.emotion);
-  if (entries.length === 0) return { summary: 'No data', dominant: 'unknown', timeline: [] };
-  const counts = {};
-  for (const m of entries) { counts[m.emotion] = (counts[m.emotion] || 0) + 1; }
-  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  const dominant = sorted[0][0];
-  const pct = Math.round(sorted[0][1] / entries.length * 100);
-  return {
-    dominant, confidence_pct: pct,
-    breakdown: counts,
-    total_readings: entries.length,
-    timeline: entries,
-    summary: `${dominant} (${pct}% of ${entries.length} readings)`,
-  };
-}
-
-async function getToken() {
-  const resp = await fetch('/token');
-  if (!resp.ok) throw new Error(`Token error: ${resp.status}`);
-  return resp.json();
-}
-
-function switchToInterview() {
-  welcomePanel.style.display = 'none';
-  interviewPanel.style.display = 'flex';
-  controls.style.display = 'flex';
-  headerStatus.textContent = 'Connected';
-  headerStatus.style.color = '#4ade80';
-}
-
-async function connect() {
   try {
-    startBtn.disabled = true;
-    startBtn.textContent = 'Connecting...';
-    startBtn.className = 'btn-start connecting';
-    addLog('Requesting interview token...', 'active');
+    const resp = await fetch('/token');
+    if (!resp.ok) throw new Error('Token fetch failed: ' + resp.status);
+    const { token, url, room: roomName, identity } = await resp.json();
+    console.log('Connecting:', roomName, 'as', identity);
 
-    const { token, url, room: roomName, identity } = await getToken();
-    addLog(`Connected to session: ${roomName}`, 'success');
-
-    startBtn.textContent = 'Getting camera & mic...';
-    camStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    webcam.srcObject = camStream;
-    addLog('Camera and microphone ready', 'success');
-
-    startBtn.textContent = 'Joining room...';
     room = new LivekitClient.Room({ adaptiveStream: true, dynacast: true });
 
-    room.on('dataReceived', (payload) => {
-      try {
-        const msg = JSON.parse(new TextDecoder().decode(payload));
-        switch (msg.type) {
-          case 'question':
-            setQuestion(msg.text);
-            addChat('agent', msg.text);
-            break;
-          case 'transcript':
-            setTranscript(msg.text, msg.is_final);
-            if (msg.is_final && msg.text.trim()) addChat('candidate', msg.text);
-            break;
-        }
-      } catch(e) {}
-    });
-
-    room.on('disconnected', () => {
-      stopMoodDetection();
-      if (camStream) camStream.getTracks().forEach(t => t.stop());
-      interviewPanel.style.display = 'none';
-      welcomePanel.style.display = 'flex';
-      controls.style.display = 'none';
-      startBtn.textContent = 'Reconnect';
-      startBtn.disabled = false;
-      startBtn.className = 'btn-start';
-      headerStatus.textContent = 'Disconnected';
-      headerStatus.style.color = '#f87171';
-    });
-
-    room.on(LivekitClient.RoomEvent.TrackSubscribed, (track) => {
+    room.on('dataReceived', handleData);
+    room.on('disconnected', handleDisconnect);
+    room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, pub, participant) => {
       if (track.kind === 'audio') {
         const el = track.attach();
         el.id = 'agent-audio';
         document.body.appendChild(el);
-        addLog('Agent audio connected', 'success');
       }
+    });
+    room.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track) => {
+      track.detach().forEach(el => el.remove());
     });
 
     await room.connect(url, token);
-    addLog('Joined room, publishing tracks...', 'active');
 
-    const videoTrack = camStream.getVideoTracks()[0];
-    const audioTrack = camStream.getAudioTracks()[0];
-    await room.localParticipant.publishTrack(audioTrack, { source: 'microphone' });
-    await room.localParticipant.publishTrack(videoTrack, { source: 'camera' });
+    const micTrack = mediaStream.getAudioTracks()[0];
+    const camTrack = mediaStream.getVideoTracks()[0];
+    await room.localParticipant.publishTrack(micTrack, { source: 'microphone' });
+    await room.localParticipant.publishTrack(camTrack, { source: 'camera' });
 
-    startBtn.textContent = 'Interview Started';
-    startBtn.className = 'btn-start connected';
-    addLog('Interview started — AI agent speaking...', 'success');
-    setQuestion('AI agent is speaking...');
-    setTranscript('The AI is speaking — listen carefully', false);
-    switchToInterview();
-    startMoodDetection();
+    $('connBadge').textContent = '\u25CF Connected';
+    sessionData.phase = 'greeting';
+    $('phaseBadge').textContent = 'Greeting';
+
+    startEmotionDetection();
+    startDistractionDetection();
 
   } catch (err) {
-    console.error(err);
-    startBtn.textContent = 'Retry';
-    startBtn.className = 'btn-start error';
-    startBtn.disabled = false;
-    addLog(`Error: ${err.message}`, 'error');
-    if (camStream) camStream.getTracks().forEach(t => t.stop());
+    console.error('Connection failed:', err);
+    $('connBadge').textContent = '\u25CF Error';
+    addChat('system', 'Connection error: ' + err.message);
   }
 }
 
-function disconnect() {
-  stopMoodDetection();
-  if (camStream) camStream.getTracks().forEach(t => t.stop());
+function handleData(payload) {
+  try {
+    const msg = JSON.parse(new TextDecoder().decode(payload));
+    switch (msg.type) {
+      case 'agent_speech':
+        $('questionText').textContent = msg.text;
+        $('qNum').textContent = msg.q_count || 0;
+        sessionData.qCount = msg.q_count || 0;
+        if (msg.phase) {
+          sessionData.phase = msg.phase;
+          $('phaseBadge').textContent = msg.phase.charAt(0).toUpperCase() + msg.phase.slice(1);
+        }
+        addChat('agent', msg.text);
+        sessionData.transcript.push({ role: 'agent', text: msg.text, time: elapsed() });
+        break;
+      case 'transcript':
+        $('liveTranscript').textContent = msg.text;
+        $('liveTranscript').className = msg.is_final ? 'text' : 'text interim';
+        if (msg.is_final && msg.text.trim()) {
+          addChat('candidate', msg.text);
+          sessionData.transcript.push({ role: 'candidate', text: msg.text, time: elapsed() });
+        }
+        break;
+      case 'warning':
+        showWarning(msg.text);
+        sessionData.distractions.push({ type: 'agent_warning', text: msg.text, time: elapsed() });
+        break;
+    }
+  } catch(e) {}
+}
+
+function handleDisconnect() {
+  $('connBadge').textContent = '\u25CF Ended';
+  $('phaseBadge').textContent = 'Complete';
+  $('statusLabel').textContent = 'Interview ended';
+  clearInterval(timerInterval);
+  clearInterval(emotionInterval);
+  setTimeout(showDashboard, 2000);
+}
+
+function addChat(role, text) {
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + role;
+  const roleName = role === 'agent' ? '\uD83E\uDD16 Interviewer' : (role === 'candidate' ? '\uD83E\uDDD1 You' : '\u2699 System');
+  div.innerHTML = '<div class="role">' + roleName + '</div>' + text;
+  $('chatHistory').appendChild(div);
+  $('chatHistory').scrollTop = $('chatHistory').scrollHeight;
+}
+
+function showWarning(text) {
+  const banner = $('warningBanner');
+  banner.textContent = '\u26A0\uFE0F ' + text;
+  banner.style.display = 'block';
+  setTimeout(() => { banner.style.display = 'none'; }, 4000);
+}
+
+function updateTimer() {
+  const secs = Math.floor((Date.now() - sessionData.startTime) / 1000);
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  $('timeBadge').textContent = '\u23F1 ' + m + ':' + s.toString().padStart(2, '0');
+}
+
+function elapsed() {
+  return sessionData.startTime ? Math.floor((Date.now() - sessionData.startTime) / 1000) : 0;
+}
+
+// ── Emotion Detection (face-api.js, client-side, non-blocking) ──
+function startEmotionDetection() {
+  if (!faceApiLoaded) return;
+  const video = $('interviewVideo');
+  emotionInterval = setInterval(async () => {
+    try {
+      const detections = await faceApi.detectAllFaces(video, new faceApi.TinyFaceDetectorOptions())
+        .withFaceExpressions();
+      if (detections.length === 0) {
+        $('emotionBadge').textContent = '\uD83D\uDC64 No face';
+        reportDistraction('no_face', 'No face detected');
+        return;
+      }
+      if (detections.length > 1) {
+        reportDistraction('multiple_faces', 'Multiple faces detected');
+      }
+      const expr = detections[0].expressions;
+      const dominant = Object.entries(expr).sort((a, b) => b[1] - a[1])[0];
+      const emojis = { happy:'\uD83D\uDE0A', sad:'\uD83D\uDE22', angry:'\uD83D\uDE20', surprised:'\uD83D\uDE32', fearful:'\uD83D\uDE28', disgusted:'\uD83E\uDD22', neutral:'\uD83D\uDE10' };
+      $('emotionBadge').textContent = (emojis[dominant[0]] || '\uD83D\uDE10') + ' ' + dominant[0];
+      sessionData.emotions.push({
+        time: elapsed(),
+        emotion: dominant[0],
+        confidence: Math.round(dominant[1] * 100),
+        all: Object.fromEntries(Object.entries(expr).map(([k,v]) => [k, Math.round(v*100)]))
+      });
+      if (sessionData.emotions.length % 5 === 0 && room) {
+        try {
+          room.localParticipant.publishData(
+            new TextEncoder().encode(JSON.stringify({
+              type: 'emotion', emotion: dominant[0], confidence: dominant[1]
+            }))
+          );
+        } catch(e) {}
+      }
+    } catch(e) {}
+  }, 2500);
+}
+
+// ── Distraction Detection ──
+let lastDistractionTime = 0;
+function reportDistraction(type, detail) {
+  const now = Date.now();
+  if (now - lastDistractionTime < 5000) return;
+  lastDistractionTime = now;
+  sessionData.distractions.push({ type: type, detail: detail, time: elapsed() });
+  if (room) {
+    try {
+      room.localParticipant.publishData(
+        new TextEncoder().encode(JSON.stringify({ type: 'distraction', detail: detail, severity: 'medium' }))
+      );
+    } catch(e) {}
+  }
+}
+
+function startDistractionDetection() {
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      reportDistraction('tab_switch', 'Switched to another tab');
+      showWarning('Please stay on this tab during the interview');
+    }
+  });
+  window.addEventListener('blur', () => {
+    reportDistraction('window_blur', 'Window lost focus');
+  });
+}
+
+// ── End Interview ──
+$('endBtn').addEventListener('click', () => {
   if (room) room.disconnect();
-  room = null;
-  camStream = null;
-  const payload = {
-    session: 'manual',
-    conversation: conversationLog,
-    mood: getMoodSummary(),
-  };
+  else handleDisconnect();
+});
+
+// ── Dashboard ──
+function showDashboard() {
+  $('interviewScreen').classList.remove('active');
+  $('dashboardScreen').classList.add('active');
+
+  const duration = elapsed();
+  const mins = Math.floor(duration / 60);
+  const candidateMsgs = sessionData.transcript.filter(t => t.role === 'candidate').length;
+
+  $('dashSubtitle').textContent = 'Duration: ' + mins + ' min | ' + sessionData.qCount + ' questions | ' + new Date().toLocaleDateString();
+
+  $('metricsRow').innerHTML =
+    '<div class="metric-card"><div class="value">' + sessionData.qCount + '</div><div class="label">Questions</div></div>' +
+    '<div class="metric-card"><div class="value">' + candidateMsgs + '</div><div class="label">Answers</div></div>' +
+    '<div class="metric-card"><div class="value">' + mins + 'm</div><div class="label">Duration</div></div>' +
+    '<div class="metric-card"><div class="value">' + sessionData.distractions.length + '</div><div class="label">Distractions</div></div>' +
+    '<div class="metric-card"><div class="value">' + sessionData.emotions.length + '</div><div class="label">Emotions</div></div>';
+
+  // Transcript
+  let html = '';
+  for (const msg of sessionData.transcript) {
+    const icon = msg.role === 'agent' ? '\uD83E\uDD16' : '\uD83E\uDDD1';
+    const timeStr = Math.floor(msg.time/60) + ':' + (msg.time%60).toString().padStart(2,'0');
+    html += '<div class="transcript-item"><div class="role">' + icon + ' ' + msg.role + ' \u00B7 ' + timeStr + '</div><div class="msg">' + msg.text + '</div></div>';
+  }
+  $('dashTranscript').innerHTML = html || '<p style="color:var(--text-muted)">No transcript recorded</p>';
+
+  // Emotion chart
+  const counts = {};
+  for (const e of sessionData.emotions) counts[e.emotion] = (counts[e.emotion] || 0) + 1;
+  const maxC = Math.max(...Object.values(counts), 1);
+  const colors = { happy:'#10b981', sad:'#6366f1', angry:'#ef4444', surprised:'#f59e0b', fearful:'#8b5cf6', disgusted:'#64748b', neutral:'#94a3b8' };
+  let chart = '';
+  for (const [em, cnt] of Object.entries(counts).sort((a,b)=>b[1]-a[1])) {
+    const h = Math.max((cnt/maxC)*120, 8);
+    chart += '<div class="emotion-col"><div class="bar" style="height:'+h+'px;background:'+(colors[em]||'#94a3b8')+'"></div><div class="lbl">'+em+'<br>'+cnt+'</div></div>';
+  }
+  $('emotionChart').innerHTML = chart || '<p style="color:var(--text-muted)">No emotion data</p>';
+
+  // Events
+  let evHtml = '';
+  for (const ev of sessionData.distractions) {
+    const t = Math.floor(ev.time/60) + ':' + (ev.time%60).toString().padStart(2,'0');
+    evHtml += '<div class="event-item"><div class="time">' + t + '</div><div class="desc">\u26A0\uFE0F ' + (ev.detail||ev.type) + '</div></div>';
+  }
+  $('dashEvents').innerHTML = evHtml || '<p style="color:var(--text-muted)">No distraction events recorded</p>';
+
+  // Save to server
   fetch('/save_transcript', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ session: 'client-' + Date.now(), transcript: sessionData.transcript, emotions: sessionData.emotions, distractions: sessionData.distractions, duration_secs: duration, q_count: sessionData.qCount })
   }).catch(() => {});
 }
-
-startBtn.addEventListener('click', connect);
-endBtn.addEventListener('click', disconnect);
 </script>
 </body>
 </html>

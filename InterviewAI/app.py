@@ -748,15 +748,12 @@ with tab5:
                     jd_text = st.session_state.get("jd_data", {}).get("full_text", "")
                     cv_data = st.session_state.get("cv_data", {})
                     jd_data = st.session_state.get("jd_data", {})
+                    # Collect ALL questions as seed for adaptive interview
                     q_list = []
                     iq = st.session_state.get("interview_questions", {})
                     for section in ("opening", "technical", "behavioural", "closing"):
                         for q in iq.get(section, []):
                             q_list.append(q.get("question", ""))
-                            if len(q_list) >= 5:
-                                break
-                        if len(q_list) >= 5:
-                            break
                     from core.livekit.launcher import launch
                     url = launch(resume_text=cv_text, jd_text=jd_text, questions=q_list or None,
                                  cv_data=cv_data, jd_data=jd_data)

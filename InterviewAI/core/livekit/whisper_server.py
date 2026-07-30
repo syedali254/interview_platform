@@ -80,7 +80,7 @@ class WhisperHTTPHandler(BaseHTTPRequestHandler):
                 .to_jwt()
             )
 
-            # Start agent subprocess for this room (direct connection, no dispatch)
+            # Start agent subprocess for this room
             agent_script = _CLIENT_DIR / "run_agent.py"
             agent_log = _CLIENT_DIR.parent.parent / "agent_debug.log"
             env = os.environ.copy()
@@ -88,12 +88,11 @@ class WhisperHTTPHandler(BaseHTTPRequestHandler):
             env["LIVEKIT_API_KEY"] = LIVEKIT_API_KEY
             env["LIVEKIT_API_SECRET"] = LIVEKIT_API_SECRET
             env["PYTHONUNBUFFERED"] = "1"
-            if "INTERVIEW_QUESTIONS" in os.environ:
-                env["INTERVIEW_QUESTIONS"] = os.environ["INTERVIEW_QUESTIONS"]
-            if "CV_DATA" in os.environ:
-                env["CV_DATA"] = os.environ["CV_DATA"]
-            if "JD_DATA" in os.environ:
-                env["JD_DATA"] = os.environ["JD_DATA"]
+            for env_key in ("INTERVIEW_QUESTIONS", "CV_DATA", "JD_DATA",
+                            "MAX_INTERVIEW_QUESTIONS", "MIN_INTERVIEW_QUESTIONS",
+                            "INTERVIEW_TIME_BUDGET_MINS"):
+                if env_key in os.environ:
+                    env[env_key] = os.environ[env_key]
             log_fh = open(agent_log, "w")
             subprocess.Popen(
                 [sys.executable, "-u", str(agent_script), room_name],
@@ -101,7 +100,6 @@ class WhisperHTTPHandler(BaseHTTPRequestHandler):
                 env=env,
                 cwd=str(_CLIENT_DIR.parent.parent),
             )
-            log_fh.close()
 
             self._json_response({
                 "token": token,
