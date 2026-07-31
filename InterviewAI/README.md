@@ -11,7 +11,20 @@ Multi-Agent AI Interview Platform with adaptive voice interviews, skill graph an
 
 ## Setup & Run
 
-### 1. Clone & install Python dependencies
+### Quick start (Windows - one click)
+
+Just double-click **`run.bat`** (in the project root). It will automatically:
+
+1. Switch to the latest fixed branch (`sherali-dev2`)
+2. Check Python 3.11+ and Node.js 18+ are installed
+3. Create the `venv` and install all Python packages
+4. Create `.env` and open it so you can paste your API keys (only the first time)
+5. Install and build the frontend
+6. Start the app and open `http://localhost:8000` in your browser
+
+Prerequisites (one-time on the machine): [Python 3.11+](https://www.python.org/downloads/), [Node.js LTS](https://nodejs.org), and your 3 API keys.
+
+### Manual setup
 
 ```bash
 cd InterviewAI

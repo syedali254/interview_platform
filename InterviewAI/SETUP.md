@@ -1,171 +1,195 @@
 # InterviewAI — Setup Guide
 
-> Complete setup instructions for running the AI Interview Platform.
+> One-file setup. Just run `start.bat` and you're done.
 
 ---
 
-## Quick Start (Automated)
+## ⚡ Quick Start (Easiest Way)
 
-**Run this file ONCE to set everything up automatically:**
-
-```bash
-setup.bat
-```
-
-Then add your API keys to `.env` (see below), and run:
+**Your friend's entire workflow:**
 
 ```bash
-run.bat
+# 1. Get the code
+git clone https://github.com/syedali254/interview_platform.git
+cd interview_platform/InterviewAI
+
+# 2. Run this ONE file
+start.bat
 ```
 
-**Done!** Skip to [Get API Keys](#get-api-keys) if using automated setup.
+**That's it!** On first run, it will:
+- Install everything automatically
+- Open Notepad for API keys
+- Start the server
+- Open http://localhost:8000
+
+**Next times:** Just double-click `start.bat` → server starts!
 
 ---
 
-## What You Need (Prerequisites)
+## 📦 What You Need First
 
-These must be installed before running `setup.bat`:
+Install these two things (one time only):
 
 1. **Python 3.11+** → https://www.python.org/downloads/
    - ✅ **CHECK "Add Python to PATH" during installation**
    
-2. **Node.js 18+** → https://nodejs.org/ (LTS version)
+2. **Node.js 18+** → https://nodejs.org/ (download LTS version)
 
 ---
 
-## Get API Keys
+## 🔑 API Keys (Free, Required)
 
-You need **3 free API keys**:
+On first run, `start.bat` opens Notepad. You'll need these 3 keys:
 
 | Service | Purpose | Get Key | Free Tier |
 |---------|---------|---------|-----------|
-| **Google Gemini** | LLM (brain) | [Get API Key](https://aistudio.google.com/apikey) | 15 req/min |
-| **Deepgram** | Speech-to-Text | [Sign Up](https://console.deepgram.com/signup) | $200 credit |
-| **ElevenLabs** | Text-to-Speech | [Sign Up](https://elevenlabs.io/) | 10k chars/month |
+| **Google Gemini** | AI Brain | [Get Key](https://aistudio.google.com/apikey) | 15 req/min |
+| **Deepgram** | Speech→Text | [Sign Up](https://console.deepgram.com/signup) | $200 credit |
+| **ElevenLabs** | Text→Speech | [Sign Up](https://elevenlabs.io/) | 10k chars/mo |
 
-### Configure Keys
-
-1. Copy `.env.example` to `.env`:
-   ```bash
-   copy .env.example .env
-   ```
-
-2. Open `.env` in Notepad and replace with YOUR keys:
-
-```env
-GEMINI_API_KEY=AIzaXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-DEEPGRAM_API_KEY=your_deepgram_key_here
-ELEVENLABS_API_KEY=your_elevenlabs_key_here
-```
-
-3. Save and close
+Paste them in Notepad when prompted, save, close. Done!
 
 ---
 
-## Manual Setup (If setup.bat Fails)
+## 🎯 Complete Friend Workflow
+
+```
+Step 1: Install Python + Node.js (5 minutes)
+Step 2: Clone repo (1 minute)
+Step 3: Double-click start.bat (3 minutes first time)
+Step 4: Paste API keys when Notepad opens
+Step 5: Browser opens automatically → http://localhost:8000
+```
+
+**Total time:** ~10 minutes including downloads
+
+---
+
+## 📥 Alternative: Download ZIP (No Git)
+
+```
+https://github.com/syedali254/interview_platform/archive/refs/heads/sherali-dev2.zip
+```
+
+Extract → Open `InterviewAI` folder → Double-click `start.bat`
+
+---
+
+## 🤖 What start.bat Does
+
+**First Run (Automatic Setup):**
+1. Checks Python & Node.js installed
+2. Creates Python virtual environment
+3. Installs 15+ Python packages (~2 mins)
+4. Installs JavaScript packages (~1 min)
+5. Builds React frontend (~30 sec)
+6. Creates .env file
+7. Opens Notepad for API keys
+8. Waits for you to save & close
+9. Starts server
+10. Opens http://localhost:8000
+
+**Every Other Run:**
+1. Activates virtual environment
+2. Starts server
+3. Done in 2 seconds!
+
+---
+
+## 🎮 Using the App
+
+1. **Upload & Parse** → Upload CV (PDF) + paste job description → Click "Analyze"
+2. **Skill Graph** → Click "Build Graph" → See 3 graphs (matched/missing/extra skills)
+3. **Questions** → Click "Generate Questions" → Review AI-generated questions
+4. **Device Setup** → Allow camera & mic → Test → Click "Begin Interview"
+5. **Live Interview** → AI asks questions via voice → You answer
+6. **Dashboard** → Full report with transcript, emotion timeline, metrics
+
+---
+
+## 🛠 Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| `python not found` | Reinstall Python, check "Add to PATH" |
+| `node not found` | Install Node.js from nodejs.org |
+| Setup hangs | Check internet connection |
+| Port 8000 in use | Close other apps or restart PC |
+| Camera/mic not working | Allow browser permissions (click lock icon) |
+| Agent not speaking | Check `.env` has correct API keys |
+| Still broken | Delete `venv` folder, run `start.bat` again |
+
+---
+
+## 📂 Project Structure
+
+```
+InterviewAI/
+├── start.bat              ← Double-click this!
+├── .env                   ← API keys (auto-created)
+├── server.py              ← FastAPI backend
+├── PROJECT_GUIDE.md       ← Detailed explanation
+├── core/                  ← Backend logic
+│   ├── agents/            ← CV/JD parsers, question generator
+│   ├── graph/             ← Skill graph (ESCO-based)
+│   └── livekit/           ← Voice interview system
+├── frontend/              ← React UI
+│   ├── dist/              ← Built files (auto-generated)
+│   └── src/               ← Source code
+└── venv/                  ← Python environment (auto-created)
+```
+
+---
+
+## 💻 System Requirements
+
+- Windows 10/11 (macOS/Linux with minor tweaks)
+- 4GB RAM (8GB recommended)
+- 2GB free disk space
+- Internet connection
+- Chrome or Edge browser (latest)
+- Microphone (required)
+- Camera (required for emotion detection)
+
+---
+
+## 🔒 Security
+
+- `.env` is never committed (in `.gitignore`)
+- Never share your API keys
+- All processing is local except API calls
+- No data stored on external servers
+
+---
+
+## 📚 Next Steps
+
+- Read **PROJECT_GUIDE.md** for how everything works
+- Check **agent_debug.log** if something fails
+- Verify `.env` contains all 3 API keys
+- Join camera/mic must be allowed in browser
+
+---
+
+## ✋ Manual Setup (Only If start.bat Fails)
 
 ```bash
-# Create virtual environment
 python -m venv venv
-
-# Activate (Windows)
 venv\Scripts\activate
-
-# Install Python packages
 pip install -r requirements.txt
 
-# Build frontend
 cd frontend
 npm install
 npm run build
 cd ..
-```
 
----
+copy .env.example .env
+notepad .env  # Add your API keys
 
-## Running the App
-
-### Easy way:
-```bash
-run.bat
-```
-
-### Manual way:
-```bash
-venv\Scripts\activate
 python server.py
 ```
 
-**Open browser:** http://localhost:8000
-
-Press `Ctrl+C` to stop.
-
 ---
 
-## How to Use
-
-1. **Upload & Parse** → Upload CV + paste JD → Click "Analyze"
-2. **Skill Graph** → Build graph → View matched/missing/extra skills  
-3. **Questions** → Generate questions → Review AI questions
-4. **Setup** → Allow camera/mic → Test devices → Begin
-5. **Interview** → AI asks questions → You answer via voice
-6. **Report** → View transcript, emotions, distractions
-
----
-
-## Troubleshooting
-
-| Problem | Solution |
-|---------|----------|
-| `python: command not found` | Reinstall Python with "Add to PATH" checked |
-| `pip: command not found` | Run `venv\Scripts\activate` first |
-| `npm: command not found` | Install Node.js from nodejs.org |
-| Port 8000 in use | Close other apps or change port in server.py |
-| Camera/Mic not working | Allow permissions in browser (click lock icon) |
-| Agent not speaking | Check API keys in `.env`, see `agent_debug.log` |
-| Import errors | Delete `venv`, re-run `setup.bat` |
-
----
-
-## File Structure
-
-```
-InterviewAI/
-├── setup.bat          ← Run ONCE to setup everything
-├── run.bat            ← Run to start server
-├── server.py          ← Main application
-├── .env               ← Your API keys (create from .env.example)
-├── requirements.txt   ← Python dependencies
-├── PROJECT_GUIDE.md   ← Detailed explanation
-├── core/              ← Backend (agents, graph, livekit, llm)
-├── frontend/          ← React UI (src, dist)
-└── venv/              ← Virtual environment (auto-created)
-```
-
----
-
-## System Requirements
-
-- Windows 10/11 (or macOS/Linux with adjustments)
-- 4GB RAM minimum, 8GB recommended
-- 2GB free disk space
-- Internet connection
-- Chrome/Edge browser
-- Microphone + Camera
-
----
-
-## Security
-
-- Never commit `.env` (already in `.gitignore`)
-- Never share API keys publicly
-- All processing is local except API calls
-
----
-
-## Need Help?
-
-- Read **PROJECT_GUIDE.md** for detailed explanations
-- Check **agent_debug.log** for errors
-- Verify `.env` has all 3 API keys
-- Make sure venv is activated before running
+**That's it!** Your friend just clones and runs one file. 🚀
