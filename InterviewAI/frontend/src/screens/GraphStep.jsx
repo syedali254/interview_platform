@@ -114,137 +114,151 @@ export default function GraphStep({ session, updateSession, onNext }) {
 }
 
 function SkillGraphCanvas({ graph }) {
+  const matched = graph.gaps?.matched_required || []
+  const missing = graph.gaps?.missing_required || []
+  const extra = graph.gaps?.extra_skills || []
+
+  return (
+    <div className="space-y-6">
+      {/* Graph 1: Matched Skills */}
+      <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-4">
+        <h4 className="text-sm font-semibold text-emerald-700 mb-3 flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-emerald-500" /> Matched Skills ({matched.length})
+          <span className="text-xs font-normal text-gray-500 ml-auto">Candidate has ✓ Job requires ✓</span>
+        </h4>
+        {matched.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {matched.map((skill, i) => (
+              <span key={i} className="px-3 py-1.5 bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-lg text-xs font-medium">
+                ✓ {skill}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400">No matched skills found</p>
+        )}
+        <SingleGraphCanvas skills={matched} color="#10b981" label="Matched" />
+      </div>
+
+      {/* Graph 2: Missing / Gap Skills */}
+      <div className="bg-red-50/50 border border-red-100 rounded-xl p-4">
+        <h4 className="text-sm font-semibold text-red-700 mb-3 flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-red-500" /> Missing Skills ({missing.length})
+          <span className="text-xs font-normal text-gray-500 ml-auto">Job requires ✓ Candidate lacks ✗</span>
+        </h4>
+        {missing.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {missing.map((skill, i) => (
+              <span key={i} className="px-3 py-1.5 bg-red-100 border border-red-200 text-red-700 rounded-lg text-xs font-medium">
+                ✗ {skill}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-emerald-600">No gaps — candidate covers all requirements! 🎯</p>
+        )}
+        <SingleGraphCanvas skills={missing} color="#ef4444" label="Gap" />
+      </div>
+
+      {/* Graph 3: Extra Skills */}
+      <div className="bg-violet-50/50 border border-violet-100 rounded-xl p-4">
+        <h4 className="text-sm font-semibold text-violet-700 mb-3 flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-violet-500" /> Extra Skills ({extra.length})
+          <span className="text-xs font-normal text-gray-500 ml-auto">Candidate has ✓ Job doesn't require</span>
+        </h4>
+        {extra.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {extra.map((skill, i) => (
+              <span key={i} className="px-3 py-1.5 bg-violet-100 border border-violet-200 text-violet-700 rounded-lg text-xs font-medium">
+                + {skill}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400">No extra skills detected</p>
+        )}
+        <SingleGraphCanvas skills={extra} color="#8b5cf6" label="Extra" />
+      </div>
+    </div>
+  )
+}
+
+function SingleGraphCanvas({ skills, color, label }) {
   const canvasRef = useRef(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
-    if (!canvas) return
+    if (!canvas || skills.length === 0) return
     const ctx = canvas.getContext('2d')
-    const w = canvas.width = canvas.offsetWidth * 2
-    const h = canvas.height = 500
-    ctx.scale(2, 2)
-    const cw = w / 2, ch = h / 2
+    const dpr = window.devicePixelRatio || 2
+    const w = canvas.offsetWidth
+    const h = 180
+    canvas.width = w * dpr
+    canvas.height = h * dpr
+    ctx.scale(dpr, dpr)
+    canvas.style.height = `${h}px`
 
-    // Build nodes from graph data
-    const matched = graph.gaps?.matched_required || []
-    const missing = graph.gaps?.missing_required || []
-    const topics = graph.topics || []
+    const cx = w / 2
+    const cy = h / 2
+    const radius = Math.min(cx, cy) - 40
 
-    const centerNode = { x: cw / 2, y: ch / 2, label: 'Role', type: 'center', r: 24 }
-    const nodes = [centerNode]
-    const edges = []
+    ctx.clearRect(0, 0, w, h)
 
-    // Matched skills (green) — arranged in an arc to the left
-    matched.forEach((skill, i) => {
-      const angle = (-Math.PI / 3) + (i / Math.max(matched.length - 1, 1)) * (Math.PI * 0.6)
-      const dist = 100 + Math.random() * 30
-      const node = {
-        x: cw / 2 + Math.cos(angle) * dist,
-        y: ch / 2 + Math.sin(angle) * dist,
-        label: skill.length > 14 ? skill.slice(0, 12) + '..' : skill,
-        type: 'matched', r: 16
-      }
-      nodes.push(node)
-      edges.push({ from: centerNode, to: node })
-    })
+    // Center node
+    ctx.beginPath()
+    ctx.arc(cx, cy, 18, 0, Math.PI * 2)
+    ctx.fillStyle = color
+    ctx.fill()
+    ctx.strokeStyle = '#fff'
+    ctx.lineWidth = 2
+    ctx.stroke()
+    ctx.fillStyle = '#fff'
+    ctx.font = 'bold 9px Inter, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(label, cx, cy)
 
-    // Missing skills (red) — arranged in an arc to the right
-    missing.forEach((skill, i) => {
-      const angle = (Math.PI / 6) + (i / Math.max(missing.length - 1, 1)) * (Math.PI * 0.5)
-      const dist = 120 + Math.random() * 20
-      const node = {
-        x: cw / 2 + Math.cos(angle) * dist,
-        y: ch / 2 + Math.sin(angle) * dist,
-        label: skill.length > 14 ? skill.slice(0, 12) + '..' : skill,
-        type: 'gap', r: 16
-      }
-      nodes.push(node)
-      edges.push({ from: centerNode, to: node })
-    })
+    // Skill nodes in a circle
+    const count = skills.length
+    skills.forEach((skill, i) => {
+      const angle = (i / count) * Math.PI * 2 - Math.PI / 2
+      const nx = cx + Math.cos(angle) * radius
+      const ny = cy + Math.sin(angle) * radius
 
-    // Topic connections (purple) — arranged below
-    topics.forEach((topic, i) => {
-      const angle = (Math.PI * 0.6) + (i / Math.max(topics.length - 1, 1)) * (Math.PI * 0.5)
-      const dist = 140 + Math.random() * 20
-      const existing = nodes.find(n => n.label === topic.skill || n.label === (topic.skill.length > 14 ? topic.skill.slice(0, 12) + '..' : topic.skill))
-      if (existing) {
-        existing.isTopic = true
-        return
-      }
-      const node = {
-        x: cw / 2 + Math.cos(angle) * dist,
-        y: ch / 2 + Math.sin(angle) * dist,
-        label: topic.skill.length > 14 ? topic.skill.slice(0, 12) + '..' : topic.skill,
-        type: 'topic', r: 14
-      }
-      nodes.push(node)
-      edges.push({ from: centerNode, to: node })
-    })
-
-    // Draw
-    ctx.clearRect(0, 0, cw, ch)
-
-    // Edges
-    edges.forEach(({ from, to }) => {
+      // Edge
       ctx.beginPath()
-      ctx.moveTo(from.x, from.y)
-      ctx.lineTo(to.x, to.y)
-      ctx.strokeStyle = to.type === 'gap' ? '#fca5a5' : to.type === 'matched' ? '#86efac' : '#c4b5fd'
+      ctx.moveTo(cx, cy)
+      ctx.lineTo(nx, ny)
+      ctx.strokeStyle = color + '40'
       ctx.lineWidth = 1.5
       ctx.stroke()
-    })
 
-    // Nodes
-    nodes.forEach(node => {
+      // Node
       ctx.beginPath()
-      ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2)
-      if (node.type === 'center') {
-        ctx.fillStyle = '#6366f1'
-      } else if (node.type === 'matched') {
-        ctx.fillStyle = '#10b981'
-      } else if (node.type === 'gap') {
-        ctx.fillStyle = '#ef4444'
-      } else {
-        ctx.fillStyle = '#8b5cf6'
-      }
+      ctx.arc(nx, ny, 10, 0, Math.PI * 2)
+      ctx.fillStyle = color + '20'
       ctx.fill()
-      ctx.strokeStyle = '#fff'
-      ctx.lineWidth = 2
+      ctx.strokeStyle = color
+      ctx.lineWidth = 1.5
       ctx.stroke()
 
       // Label
       ctx.fillStyle = '#374151'
-      ctx.font = node.type === 'center' ? 'bold 11px Inter, sans-serif' : '10px Inter, sans-serif'
+      ctx.font = '9px Inter, sans-serif'
       ctx.textAlign = 'center'
-      ctx.fillText(node.label, node.x, node.y + node.r + 14)
+      ctx.textBaseline = 'top'
+      const displaySkill = skill.length > 16 ? skill.slice(0, 14) + '..' : skill
+      ctx.fillText(displaySkill, nx, ny + 14)
     })
+  }, [skills, color, label])
 
-    // Legend
-    const legendY = ch / 2 - 10
-    const legends = [
-      { color: '#10b981', label: 'Matched' },
-      { color: '#ef4444', label: 'Gap' },
-      { color: '#8b5cf6', label: 'Topic' },
-    ]
-    legends.forEach((l, i) => {
-      const lx = 20
-      const ly = legendY + i * 22
-      ctx.beginPath()
-      ctx.arc(lx, ly, 6, 0, Math.PI * 2)
-      ctx.fillStyle = l.color
-      ctx.fill()
-      ctx.fillStyle = '#6b7280'
-      ctx.font = '10px Inter, sans-serif'
-      ctx.textAlign = 'left'
-      ctx.fillText(l.label, lx + 12, ly + 4)
-    })
-  }, [graph])
+  if (skills.length === 0) return null
 
   return (
     <canvas
       ref={canvasRef}
-      className="w-full rounded-xl bg-gradient-to-br from-gray-50 to-indigo-50/30 border border-gray-100"
-      style={{ height: '250px' }}
+      className="w-full rounded-lg bg-white/50 border border-gray-100 mt-3"
+      style={{ height: '180px' }}
     />
   )
 }

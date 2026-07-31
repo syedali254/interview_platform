@@ -151,7 +151,7 @@ export default function InterviewScreen({ mediaStream, sessionData, setSessionDa
       setTimeout(() => startEmotionDetection(), 3000)
       return
     }
-    const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights'
+    const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models'
     try {
       await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL)
       await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
