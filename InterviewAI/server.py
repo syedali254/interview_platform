@@ -18,6 +18,7 @@ Endpoints:
 import json
 import os
 import sys
+import subprocess
 import tempfile
 import uuid
 import datetime
@@ -70,8 +71,17 @@ def _stop_agent_process():
     global _agent_proc
     if _agent_proc is not None and _agent_proc.poll() is None:
         try:
-            _agent_proc.terminate()
-            _agent_proc.wait(timeout=5)
+            if os.name == "nt":
+                # venv python.exe is a redirector: it spawns a child python
+                # that does the real work. Terminating only the parent would
+                # orphan the child, so kill the whole process tree.
+                subprocess.run(
+                    ["taskkill", "/PID", str(_agent_proc.pid), "/T", "/F"],
+                    capture_output=True, timeout=10,
+                )
+            else:
+                _agent_proc.terminate()
+                _agent_proc.wait(timeout=5)
         except Exception:
             try:
                 _agent_proc.kill()
@@ -279,7 +289,6 @@ async def api_session():
 @app.get("/token")
 async def get_token():
     from livekit.api import AccessToken, VideoGrants
-    import subprocess
 
     LIVEKIT_API_KEY = os.environ.get("LIVEKIT_API_KEY", "devkey")
     LIVEKIT_API_SECRET = os.environ.get("LIVEKIT_API_SECRET", "secret")
