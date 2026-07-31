@@ -152,12 +152,13 @@ async def run_interview(room_name: str):
             language="en-US",
             interim_results=True,
             api_key=deepgram_key,
-            endpointing=500,
+            endpointing_ms=500,
         )
         tts = elevenlabs.TTS(
             model="eleven_flash_v2_5",
             voice_id="JBFqnCBsd6RMkjVDRZzb",
             api_key=elevenlabs_key,
+            streaming_latency=4,
         )
 
         agent = Agent(
@@ -165,9 +166,16 @@ async def run_interview(room_name: str):
             stt=stt,
             llm=llm_instance,
             tts=tts,
+            allow_interruptions=False,
+            min_endpointing_delay=1.2,
+            max_endpointing_delay=5.0,
         )
 
-        session = AgentSession()
+        session = AgentSession(
+            allow_interruptions=False,
+            min_endpointing_delay=1.2,
+            max_endpointing_delay=5.0,
+        )
 
         # Track questions for client
         q_count = 0
