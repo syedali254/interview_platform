@@ -1,0 +1,178 @@
+==========================================
+  InterviewAI — Setup Instructions
+  (For Non-Technical Users)
+==========================================
+
+STEP 1: Install Python
+-----------------------
+1. Go to: https://www.python.org/downloads/
+2. Download Python 3.11 (or newer)
+3. Run installer
+4. ✅ CHECK THE BOX "Add Python to PATH" (IMPORTANT!)
+5. Click Install
+
+
+STEP 2: Install Node.js
+------------------------
+1. Go to: https://nodejs.org/
+2. Download LTS version
+3. Run installer with default settings
+
+
+STEP 3: Get the Code
+---------------------
+1. Download the project from GitHub:
+   https://github.com/syedali254/interview_platform
+
+2. Click green "Code" button → Download ZIP
+
+3. Extract the ZIP file to your Desktop
+
+4. Open the folder: interview_platform-sherali-dev2\InterviewAI
+
+
+STEP 4: Get API Keys (FREE)
+----------------------------
+You need 3 free accounts:
+
+A. Google Gemini (for AI brain)
+   - Go to: https://aistudio.google.com/apikey
+   - Sign in with Google account
+   - Click "Get API key" → "Create API key"
+   - COPY the key (starts with AIza...)
+
+B. Deepgram (for voice-to-text)
+   - Go to: https://console.deepgram.com/signup
+   - Create free account ($200 free credit)
+   - Go to API Keys → Create key
+   - COPY the key
+
+C. ElevenLabs (for AI voice)
+   - Go to: https://elevenlabs.io/
+   - Create free account (10k chars/month)
+   - Profile → API Key
+   - COPY the key
+
+
+STEP 5: Setup the Project
+--------------------------
+1. Open Command Prompt (press Win+R, type "cmd", press Enter)
+
+2. Navigate to project folder:
+   cd Desktop\interview_platform-sherali-dev2\InterviewAI
+
+3. Create virtual environment:
+   python -m venv venv
+
+4. Activate it:
+   venv\Scripts\activate
+   (You should see "(venv)" before your prompt)
+
+5. Install Python packages (takes 2-3 minutes):
+   pip install -r requirements.txt
+
+
+STEP 6: Configure API Keys
+---------------------------
+1. In the InterviewAI folder, find file: .env.example
+
+2. Make a copy and rename it to: .env
+
+3. Open .env in Notepad
+
+4. Replace these lines with YOUR keys:
+   GEMINI_API_KEY=paste_your_gemini_key_here
+   DEEPGRAM_API_KEY=paste_your_deepgram_key_here
+   ELEVENLABS_API_KEY=paste_your_elevenlabs_key_here
+
+5. SAVE the file
+
+
+STEP 7: Build the Frontend
+---------------------------
+In the same Command Prompt:
+
+1. Go to frontend folder:
+   cd frontend
+
+2. Install packages (takes 1-2 minutes):
+   npm install
+
+3. Build the app:
+   npm run build
+
+4. Go back:
+   cd ..
+
+
+STEP 8: RUN THE APP!
+--------------------
+In Command Prompt:
+
+1. Make sure you're in InterviewAI folder
+2. Make sure venv is activated (should see "(venv)")
+3. Run:
+   python server.py
+
+4. Wait for message:
+   "Uvicorn running on http://0.0.0.0:8000"
+
+5. Open browser and go to:
+   http://localhost:8000
+
+
+DONE! 🎉
+--------
+The app is now running on your computer.
+
+To use it:
+1. Upload a CV (PDF)
+2. Paste job description
+3. Click through the steps
+4. Allow camera/mic when asked
+5. Interview starts!
+
+
+To STOP the app:
+Press Ctrl+C in the Command Prompt
+
+
+Next Time You Want to Run It:
+------------------------------
+1. Open Command Prompt
+2. cd Desktop\interview_platform-sherali-dev2\InterviewAI
+3. venv\Scripts\activate
+4. python server.py
+5. Go to: http://localhost:8000
+
+
+TROUBLESHOOTING:
+----------------
+❌ "python: command not found"
+   → Python not installed correctly
+   → Reinstall Python and CHECK "Add to PATH"
+
+❌ "'pip' is not recognized"
+   → Virtual environment not activated
+   → Run: venv\Scripts\activate
+
+❌ "Port 8000 already in use"
+   → Something else using that port
+   → Close other programs or restart computer
+
+❌ Camera/Mic not working
+   → Browser needs permission
+   → Click lock icon in address bar → Allow
+
+❌ Interview not starting
+   → Check API keys in .env file
+   → Make sure all 3 keys are correct
+
+
+NEED MORE HELP?
+---------------
+1. Read SETUP.md (more detailed)
+2. Read PROJECT_GUIDE.md (explains everything)
+3. Check agent_debug.log file for errors
+
+==========================================
