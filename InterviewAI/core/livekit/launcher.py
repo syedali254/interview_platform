@@ -10,7 +10,6 @@ import socket
 import platform
 import urllib.request
 import urllib.error
-import hashlib
 from pathlib import Path
 import atexit
 

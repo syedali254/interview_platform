@@ -62,6 +62,23 @@ _session = {
     "livekit_url": None,
 }
 
+# Currently running agent subprocess (one at a time)
+_agent_proc = None
+
+
+def _stop_agent_process():
+    global _agent_proc
+    if _agent_proc is not None and _agent_proc.poll() is None:
+        try:
+            _agent_proc.terminate()
+            _agent_proc.wait(timeout=5)
+        except Exception:
+            try:
+                _agent_proc.kill()
+            except Exception:
+                pass
+    _agent_proc = None
+
 
 # ── Models ──
 class JDInput(BaseModel):
@@ -212,6 +229,7 @@ async def api_launch_interview(config: InterviewConfig = InterviewConfig()):
 async def api_stop_interview():
     from core.livekit.launcher import cleanup
     cleanup()
+    _stop_agent_process()
     _session["livekit_launched"] = False
     return {"success": True}
 
@@ -283,7 +301,9 @@ async def get_token():
         .to_jwt()
     )
 
-    # Start agent subprocess
+    # Start agent subprocess (kill any previous one first)
+    global _agent_proc
+    _stop_agent_process()
     agent_script = Path(__file__).parent / "core" / "livekit" / "run_agent.py"
     agent_log = Path(__file__).parent / "agent_debug.log"
     env = os.environ.copy()
@@ -297,12 +317,12 @@ async def get_token():
         if env_key in os.environ:
             env[env_key] = os.environ[env_key]
 
-    log_fh = open(agent_log, "w")
-    subprocess.Popen(
-        [sys.executable, "-u", str(agent_script), room_name],
-        stdout=log_fh, stderr=subprocess.STDOUT,
-        env=env, cwd=str(Path(__file__).parent),
-    )
+    with open(agent_log, "w") as log_fh:
+        _agent_proc = subprocess.Popen(
+            [sys.executable, "-u", str(agent_script), room_name],
+            stdout=log_fh, stderr=subprocess.STDOUT,
+            env=env, cwd=str(Path(__file__).parent),
+        )
 
     return {
         "token": token,

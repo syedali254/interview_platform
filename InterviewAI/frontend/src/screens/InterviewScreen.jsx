@@ -123,11 +123,11 @@ export default function InterviewScreen({ mediaStream, sessionData, setSessionDa
     setTimeout(() => setWarning(''), 4000)
   }
 
-  let lastDistraction = 0
+  const lastDistractionRef = useRef(0)
   const reportDistraction = (type, detail) => {
     const now = Date.now()
-    if (now - lastDistraction < 5000) return
-    lastDistraction = now
+    if (now - lastDistractionRef.current < 5000) return
+    lastDistractionRef.current = now
     setSessionData(prev => ({
       ...prev,
       distractions: [...prev.distractions, { type, detail, time: Math.floor((Date.now() - (prev.startTime || Date.now())) / 1000) }]
@@ -151,7 +151,7 @@ export default function InterviewScreen({ mediaStream, sessionData, setSessionDa
       setTimeout(() => startEmotionDetection(), 3000)
       return
     }
-    const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models'
+    const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights'
     try {
       await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL)
       await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)

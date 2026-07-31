@@ -117,6 +117,18 @@ def _generate_agent_token(room_name: str) -> str:
 
 # ── Main loop ─────────────────────────────────────────────────────────────
 
+class InterviewAgent(Agent):
+    """Agent with a hook so the session waits for the candidate's turn
+    and notifies the client the moment they finish speaking."""
+
+    def __init__(self, on_candidate_finished=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._on_candidate_finished = on_candidate_finished
+
+    async def on_user_turn_completed(self, turn_ctx, new_message):
+        if self._on_candidate_finished is not None:
+            self._on_candidate_finished(new_message.text_content or "")
+
 async def run_interview(room_name: str):
     ws_url = os.environ.get("LIVEKIT_URL", "ws://localhost:7880")
     deepgram_key = os.environ.get("DEEPGRAM_API_KEY", "")
@@ -152,22 +164,19 @@ async def run_interview(room_name: str):
             language="en-US",
             interim_results=True,
             api_key=deepgram_key,
-            endpointing=500,
+            endpointing_ms=500,
         )
         tts = elevenlabs.TTS(
             model="eleven_flash_v2_5",
             voice_id="JBFqnCBsd6RMkjVDRZzb",
             api_key=elevenlabs_key,
+            streaming_latency=4,
         )
 
-        agent = Agent(
-            instructions=system_prompt,
-            stt=stt,
-            llm=llm_instance,
-            tts=tts,
-        )
-
-        session = AgentSession()
+        turn_cfg = {
+            "endpointing": {"min_delay": 1.5, "max_delay": 4.0},
+            "interruption": {"enabled": False},
+        }
 
         # Track questions for client
         q_count = 0
@@ -175,6 +184,42 @@ async def run_interview(room_name: str):
         distraction_events = []
         emotion_timeline = []
         start_time = time.time()
+
+
+        def _is_question(text: str) -> bool:
+            t = text.strip()
+            if "?" not in t:
+                return False
+            lowered = t.lower()
+            return not (
+                lowered.startswith("are you ready")
+                or lowered.startswith("shall we begin")
+                or lowered.startswith("do you have any questions")
+                or lowered.startswith("let's get started")
+            )
+
+        def _on_candidate_finished(text: str):
+            print(f"[Agent] Candidate finished speaking: {text[:80]}")
+            asyncio.ensure_future(
+                room.local_participant.publish_data(
+                    json.dumps({
+                        "type": "candidate_finished",
+                        "text": text,
+                        "q_count": q_count,
+                    }).encode()
+                )
+            )
+
+        agent = InterviewAgent(
+            instructions=system_prompt,
+            stt=stt,
+            llm=llm_instance,
+            tts=tts,
+            turn_handling=turn_cfg,
+            on_candidate_finished=_on_candidate_finished,
+        )
+
+        session = AgentSession(turn_handling=turn_cfg)
 
         @session.on("conversation_item_added")
         def _on_item(ev):
@@ -185,16 +230,19 @@ async def run_interview(room_name: str):
                 if not text:
                     return
                 if item.role == "assistant":
-                    # Count questions (any assistant message after the first 2 is a question)
-                    q_count += 1
+                    if _is_question(text):
+                        q_count += 1
+                        phase = "interviewing"
+                    else:
+                        phase = "greeting" if q_count == 0 else "interaction"
                     transcript.append({"role": "agent", "text": text})
-                    print(f"[Agent] Q{q_count}: {text[:80]}")
+                    print(f"[Agent] Q{q_count} ({phase}): {text[:80]}")
                     asyncio.ensure_future(
                         room.local_participant.publish_data(
                             json.dumps({
                                 "type": "agent_speech",
                                 "text": text,
-                                "phase": "interviewing" if q_count > 1 else "greeting",
+                                "phase": phase,
                                 "q_count": q_count,
                                 "elapsed_mins": round((time.time() - start_time) / 60, 1),
                             }).encode()
