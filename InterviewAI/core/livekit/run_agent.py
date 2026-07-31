@@ -117,6 +117,15 @@ def _generate_agent_token(room_name: str) -> str:
 
 # ── Main loop ─────────────────────────────────────────────────────────────
 
+class InterviewerAgent(Agent):
+    """Agent that speaks first when entering the room."""
+
+    async def on_enter(self):
+        """Trigger the greeting immediately when agent enters the session."""
+        await asyncio.sleep(1.0)
+        if self.session:
+            self.session.generate_reply()
+
 async def run_interview(room_name: str):
     ws_url = os.environ.get("LIVEKIT_URL", "ws://localhost:7880")
     deepgram_key = os.environ.get("DEEPGRAM_API_KEY", "")
@@ -161,7 +170,7 @@ async def run_interview(room_name: str):
             streaming_latency=4,
         )
 
-        agent = Agent(
+        agent = InterviewerAgent(
             instructions=system_prompt,
             stt=stt,
             llm=llm_instance,
