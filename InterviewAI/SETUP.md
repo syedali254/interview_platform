@@ -1,6 +1,6 @@
 # InterviewAI — Setup Guide
 
-> One-file setup. Just run `start.bat` and you're done.
+> One-file setup. Just run `run.bat` and you're done.
 
 ---
 
@@ -11,19 +11,20 @@
 ```bash
 # 1. Get the code
 git clone https://github.com/syedali254/interview_platform.git
-cd interview_platform/InterviewAI
+cd interview_platform
 
 # 2. Run this ONE file
-start.bat
+run.bat
 ```
 
 **That's it!** On first run, it will:
+- Switch to the latest fixed branch automatically
 - Install everything automatically
 - Open Notepad for API keys
 - Start the server
 - Open http://localhost:8000
 
-**Next times:** Just double-click `start.bat` → server starts!
+**Next times:** Just double-click `run.bat` → server starts!
 
 ---
 
@@ -40,7 +41,7 @@ Install these two things (one time only):
 
 ## 🔑 API Keys (Free, Required)
 
-On first run, `start.bat` opens Notepad. You'll need these 3 keys:
+On first run, `run.bat` opens Notepad. You'll need these 3 keys:
 
 | Service | Purpose | Get Key | Free Tier |
 |---------|---------|---------|-----------|
@@ -57,7 +58,7 @@ Paste them in Notepad when prompted, save, close. Done!
 ```
 Step 1: Install Python + Node.js (5 minutes)
 Step 2: Clone repo (1 minute)
-Step 3: Double-click start.bat (3 minutes first time)
+Step 3: Double-click run.bat (3 minutes first time)
 Step 4: Paste API keys when Notepad opens
 Step 5: Browser opens automatically → http://localhost:8000
 ```
@@ -72,11 +73,11 @@ Step 5: Browser opens automatically → http://localhost:8000
 https://github.com/syedali254/interview_platform/archive/refs/heads/sherali-dev2.zip
 ```
 
-Extract → Open `InterviewAI` folder → Double-click `start.bat`
+Extract → Open the `interview_platform` folder → Double-click `run.bat`
 
 ---
 
-## 🤖 What start.bat Does
+## 🤖 What run.bat Does
 
 **First Run (Automatic Setup):**
 1. Checks Python & Node.js installed
@@ -118,26 +119,27 @@ Extract → Open `InterviewAI` folder → Double-click `start.bat`
 | Port 8000 in use | Close other apps or restart PC |
 | Camera/mic not working | Allow browser permissions (click lock icon) |
 | Agent not speaking | Check `.env` has correct API keys |
-| Still broken | Delete `venv` folder, run `start.bat` again |
+| Still broken | Delete `venv` folder, run `run.bat` again |
 
 ---
 
 ## 📂 Project Structure
 
 ```
-InterviewAI/
-├── start.bat              ← Double-click this!
-├── .env                   ← API keys (auto-created)
-├── server.py              ← FastAPI backend
-├── PROJECT_GUIDE.md       ← Detailed explanation
-├── core/                  ← Backend logic
-│   ├── agents/            ← CV/JD parsers, question generator
-│   ├── graph/             ← Skill graph (ESCO-based)
-│   └── livekit/           ← Voice interview system
-├── frontend/              ← React UI
-│   ├── dist/              ← Built files (auto-generated)
-│   └── src/               ← Source code
-└── venv/                  ← Python environment (auto-created)
+interview_platform/
+├── run.bat                ← Double-click this!
+├── InterviewAI/
+│   ├── .env               ← API keys (auto-created)
+│   ├── server.py          ← FastAPI backend
+│   ├── PROJECT_GUIDE.md   ← Detailed explanation
+│   ├── core/              ← Backend logic
+│   │   ├── agents/        ← CV/JD parsers, question generator
+│   │   ├── graph/         ← Skill graph (ESCO-based)
+│   │   └── livekit/       ← Voice interview system
+│   ├── frontend/          ← React UI
+│   │   ├── dist/          ← Built files (auto-generated)
+│   │   └── src/           ← Source code
+│   └── venv/              ← Python environment (auto-created)
 ```
 
 ---
@@ -172,7 +174,7 @@ InterviewAI/
 
 ---
 
-## ✋ Manual Setup (Only If start.bat Fails)
+## ✋ Manual Setup (Only If run.bat Fails)
 
 ```bash
 python -m venv venv
