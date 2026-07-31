@@ -150,15 +150,6 @@ def start_livekit_server() -> bool:
     return False
 
 
-def start_web_server():
-    log("Starting/restarting web server...")
-    from core.livekit.whisper_server import start_whisper_server
-    start_whisper_server(force_restart=True)
-    time.sleep(1)
-    log("Web server running on http://localhost:18765")
-    return True
-
-
 def launch(resume_text="", jd_text="", questions=None, cv_data=None, jd_data=None):
     os.environ["RESUME_TEXT"] = (resume_text or "")[:3000]
     os.environ["JD_TEXT"] = (jd_text or "")[:3000]
@@ -171,9 +162,7 @@ def launch(resume_text="", jd_text="", questions=None, cv_data=None, jd_data=Non
 
     if not start_livekit_server():
         return None
-    if not start_web_server():
-        return None
-    return "http://localhost:18765/livekit"
+    return "ws://localhost:7880"
 
 
 def cleanup():

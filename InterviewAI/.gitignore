@@ -1,7 +1,6 @@
 .env
 __pycache__/
 *.pyc
-.streamlit/
 *.pdf
 data/uploads/
 venv/
@@ -10,4 +9,6 @@ venv/
 dist/
 build/
 *.log
-
+node_modules/
+frontend/dist/
+frontend/node_modules/
