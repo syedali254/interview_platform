@@ -1,310 +1,171 @@
-# Quick Setup Guide — InterviewAI
+# InterviewAI — Setup Guide
 
-Follow these steps exactly to get InterviewAI running on your machine.
-
----
-
-## Prerequisites (Install First)
-
-### 1. Install Python 3.11
-- Download: https://www.python.org/downloads/
-- **IMPORTANT**: During installation, check ✅ "Add Python to PATH"
-- Verify: Open Command Prompt and type: `python --version`
-- Should show: `Python 3.11.x`
-
-### 2. Install Node.js
-- Download: https://nodejs.org/ (LTS version)
-- Install with default settings
-- Verify: `node --version` (should show v18+ or v20+)
-
-### 3. Install Git (if not already installed)
-- Download: https://git-scm.com/downloads
-- Install with default settings
+> Complete setup instructions for running the AI Interview Platform.
 
 ---
 
-## Get the Code
+## Quick Start (Automated)
+
+**Run this file ONCE to set everything up automatically:**
 
 ```bash
-# Clone the repository
-git clone https://github.com/syedali254/interview_platform.git
-cd interview_platform
-
-# Switch to the working branch
-git checkout sherali-dev2
-
-# Navigate to the project folder
-cd InterviewAI
+setup.bat
 ```
+
+Then add your API keys to `.env` (see below), and run:
+
+```bash
+run.bat
+```
+
+**Done!** Skip to [Get API Keys](#get-api-keys) if using automated setup.
 
 ---
 
-## Get API Keys (Required)
+## What You Need (Prerequisites)
+
+These must be installed before running `setup.bat`:
+
+1. **Python 3.11+** → https://www.python.org/downloads/
+   - ✅ **CHECK "Add Python to PATH" during installation**
+   
+2. **Node.js 18+** → https://nodejs.org/ (LTS version)
+
+---
+
+## Get API Keys
 
 You need **3 free API keys**:
 
-### 1. Google Gemini API Key
-1. Go to: https://aistudio.google.com/apikey
-2. Click "Get API key" → "Create API key"
-3. Copy the key (starts with `AIza...`)
+| Service | Purpose | Get Key | Free Tier |
+|---------|---------|---------|-----------|
+| **Google Gemini** | LLM (brain) | [Get API Key](https://aistudio.google.com/apikey) | 15 req/min |
+| **Deepgram** | Speech-to-Text | [Sign Up](https://console.deepgram.com/signup) | $200 credit |
+| **ElevenLabs** | Text-to-Speech | [Sign Up](https://elevenlabs.io/) | 10k chars/month |
 
-### 2. Deepgram API Key
-1. Go to: https://console.deepgram.com/signup
-2. Sign up for free account ($200 free credit)
-3. Go to "API Keys" → Create new key
-4. Copy the key
+### Configure Keys
 
-### 3. ElevenLabs API Key
-1. Go to: https://elevenlabs.io/
-2. Sign up for free account (10,000 characters/month free)
-3. Go to Profile → API Key
-4. Copy the key
+1. Copy `.env.example` to `.env`:
+   ```bash
+   copy .env.example .env
+   ```
+
+2. Open `.env` in Notepad and replace with YOUR keys:
+
+```env
+GEMINI_API_KEY=AIzaXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+DEEPGRAM_API_KEY=your_deepgram_key_here
+ELEVENLABS_API_KEY=your_elevenlabs_key_here
+```
+
+3. Save and close
 
 ---
 
-## Setup (One-Time)
-
-### Step 1: Python Setup
+## Manual Setup (If setup.bat Fails)
 
 ```bash
 # Create virtual environment
 python -m venv venv
 
-# Activate it (Windows)
+# Activate (Windows)
 venv\Scripts\activate
 
-# You should see (venv) in your terminal now
-
-# Install Python packages (takes 2-3 minutes)
+# Install Python packages
 pip install -r requirements.txt
-```
 
-### Step 2: Configure API Keys
-
-1. Open the `InterviewAI` folder in File Explorer
-2. Find the file `.env.example`
-3. Make a copy and rename it to `.env` (remove `.example`)
-4. Open `.env` in Notepad
-5. Replace the placeholder values with your actual API keys:
-
-```env
-# Replace these with YOUR actual keys:
-GEMINI_API_KEY=AIzaXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-DEEPGRAM_API_KEY=your_deepgram_key_here
-ELEVENLABS_API_KEY=your_elevenlabs_key_here
-
-# Keep these as-is:
-GEMINI_MODEL=gemini-2.0-flash
-LIVEKIT_API_KEY=devkey
-LIVEKIT_API_SECRET=secret
-LIVEKIT_URL=ws://localhost:7880
-```
-
-6. Save and close
-
-### Step 3: Frontend Build
-
-```bash
-# Go to frontend folder
+# Build frontend
 cd frontend
-
-# Install JavaScript packages (takes 1-2 minutes)
 npm install
-
-# Build the React app (takes ~30 seconds)
 npm run build
-
-# Go back to main folder
 cd ..
 ```
 
 ---
 
-## Running the Application
+## Running the App
 
-Every time you want to use InterviewAI:
-
+### Easy way:
 ```bash
-# 1. Navigate to the project folder
-cd path\to\interview_platform\InterviewAI
+run.bat
+```
 
-# 2. Activate virtual environment (if not already active)
+### Manual way:
+```bash
 venv\Scripts\activate
-
-# 3. Start the server
 python server.py
 ```
 
-You should see:
-```
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-```
+**Open browser:** http://localhost:8000
 
-**Open your browser and go to:** http://localhost:8000
+Press `Ctrl+C` to stop.
 
 ---
 
-## Using the Application
+## How to Use
 
-1. **Upload Step**
-   - Upload a CV (PDF file)
-   - Paste a job description
-   - Click "Analyze CV & JD"
-
-2. **Skill Graph**
-   - Click "Build Graph"
-   - Review the 3 skill graphs (Matched, Missing, Extra)
-
-3. **Questions**
-   - Click "Generate Questions"
-   - Review the AI-generated interview questions
-
-4. **Device Setup**
-   - Allow camera and microphone access when prompted
-   - Test your devices
-   - Click "Begin Interview"
-
-5. **Live Interview**
-   - AI will greet you and start asking questions
-   - Speak your answers naturally
-   - Interview runs for ~15 questions or 30 minutes
-
-6. **Report**
-   - View full transcript
-   - See emotion timeline
-   - Check distraction events
-   - Review metrics
+1. **Upload & Parse** → Upload CV + paste JD → Click "Analyze"
+2. **Skill Graph** → Build graph → View matched/missing/extra skills  
+3. **Questions** → Generate questions → Review AI questions
+4. **Setup** → Allow camera/mic → Test devices → Begin
+5. **Interview** → AI asks questions → You answer via voice
+6. **Report** → View transcript, emotions, distractions
 
 ---
 
 ## Troubleshooting
 
-### ❌ "python: command not found"
-- Python not installed or not in PATH
-- Reinstall Python and check "Add to PATH"
-
-### ❌ "ModuleNotFoundError"
-- Virtual environment not activated
-- Run: `venv\Scripts\activate` first
-
-### ❌ "Port 8000 already in use"
-- Another process using port 8000
-- Close it or change port in `server.py` (line: `uvicorn.run(app, host="0.0.0.0", port=8000)`)
-
-### ❌ "Camera/Mic not working"
-- Check browser permissions
-- Chrome/Edge: Click lock icon in address bar → Allow camera/mic
-- Try refreshing the page
-
-### ❌ "Agent not speaking"
-- Check API keys in `.env`
-- Check console for error messages
-- Check `agent_debug.log` file for detailed errors
-
-### ❌ "npm: command not found"
-- Node.js not installed
-- Install from: https://nodejs.org/
+| Problem | Solution |
+|---------|----------|
+| `python: command not found` | Reinstall Python with "Add to PATH" checked |
+| `pip: command not found` | Run `venv\Scripts\activate` first |
+| `npm: command not found` | Install Node.js from nodejs.org |
+| Port 8000 in use | Close other apps or change port in server.py |
+| Camera/Mic not working | Allow permissions in browser (click lock icon) |
+| Agent not speaking | Check API keys in `.env`, see `agent_debug.log` |
+| Import errors | Delete `venv`, re-run `setup.bat` |
 
 ---
 
-## Stopping the Server
-
-Press `Ctrl+C` in the terminal where the server is running.
-
----
-
-## File Structure (What's What)
+## File Structure
 
 ```
-interview_platform/
-└── InterviewAI/                 ← Main project folder
-    ├── server.py                ← Start this to run the app
-    ├── .env                     ← Your API keys (DON'T SHARE THIS)
-    ├── requirements.txt         ← Python packages list
-    ├── PROJECT_GUIDE.md         ← Detailed explanation
-    ├── SETUP.md                 ← This file
-    │
-    ├── core/                    ← Backend logic
-    │   ├── agents/              ← CV/JD parsers, question generator
-    │   ├── graph/               ← Skill graph engine
-    │   ├── livekit/             ← Voice interview system
-    │   └── ...
-    │
-    ├── frontend/                ← React UI
-    │   ├── dist/                ← Built files (served by server.py)
-    │   ├── src/                 ← React source code
-    │   └── package.json         ← JS packages list
-    │
-    └── venv/                    ← Python virtual environment
-```
-
----
-
-## Quick Command Reference
-
-```bash
-# Activate environment (do this first every time)
-venv\Scripts\activate
-
-# Run the app
-python server.py
-
-# Rebuild frontend (only if you change React code)
-cd frontend
-npm run build
-cd ..
-
-# Install new Python package
-pip install package_name
-
-# Install new JS package
-cd frontend
-npm install package_name
-cd ..
+InterviewAI/
+├── setup.bat          ← Run ONCE to setup everything
+├── run.bat            ← Run to start server
+├── server.py          ← Main application
+├── .env               ← Your API keys (create from .env.example)
+├── requirements.txt   ← Python dependencies
+├── PROJECT_GUIDE.md   ← Detailed explanation
+├── core/              ← Backend (agents, graph, livekit, llm)
+├── frontend/          ← React UI (src, dist)
+└── venv/              ← Virtual environment (auto-created)
 ```
 
 ---
 
 ## System Requirements
 
-- **OS**: Windows 10/11, macOS, or Linux
-- **RAM**: 4GB minimum (8GB recommended)
-- **Disk**: ~2GB free space
-- **Internet**: Required for API calls (LLM, STT, TTS)
-- **Browser**: Chrome, Edge, or Firefox (latest version)
-- **Microphone**: Required for interview
-- **Camera**: Required for emotion detection
+- Windows 10/11 (or macOS/Linux with adjustments)
+- 4GB RAM minimum, 8GB recommended
+- 2GB free disk space
+- Internet connection
+- Chrome/Edge browser
+- Microphone + Camera
+
+---
+
+## Security
+
+- Never commit `.env` (already in `.gitignore`)
+- Never share API keys publicly
+- All processing is local except API calls
 
 ---
 
 ## Need Help?
 
-1. Check `agent_debug.log` file for errors
-2. Read `PROJECT_GUIDE.md` for detailed explanations
-3. Verify all API keys are correct in `.env`
-4. Make sure virtual environment is activated (`venv\Scripts\activate`)
-
----
-
-## Security Notes
-
-- **Never commit `.env`** to Git (it's already in `.gitignore`)
-- **Never share API keys** publicly
-- Free tier limits:
-  - Gemini: 15 requests/minute
-  - Deepgram: $200 credit (~100 hours)
-  - ElevenLabs: 10,000 characters/month (~7-10 interviews)
-
----
-
-## What If It Still Doesn't Work?
-
-1. Delete `venv` folder
-2. Run: `python -m venv venv` again
-3. Activate: `venv\Scripts\activate`
-4. Reinstall: `pip install -r requirements.txt`
-5. Try again
-
----
-
-**That's it! You're ready to conduct AI interviews. 🎤🤖**
+- Read **PROJECT_GUIDE.md** for detailed explanations
+- Check **agent_debug.log** for errors
+- Verify `.env` has all 3 API keys
+- Make sure venv is activated before running
