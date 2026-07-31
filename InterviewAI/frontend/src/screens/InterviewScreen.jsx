@@ -124,18 +124,26 @@ export default function InterviewScreen({ mediaStream, sessionData, setSessionDa
   }
 
   const lastDistractionRef = useRef(0)
+  const distractionCountRef = useRef({})
   const reportDistraction = (type, detail) => {
     const now = Date.now()
-    if (now - lastDistractionRef.current < 5000) return
+    // Global cooldown: 15 seconds between ANY distraction reports
+    if (now - lastDistractionRef.current < 15000) return
     lastDistractionRef.current = now
+
+    // Track per-type counts for escalation
+    distractionCountRef.current[type] = (distractionCountRef.current[type] || 0) + 1
+    const count = distractionCountRef.current[type]
+    const severity = count >= 3 ? 'high' : count >= 2 ? 'medium' : 'low'
+
     setSessionData(prev => ({
       ...prev,
-      distractions: [...prev.distractions, { type, detail, time: Math.floor((Date.now() - (prev.startTime || Date.now())) / 1000) }]
+      distractions: [...prev.distractions, { type, detail, severity, count, time: Math.floor((Date.now() - (prev.startTime || Date.now())) / 1000) }]
     }))
     if (roomRef.current) {
       try {
         roomRef.current.localParticipant.publishData(
-          new TextEncoder().encode(JSON.stringify({ type: 'distraction', detail, severity: 'medium' }))
+          new TextEncoder().encode(JSON.stringify({ type: 'distraction', detail, severity, count }))
         )
       } catch(e) {}
     }
@@ -171,10 +179,10 @@ export default function InterviewScreen({ mediaStream, sessionData, setSessionDa
           .withFaceExpressions()
         if (detections.length === 0) {
           noFaceCountRef.current++
-          // Only report distraction after 5 consecutive misses (10+ seconds)
-          if (noFaceCountRef.current >= 5) {
+          // Only report after 10 consecutive misses (20+ seconds)
+          if (noFaceCountRef.current >= 10) {
             setEmotion('no_face')
-            if (noFaceCountRef.current === 5) {
+            if (noFaceCountRef.current === 10) {
               reportDistraction('no_face', 'No face detected for extended period')
             }
           }
@@ -196,13 +204,13 @@ export default function InterviewScreen({ mediaStream, sessionData, setSessionDa
   }
 
   const startDistractionDetection = (room) => {
+    // Only track actual tab switches (not window blur which fires too often)
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
-        reportDistraction('tab_switch', 'Switched tabs')
-        showWarning('Please stay on this tab during the interview')
+        reportDistraction('tab_switch', 'Candidate switched away from interview tab')
+        showWarning('⚠️ Please stay on this tab during the interview')
       }
     })
-    window.addEventListener('blur', () => reportDistraction('window_blur', 'Window lost focus'))
   }
 
   const endInterview = () => {
