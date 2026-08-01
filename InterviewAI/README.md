@@ -1,176 +1,134 @@
 # InterviewAI
 
-Multi-Agent AI Interview Platform with adaptive voice interviews, skill graph analysis, emotion detection, and behavioral integrity monitoring.
+> Multi-Agent AI Interview Platform — CMP7200 Masters Dissertation Project
 
-## Prerequisites
+An intelligent platform that conducts voice-based technical interviews using LLMs, evaluates candidates with dual-track scoring (LLM + ML classifier), detects behavioral anomalies, and produces explainable hiring recommendations.
 
-- **Python 3.11+**
-- **Node.js 18+** (for frontend build)
-- **API Keys** (see table below)
-- Modern browser (Chrome/Edge recommended) with camera & microphone
+## Architecture (12 Modules)
 
-## Setup & Run
+| Phase | Module | Function | Technology |
+|-------|--------|----------|------------|
+| 1 | M1 | CV Parsing | Gemini LLM |
+| 1 | M2 | JD Understanding | Gemini LLM |
+| 1 | M3 | Skill Graph | NetworkX + ESCO |
+| 1 | M4 | Question Generation | LLM + Graph Traversal |
+| 2 | M5 | Voice Interview | Deepgram STT + ElevenLabs TTS |
+| 2 | M7 | Vision Monitor | face-api.js |
+| 2 | M10 | Emotion Detection | face-api.js expressions |
+| 3 | M6 | Answer Evaluation | LLM-as-Judge + S-BERT/XGBoost |
+| 3 | M9 | Behavioral Integrity | Isolation Forest |
+| 4 | M11 | Recommendation Fusion | Weighted scoring engine |
+| 4 | M12 | Report Generation | Dashboard + templates |
 
-### Quick start (Windows - one click)
+## Quick Start
 
-Just double-click **`run.bat`** (in the project root). It will automatically:
+### Prerequisites
+- **Python 3.11+** — [Download](https://www.python.org/downloads/) (check "Add to PATH")
+- **Node.js 18+** — [Download](https://nodejs.org/)
 
-1. Switch to the latest fixed branch (`sherali-dev2`)
-2. Check Python 3.11+ and Node.js 18+ are installed
-3. Create the `venv` and install all Python packages
-4. Create `.env` and open it so you can paste your API keys (only the first time)
-5. Install and build the frontend
-6. Start the app and open `http://localhost:8000` in your browser
-
-Prerequisites (one-time on the machine): [Python 3.11+](https://www.python.org/downloads/), [Node.js LTS](https://nodejs.org), and your 3 API keys.
-
-### Manual setup
-
-```bash
-cd InterviewAI
-python -m venv venv
-
-# Windows:
-venv\Scripts\activate
-# macOS/Linux:
-source venv/bin/activate
-
-pip install -r requirements.txt
-```
-
-### 2. Create `.env` file
-
-Copy `.env.example` to `.env` and fill in your keys:
-
-```env
-GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-2.5-flash
-DEEPGRAM_API_KEY=your_deepgram_api_key
-ELEVENLABS_API_KEY=your_elevenlabs_api_key
-```
-
-### 3. Build frontend
+### Setup (Windows)
 
 ```bash
-cd frontend
-npm install
-npm run build
-cd ..
+git clone https://github.com/syedali254/interview_platform.git
+cd interview_platform/InterviewAI
+setup.bat
 ```
 
-### 4. Run the application
+`setup.bat` handles everything: venv, packages, frontend build, and API key configuration.
+
+### Run
 
 ```bash
-python server.py
+run.bat
 ```
 
-Open **http://localhost:8000** in your browser.
+Open **http://localhost:8000** in Chrome/Edge.
 
-> **Note:** The LiveKit server binary auto-downloads on first interview launch (~50 MB).
-
-### Development mode (hot-reload frontend)
+### Update Dependencies
 
 ```bash
-# Terminal 1 — backend
-python server.py
-
-# Terminal 2 — frontend dev server (proxies API to port 8000)
-cd frontend
-npm run dev
+update.bat
 ```
 
-Then open **http://localhost:5173** for hot-reloading.
+## API Keys (Free)
 
----
-
-## API Keys Required
-
-| Service | Purpose | Get it at |
-|---------|---------|-----------|
-| **Gemini** | LLM — question generation, evaluation, adaptive interviewer | https://aistudio.google.com/apikey |
-| **Deepgram** | Real-time Speech-to-Text | https://console.deepgram.com |
-| **ElevenLabs** | Text-to-Speech (AI interviewer voice) | https://elevenlabs.io |
-
----
-
-## Application Flow
-
-```
-Step 1: Upload CV (PDF/text) + Paste Job Description
-Step 2: Build Skill Graph (matches skills, finds gaps)
-Step 3: Generate Adaptive Interview Questions
-Step 4: Device Setup (camera + mic verification)
-Step 5: Live Voice Interview (AI asks, you answer)
-Step 6: Dashboard (transcript, scores, emotion timeline)
-```
-
----
-
-## Architecture
-
-### Adaptive Live Interview
-- AI interviewer powered by **Gemini LLM** generates questions adaptively
-- Strong answer → deeper probe or harder topic
-- Weak answer → simpler follow-up
-- Real-time voice via **LiveKit** (Deepgram STT + ElevenLabs TTS)
-- Configurable end conditions: time budget / max questions / topic coverage
-
-### Emotion & Distraction Detection
-- Client-side via **face-api.js** (every 2.5s, non-blocking)
-- Detects: happy, sad, angry, surprised, fearful, neutral
-- Distraction alerts: tab switch, no face, multiple faces
-- All events logged and shown in dashboard
-
----
+| Service | Purpose | Get Key |
+|---------|---------|---------|
+| Google Gemini | LLM | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+| Deepgram | Speech-to-Text | [console.deepgram.com](https://console.deepgram.com/signup) |
+| ElevenLabs | Text-to-Speech | [elevenlabs.io](https://elevenlabs.io/) |
 
 ## Project Structure
 
 ```
 InterviewAI/
-├── server.py              # FastAPI backend (all API endpoints)
-├── requirements.txt       # Python dependencies
-├── .env.example           # Environment variable template
+├── setup.bat / run.bat / update.bat   ← Windows scripts
+├── server.py                          ← FastAPI backend (all endpoints)
+├── .env.example                       ← Environment template
+├── requirements.txt                   ← Python dependencies
+│
 ├── core/
-│   ├── config.py          # Configuration & env vars
-│   ├── llm.py             # Gemini LLM wrapper
-│   ├── agents/
-│   │   ├── cv_agent.py    # CV parsing (PDF + text)
-│   │   ├── jd_agent.py    # Job description parsing
-│   │   └── question_agent.py  # Interview question generation
+│   ├── agents/                        ← M1, M2, M4 (CV/JD/Question agents)
+│   ├── graph/                         ← M3 (Skill graph + ESCO matching)
+│   ├── livekit/                       ← M5 (Voice interview agent)
 │   ├── evaluator/
-│   │   └── evaluator.py   # Answer evaluation (LLM-as-judge)
-│   ├── graph/
-│   │   ├── skill_graph.py # ESCO-based skill graph builder
-│   │   ├── state.py       # Interview state tracking
-│   │   ├── traversal.py   # Graph traversal for skill selection
-│   │   └── visualize.py   # Graph visualization utilities
-│   ├── livekit/
-│   │   ├── run_agent.py   # Adaptive AI interviewer agent
-│   │   ├── launcher.py    # LiveKit server lifecycle manager
-│   │   └── livekit.yaml   # LiveKit server configuration
-│   ├── pipeline/
-│   │   └── interview_loop.py  # Interview orchestration logic
-│   └── report/
-│       └── generator.py   # Report generation
-├── data/esco/             # ESCO taxonomy data (skill relationships)
-└── frontend/              # React + Vite + Tailwind CSS
-    ├── src/
-    │   ├── App.jsx        # Main app (step navigation + state)
-    │   ├── components/    # Sidebar
-    │   └── screens/       # UploadStep, GraphStep, QuestionsStep,
-    │                      # SetupScreen, InterviewScreen, DashboardScreen
-    ├── package.json
-    └── vite.config.js
+│   │   ├── evaluator.py              ← M6 orchestrator (dual-track)
+│   │   ├── track_b.py                ← M6 Track B (S-BERT + XGBoost)
+│   │   ├── integrity.py             ← M9 (Isolation Forest)
+│   │   ├── fusion.py                ← M11 (Weighted recommendation)
+│   │   ├── train_model.py           ← Training script for XGBoost
+│   │   └── models/                   ← Saved model files
+│   ├── pipeline/                      ← Interview loop state machine
+│   ├── report/                        ← M12 (Report generator)
+│   ├── config.py                      ← Configuration
+│   └── llm.py                         ← Gemini API wrapper
+│
+├── frontend/                          ← React + Vite app
+│   └── src/screens/                   ← UI screens (Upload→Graph→Questions→Interview→Dashboard)
+│
+└── proposal/                          ← Dissertation proposal (Word doc + diagrams)
 ```
 
----
+## Key Features
+
+- **Dual-Track Evaluation (M6)**: Every answer scored by both LLM-as-Judge AND trained XGBoost classifier with SHAP explanations. Disagreements flagged for review.
+- **Behavioral Integrity (M9)**: Isolation Forest detects anomalous patterns (tab-switching, timing, hesitation).
+- **Adaptive Interview**: Questions adapt based on skill graph gaps and candidate responses.
+- **Real-time Emotion**: face-api.js tracks facial expressions during interview.
+- **Weighted Fusion (M11)**: Final recommendation combines answer quality (50%), skill match (20%), integrity (15%), engagement (15%).
+
+## Training the ML Model
+
+```bash
+cd InterviewAI
+venv\Scripts\activate
+python -m core.evaluator.train_model
+```
+
+Generates synthetic training data via LLM, extracts S-BERT features, trains XGBoost regressor.
+
+## Manual Setup (If bat files fail)
+
+```bash
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+cd frontend && npm install && npm run build && cd ..
+copy .env.example .env
+# Edit .env with your API keys
+python server.py
+```
 
 ## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| `GEMINI_API_KEY not set` | Ensure `.env` file exists with valid key |
-| LiveKit won't start | First run downloads binary — needs internet. Check port 7880 is free |
-| No audio in interview | Allow microphone permission in browser. Check Deepgram key is valid |
-| Frontend 404 | Run `cd frontend && npm run build` to generate `dist/` folder |
-| Camera not showing | Use Chrome/Edge. Some browsers block camera on `localhost` without HTTPS |
+| Issue | Fix |
+|-------|-----|
+| `python not found` | Reinstall with "Add to PATH" checked |
+| `npm not found` | Install Node.js from nodejs.org |
+| Agent not speaking | Check API keys in `.env` |
+| Port 8000 in use | Close other apps or restart |
+| Camera/mic blocked | Allow in browser (lock icon) |
+
+## License
+
+Academic project — Birmingham City University, CMP7200.

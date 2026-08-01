@@ -12,3 +12,5 @@ build/
 node_modules/
 frontend/dist/
 frontend/node_modules/
+core/evaluator/models/*.joblib
+core/evaluator/models/training_data.json

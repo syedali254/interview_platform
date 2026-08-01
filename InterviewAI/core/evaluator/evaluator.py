@@ -1,4 +1,11 @@
-"""M6: Core evaluation module — Track A LLM-as-Judge."""
+"""M6: Core evaluation module — Dual-track answer scoring.
+
+Track A: LLM-as-Judge (GPT/Gemini evaluates against rubric)
+Track B: Trained ML Classifier (S-BERT + XGBoost + SHAP)
+
+Both tracks run in parallel. Results are compared using disagreement
+analysis. High disagreement flags answers for human review.
+"""
 
 from datetime import datetime
 
@@ -126,13 +133,41 @@ def evaluate_answer(question: str, candidate_answer: str, skill: str) -> dict:
             "final_score": 0.0,
             "verdict": "gap",
             "track_a": None,
+            "track_b": None,
+            "comparison": None,
             "flagged": False,
             "timestamp": datetime.now().isoformat(),
         }
 
     reference = generate_reference_answer(question, skill)
     track_a_result = track_a_evaluate(question, candidate_answer, skill, reference)
-    final_score = track_a_result["score"]
+
+    # Track B: Trained classifier
+    try:
+        from core.evaluator.track_b import track_b_evaluate
+        track_b_result = track_b_evaluate(question, candidate_answer, skill, reference)
+    except Exception as e:
+        track_b_result = {"score": None, "error": str(e), "method": "trained_classifier"}
+
+    # Dual-track comparison
+    score_a = track_a_result["score"]
+    score_b = track_b_result.get("score")
+
+    comparison = None
+    if score_b is not None:
+        disagreement = abs(score_a - score_b)
+        agreement_level = "high" if disagreement < 10 else "moderate" if disagreement < 20 else "low"
+        comparison = {
+            "track_a_score": score_a,
+            "track_b_score": score_b,
+            "disagreement": round(disagreement, 1),
+            "agreement_level": agreement_level,
+            "flagged_for_review": disagreement > 20,
+        }
+        # Final score: weighted average (Track A 60%, Track B 40%)
+        final_score = score_a * 0.6 + score_b * 0.4
+    else:
+        final_score = score_a
 
     if final_score >= SCORE_STRONG_THRESHOLD:
         verdict = "strong"
@@ -141,14 +176,18 @@ def evaluate_answer(question: str, candidate_answer: str, skill: str) -> dict:
     else:
         verdict = "gap"
 
+    flagged = comparison["flagged_for_review"] if comparison else False
+
     return {
         "skill": skill,
         "question": question,
         "candidate_answer": candidate_answer,
         "reference_answer": reference,
-        "final_score": final_score,
+        "final_score": round(final_score, 1),
         "verdict": verdict,
         "track_a": track_a_result,
-        "flagged": False,
+        "track_b": track_b_result,
+        "comparison": comparison,
+        "flagged": flagged,
         "timestamp": datetime.now().isoformat(),
     }

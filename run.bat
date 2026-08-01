@@ -129,7 +129,9 @@ rem ---- [6/6] Build the web app ----
 echo [6/6] Building the web app...
 if not exist "frontend\node_modules" (
     echo       Installing web app packages - first time takes a few minutes...
+    cd /d "%~dp0InterviewAI\frontend"
     call npm install --no-audit --no-fund
+    cd /d "%~dp0InterviewAI"
     if errorlevel 1 (
         echo.
         echo   ERROR: npm install failed. Check your internet and rerun.

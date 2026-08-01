@@ -42,6 +42,8 @@ from core.agents.jd_agent import parse_job_description
 from core.agents.question_agent import generate_interview_questions, build_interview_flow
 from core.graph.skill_graph import build_graph
 from core.evaluator.evaluator import evaluate_answer
+from core.evaluator.integrity import assess_integrity
+from core.evaluator.fusion import compute_fusion_score
 
 app = FastAPI(title="InterviewAI API", version="2.0")
 
@@ -350,6 +352,40 @@ async def save_transcript_endpoint(data: dict):
     fp = transcript_dir / f"{session_id}.json"
     fp.write_text(json.dumps(data, indent=2))
     return {"saved": True, "path": str(fp)}
+
+
+# ── M9: Behavioral Integrity Assessment ──
+@app.post("/api/integrity")
+async def api_integrity(data: dict):
+    """Assess behavioral integrity of an interview session."""
+    try:
+        result = assess_integrity(data)
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+# ── M11: Fusion Report ──
+@app.post("/api/fusion-report")
+async def api_fusion_report(data: dict):
+    """Generate weighted fusion report combining all module outputs."""
+    try:
+        answer_scores = data.get("answer_scores", [])
+        skill_match_pct = data.get("skill_match_pct", 0)
+        integrity_score = data.get("integrity_score", 100)
+        engagement_score = data.get("engagement_score", 75)
+        emotion_data = data.get("emotion_data", None)
+
+        result = compute_fusion_score(
+            answer_scores=answer_scores,
+            skill_match_pct=skill_match_pct,
+            integrity_score=integrity_score,
+            engagement_score=engagement_score,
+            emotion_data=emotion_data,
+        )
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(500, str(e))
 
 
 # ── Serve React frontend (production) ──
