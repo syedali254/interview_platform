@@ -11,11 +11,14 @@ export default function InterviewScreen({ mediaStream, sessionData, setSessionDa
   const [chatLog, setChatLog] = useState([])
   const [warning, setWarning] = useState('')
   const [emotion, setEmotion] = useState('neutral')
+  const [tabSwitchCount, setTabSwitchCount] = useState(0)
+  const [tabWarningVisible, setTabWarningVisible] = useState(false)
   const videoRef = useRef(null)
   const roomRef = useRef(null)
   const chatEndRef = useRef(null)
   const timerRef = useRef(null)
   const emotionRef = useRef(null)
+  const tabSwitchRef = useRef(0)
   const [elapsed, setElapsed] = useState(0)
 
   useEffect(() => {
@@ -204,11 +207,46 @@ export default function InterviewScreen({ mediaStream, sessionData, setSessionDa
   }
 
   const startDistractionDetection = (room) => {
-    // Only track actual tab switches (not window blur which fires too often)
+    // Track EVERY tab switch — no cooldown for these
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
-        reportDistraction('tab_switch', 'Candidate switched away from interview tab')
-        showWarning('⚠️ Please stay on this tab during the interview')
+        // User left the tab
+        tabSwitchRef.current += 1
+        const count = tabSwitchRef.current
+        setTabSwitchCount(count)
+
+        // Record in session data
+        setSessionData(prev => ({
+          ...prev,
+          distractions: [...prev.distractions, {
+            type: 'tab_switch',
+            detail: `Tab switch #${count}`,
+            severity: count >= 5 ? 'high' : count >= 3 ? 'medium' : 'low',
+            count,
+            time: Math.floor((Date.now() - (prev.startTime || Date.now())) / 1000)
+          }]
+        }))
+
+        // Send to agent
+        if (roomRef.current) {
+          try {
+            roomRef.current.localParticipant.publishData(
+              new TextEncoder().encode(JSON.stringify({
+                type: 'distraction',
+                detail: `Tab switch #${count}`,
+                severity: count >= 5 ? 'high' : count >= 3 ? 'medium' : 'low',
+                count
+              }))
+            )
+          } catch(e) {}
+        }
+      } else {
+        // User came back — show warning overlay
+        const count = tabSwitchRef.current
+        setTabWarningVisible(true)
+        // Auto-dismiss after time based on severity
+        const dismissTime = count >= 5 ? 6000 : count >= 3 ? 4000 : 3000
+        setTimeout(() => setTabWarningVisible(false), dismissTime)
       }
     })
   }
@@ -238,6 +276,57 @@ export default function InterviewScreen({ mediaStream, sessionData, setSessionDa
         </motion.div>
       )}
 
+      {/* Tab switch warning overlay */}
+      {tabWarningVisible && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="absolute inset-0 z-[100] bg-black/70 flex items-center justify-center"
+          onClick={() => setTabWarningVisible(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-2xl p-8 max-w-md mx-4 shadow-2xl text-center"
+          >
+            <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
+              tabSwitchCount >= 5 ? 'bg-red-100' : tabSwitchCount >= 3 ? 'bg-orange-100' : 'bg-yellow-100'
+            }`}>
+              <AlertTriangle className={`w-8 h-8 ${
+                tabSwitchCount >= 5 ? 'text-red-600' : tabSwitchCount >= 3 ? 'text-orange-600' : 'text-yellow-600'
+              }`} />
+            </div>
+            <h3 className={`text-xl font-bold mb-2 ${
+              tabSwitchCount >= 5 ? 'text-red-700' : tabSwitchCount >= 3 ? 'text-orange-700' : 'text-yellow-700'
+            }`}>
+              {tabSwitchCount >= 5 ? '⛔ Final Warning!' :
+               tabSwitchCount >= 3 ? '🚨 Warning — Tab Switch Detected!' :
+               '⚠️ Tab Switch Detected'}
+            </h3>
+            <p className="text-2xl font-bold text-gray-900 mb-2">
+              Total Switches: {tabSwitchCount}
+            </p>
+            <p className="text-gray-600 text-sm mb-4">
+              {tabSwitchCount >= 5
+                ? 'You have switched tabs multiple times. This behaviour is being recorded and WILL significantly impact your integrity score. Further switches may lead to disqualification.'
+                : tabSwitchCount >= 3
+                ? 'Multiple tab switches have been detected. This is being recorded and will affect your evaluation. Please remain on this tab.'
+                : 'Switching tabs during an interview is monitored. Please stay focused on this tab throughout the interview.'}
+            </p>
+            <button
+              onClick={() => setTabWarningVisible(false)}
+              className={`px-6 py-2 rounded-lg text-white font-semibold text-sm ${
+                tabSwitchCount >= 5 ? 'bg-red-600 hover:bg-red-700' :
+                tabSwitchCount >= 3 ? 'bg-orange-600 hover:bg-orange-700' :
+                'bg-yellow-600 hover:bg-yellow-700'
+              }`}
+            >
+              I Understand — Continue Interview
+            </button>
+          </motion.div>
+        </motion.div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-200 shadow-sm">
         <h2 className="text-sm font-semibold text-indigo-600">Live Interview</h2>
@@ -248,6 +337,15 @@ export default function InterviewScreen({ mediaStream, sessionData, setSessionDa
           <span className="px-3 py-1 bg-amber-50 border border-amber-100 rounded-full text-xs text-amber-700 flex items-center gap-1">
             <Clock className="w-3 h-3" /> {mins}:{secs.toString().padStart(2, '0')}
           </span>
+          {tabSwitchCount > 0 && (
+            <span className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${
+              tabSwitchCount >= 5 ? 'bg-red-100 border border-red-200 text-red-700' :
+              tabSwitchCount >= 3 ? 'bg-orange-100 border border-orange-200 text-orange-700' :
+              'bg-yellow-100 border border-yellow-200 text-yellow-700'
+            }`}>
+              <AlertTriangle className="w-3 h-3" /> Tab Switches: {tabSwitchCount}
+            </span>
+          )}
           <span className={`px-3 py-1 rounded-full text-xs flex items-center gap-1 ${connected ? 'bg-emerald-50 border border-emerald-100 text-emerald-600' : 'bg-red-50 border border-red-100 text-red-600'}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-emerald-500 pulse-dot' : 'bg-red-400'}`} />
             {connected ? 'Connected' : 'Connecting'}
