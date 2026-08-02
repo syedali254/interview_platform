@@ -1,24 +1,32 @@
-"""Generate PROJECT_DOCS.docx — comprehensive project explanation."""
+"""Generate PROJECT_DOCS.docx — the handover document for InterviewAI.
+
+Run: python generate_project_docs.py
+
+Everything in here is written so that someone who has never seen the project
+can run it, understand what each module does, and — most importantly — trace
+every number on the final report back to the code that produced it.
+"""
 
 from docx import Document
 from docx.shared import Pt, Cm, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-import os
+from docx.enum.table import WD_TABLE_ALIGNMENT
 
 doc = Document()
 
-# Styling
 for s in doc.sections:
-    s.top_margin = Cm(2.54)
-    s.bottom_margin = Cm(2.54)
-    s.left_margin = Cm(2.54)
-    s.right_margin = Cm(2.54)
+    s.top_margin = Cm(2.2)
+    s.bottom_margin = Cm(2.2)
+    s.left_margin = Cm(2.2)
+    s.right_margin = Cm(2.2)
 
 style = doc.styles['Normal']
 style.font.name = 'Arial'
-style.font.size = Pt(11)
-style.paragraph_format.line_spacing = 1.5
+style.font.size = Pt(10.5)
+style.paragraph_format.line_spacing = 1.35
 
+
+# ── Helpers ──────────────────────────────────────────────────────────────
 
 def h1(text):
     h = doc.add_heading(text, level=1)
@@ -26,472 +34,1065 @@ def h1(text):
         r.font.name = 'Arial'
         r.font.color.rgb = RGBColor(0x1a, 0x20, 0x2c)
 
+
 def h2(text):
     h = doc.add_heading(text, level=2)
     for r in h.runs:
         r.font.name = 'Arial'
         r.font.color.rgb = RGBColor(0x2c, 0x52, 0x82)
 
+
 def h3(text):
     h = doc.add_heading(text, level=3)
     for r in h.runs:
         r.font.name = 'Arial'
+        r.font.color.rgb = RGBColor(0x44, 0x44, 0x44)
 
-def para(text, bold=False):
+
+def para(text, bold=False, italic=False):
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
     r = p.add_run(text)
-    r.font.size = Pt(11)
+    r.font.size = Pt(10.5)
     r.font.name = 'Arial'
     r.bold = bold
-    p.paragraph_format.line_spacing = 1.5
+    r.italic = italic
+    p.paragraph_format.line_spacing = 1.35
+    return p
 
-def bullet(text):
+
+def bullet(text, bold_prefix=None):
     p = doc.add_paragraph(style='List Bullet')
+    if bold_prefix:
+        rb = p.add_run(bold_prefix)
+        rb.bold = True
+        rb.font.size = Pt(10.5)
+        rb.font.name = 'Arial'
     r = p.add_run(text)
-    r.font.size = Pt(11)
+    r.font.size = Pt(10.5)
     r.font.name = 'Arial'
 
 
-# ═══════════════════════════════════════════════════════
-# TITLE
-# ═══════════════════════════════════════════════════════
-for _ in range(4):
+def code(text):
+    """Monospaced block, used for formulas and commands."""
+    p = doc.add_paragraph()
+    p.paragraph_format.left_indent = Cm(0.6)
+    p.paragraph_format.space_before = Pt(4)
+    p.paragraph_format.space_after = Pt(8)
+    p.paragraph_format.line_spacing = 1.1
+    r = p.add_run(text)
+    r.font.name = 'Consolas'
+    r.font.size = Pt(9.5)
+    r.font.color.rgb = RGBColor(0x1a, 0x35, 0x5e)
+
+
+def table(headers, rows, widths=None):
+    t = doc.add_table(rows=1, cols=len(headers))
+    t.style = 'Light Grid Accent 1'
+    t.alignment = WD_TABLE_ALIGNMENT.CENTER
+    for i, head in enumerate(headers):
+        cell = t.rows[0].cells[i]
+        cell.text = ''
+        run = cell.paragraphs[0].add_run(head)
+        run.bold = True
+        run.font.size = Pt(9.5)
+        run.font.name = 'Arial'
+    for row in rows:
+        cells = t.add_row().cells
+        for i, value in enumerate(row):
+            cells[i].text = ''
+            run = cells[i].paragraphs[0].add_run(str(value))
+            run.font.size = Pt(9.5)
+            run.font.name = 'Arial'
+    if widths:
+        for row in t.rows:
+            for i, w in enumerate(widths):
+                row.cells[i].width = Cm(w)
+    doc.add_paragraph()
+    return t
+
+
+# ═════════════════════════════════════════════════════════════════════════
+# TITLE PAGE
+# ═════════════════════════════════════════════════════════════════════════
+for _ in range(5):
     doc.add_paragraph()
 
 tp = doc.add_paragraph()
 tp.alignment = WD_ALIGN_PARAGRAPH.CENTER
 r = tp.add_run('InterviewAI')
 r.bold = True
-r.font.size = Pt(28)
+r.font.size = Pt(30)
 r.font.name = 'Arial'
 
 doc.add_paragraph()
-
 tp2 = doc.add_paragraph()
 tp2.alignment = WD_ALIGN_PARAGRAPH.CENTER
-r2 = tp2.add_run('Project Documentation')
-r2.font.size = Pt(18)
+r2 = tp2.add_run('Project Documentation and Handover Guide')
+r2.font.size = Pt(17)
 r2.font.name = 'Arial'
 
 doc.add_paragraph()
-
 tp3 = doc.add_paragraph()
 tp3.alignment = WD_ALIGN_PARAGRAPH.CENTER
 r3 = tp3.add_run(
-    'Multi-Agent AI Interview Platform\n'
-    'Voice Interviews • Skill Graph • Dual-Track Evaluation • Behavioral Integrity'
+    'An Intelligent Multi-Agent AI Interview Platform\n'
+    'Voice Interviewing  |  ESCO Skill Graph  |  LLM Answer Evaluation\n'
+    'Attention, Posture and Vocal Analysis  |  Behavioural Integrity Detection'
 )
-r3.font.size = Pt(12)
+r3.font.size = Pt(11.5)
 r3.font.name = 'Arial'
 r3.italic = True
 
+doc.add_paragraph()
+tp4 = doc.add_paragraph()
+tp4.alignment = WD_ALIGN_PARAGRAPH.CENTER
+r4 = tp4.add_run('CMP7200 — MSc Computer Science Individual Masters Project\n'
+                 'Birmingham City University')
+r4.font.size = Pt(10.5)
+r4.font.name = 'Arial'
+
 doc.add_page_break()
 
-# ═══════════════════════════════════════════════════════
-# OVERVIEW
-# ═══════════════════════════════════════════════════════
-h1('1. Project Overview')
+
+# ═════════════════════════════════════════════════════════════════════════
+h1('1. What This Project Is')
+# ═════════════════════════════════════════════════════════════════════════
 
 para(
-    'InterviewAI is an intelligent interview platform that conducts real voice-based '
-    'technical interviews with candidates. It uses AI to ask questions, listen to answers, '
-    'detect emotions, check for cheating, and produce a detailed hiring recommendation.'
+    'InterviewAI is a working platform that conducts a technical job interview by voice, '
+    'scores the candidate\'s answers, monitors how they behaved during the session, and '
+    'produces a single evidence-backed hiring recommendation. It is built as a research '
+    'artefact for an MSc dissertation, not as a commercial hiring product, and it is not '
+    'intended to make real employment decisions.'
 )
 
 para(
-    'The system is built around 12 modules organized into 4 phases:'
+    'The problem it addresses is that commercial AI interview tools return scores without '
+    'explanation. Candidates are ranked by systems they cannot interrogate, and the EU AI '
+    'Act now classifies exactly this class of system as high-risk, requiring transparency '
+    'and human oversight. Every number this system produces is therefore traceable: the '
+    'report shows the rubric breakdown behind each answer score, the features behind the '
+    'integrity verdict, and the arithmetic behind the final recommendation.'
 )
 
-bullet('Phase 1 — Pre-Interview: Parse CV, understand job requirements, build skill graph, generate questions')
-bullet('Phase 2 — Live Interview: Voice conversation with AI, face tracking, emotion detection')
-bullet('Phase 3 — Evaluation: Score answers using two methods, detect behavioral anomalies')
-bullet('Phase 4 — Report: Combine all scores, produce recommendation with explanation')
+h2('1.1 What happens in one sentence')
+para(
+    'The candidate uploads a CV and a job description; the system maps both onto a '
+    'standardised skill taxonomy to find the gaps; it generates interview questions '
+    'targeting those gaps; an AI interviewer conducts a live voice interview; every answer '
+    'is scored against a generated reference answer; attention, posture, voice and session '
+    'behaviour are measured throughout; and all of it is fused into a final report.'
+)
+
+h2('1.2 Who this document is for')
+para(
+    'Anyone taking over this codebase. Section 2 gets the system running. Sections 3 and 4 '
+    'explain the architecture. Section 5 is the important one — it defines exactly how every '
+    'score and percentage on the final report is calculated, with the constants and the file '
+    'each formula lives in. Sections 6 to 9 cover the code layout, the API, configuration, '
+    'and what is deliberately not implemented.'
+)
+
+
+# ═════════════════════════════════════════════════════════════════════════
+h1('2. Getting It Running')
+# ═════════════════════════════════════════════════════════════════════════
+
+h2('2.1 Prerequisites')
+table(
+    ['Requirement', 'Where to get it', 'Notes'],
+    [
+        ['Python 3.11+', 'python.org/downloads', 'Tick "Add python.exe to PATH" during install'],
+        ['Node.js 18+', 'nodejs.org', 'LTS version'],
+        ['GEMINI_API_KEY', 'aistudio.google.com/apikey', 'All language model work'],
+        ['DEEPGRAM_API_KEY', 'console.deepgram.com', 'Speech to text, and the fallback voice'],
+        ['ELEVENLABS_API_KEY', 'elevenlabs.io', 'OPTIONAL - preferred voice. Falls back to Deepgram if absent'],
+    ],
+    widths=[4.0, 5.5, 7.0],
+)
+
+h2('2.2 Running it')
+para('From the project root folder, double-click run.bat, or from a terminal:')
+code('run.bat')
+para(
+    'The first run creates the virtual environment, installs Python and Node packages, '
+    'downloads the MediaPipe vision models, prompts for the three API keys, and builds the '
+    'web app. Later runs just start the server. Then open http://localhost:8000 in Chrome '
+    'or Edge and allow camera and microphone access.'
+)
+
+h2('2.3 Manual setup, if run.bat fails')
+code(
+    'cd InterviewAI\n'
+    'python -m venv venv\n'
+    'venv\\Scripts\\activate\n'
+    'pip install -r requirements.txt\n'
+    'cd frontend\n'
+    'npm install\n'
+    'npm run build          (this also downloads the MediaPipe models)\n'
+    'cd ..\n'
+    'copy .env.example .env  (then edit .env and paste your three API keys)\n'
+    'python server.py'
+)
+
+h2('2.4 What runs where')
+para(
+    'One Python process serves both the API and the built web app on port 8000. When an '
+    'interview starts, the server downloads and launches a local LiveKit media server on '
+    'port 7880, and spawns the voice agent as a separate Python process. Both are shut down '
+    'when the interview ends. Nothing needs to be installed manually for this — the launcher '
+    'fetches the LiveKit binary on first use.'
+)
+
+
+# ═════════════════════════════════════════════════════════════════════════
+h1('3. End-to-End Flow')
+# ═════════════════════════════════════════════════════════════════════════
+
+para('The user moves through six screens. Each one calls the API and stores its result in the session.')
+
+table(
+    ['Step', 'Screen', 'What happens', 'Modules'],
+    [
+        ['1', 'Upload & Parse', 'CV (PDF or text) and job description are parsed into structured data', 'M1, M2'],
+        ['2', 'Skill Graph', 'Both skill sets are mapped onto the ESCO taxonomy and compared', 'M3'],
+        ['3', 'Questions', 'Questions are generated for the gaps and ordered by priority', 'M4'],
+        ['4', 'Device Setup', 'Camera and microphone are selected and tested', '—'],
+        ['5', 'Live Interview', 'Voice interview runs; attention, posture, voice and behaviour are recorded', 'M5, M7, M8, M10'],
+        ['6', 'Report', 'Every answer is scored, behaviour assessed, and everything fused', 'M6, M9, M11, M12'],
+    ],
+    widths=[1.3, 3.2, 8.5, 3.5],
+)
+
+h2('3.1 What happens during the live interview')
+para(
+    'The agent process joins a LiveKit room alongside the candidate\'s browser. Deepgram '
+    'transcribes the candidate continuously. Gemini generates the interviewer\'s replies. '
+    'ElevenLabs speaks them.'
+)
+para(
+    'Each interviewer utterance is buffered in full before anything is spoken. The complete '
+    'text is published to the browser first, the browser renders it, and only then does '
+    'audio synthesis begin. This ordering is deliberate: the candidate reads the question '
+    'before hearing it. It also fixed a real defect — streaming partial language-model '
+    'tokens straight into the text-to-speech socket caused the agent to speak only the '
+    'first few words of each reply while the full text still appeared on screen.'
+)
+para(
+    'While this happens, the browser runs face and pose detection five times a second and '
+    'analyses microphone audio ten times a second for pitch and energy, folding both into '
+    'one sample per second for the report. Tab switches are recorded separately. All of it '
+    'is sent to the agent over the data channel and also kept in the browser.'
+)
+para(
+    'What is detected is drawn on screen. The candidate sees their own face outline, the eye '
+    'points the gaze estimate uses, a box around their face carrying a live attention '
+    'percentage, and the skeleton of their upper body behind the posture score. The overlay '
+    'can be switched off from the control bar. Showing it is deliberate: a system that '
+    'measures someone should let them see what it is measuring.'
+)
+para(
+    'The conversation is shown beside the video as it happens. Each interviewer question and '
+    'each transcribed answer appears as its own message, and whatever the candidate is saying '
+    'right now appears underneath in grey until it is finalised.'
+)
+
+h3('Why the interview starts almost immediately')
+para(
+    'Pressing Begin Interview used to mean waiting more than twenty seconds. Measuring it '
+    'showed the delay was not the network. It was Python: loading the livekit-agents library '
+    'and its plugins takes about twelve seconds before the agent process can do anything.'
+)
+para(
+    'The device-setup screen now calls /api/prewarm the moment it opens. That starts the '
+    'media server, starts the agent process, and lets it connect to a room and check its '
+    'voice provider, all while the candidate is reading the briefing and testing their '
+    'camera. The agent then sits in the room and waits. When the candidate finally presses '
+    'Begin, the only work left is issuing a token and joining, which takes about one second. '
+    'A three-two-one countdown covers it.'
+)
+para(
+    'If prewarm never ran, or the agent process died in the meantime, the token endpoint '
+    'notices and starts a fresh agent instead, so the interview still works. It just takes '
+    'the old amount of time.'
+)
+
+h2('3.2 How the interview ends')
+para('There are three ways an interview finishes, and all of them end the same way.')
+bullet('the agent gives a short closing statement, then the report screen appears automatically.',
+       bold_prefix='All questions covered — ')
+bullet('the agent asks one confirmation question. If the candidate confirms, it thanks them and ends. '
+       'If they decline, the interview continues and it does not ask again.',
+       bold_prefix='Candidate asks to stop — ')
+bullet('once MAX_INTERVIEW_QUESTIONS or INTERVIEW_TIME_BUDGET_MINS is reached, a watchdog '
+       'instructs the agent to wrap up. If the model fails to close within 35 seconds, the '
+       'session is closed anyway.',
+       bold_prefix='Budget reached — ')
+para(
+    'In every case the agent calls its end_interview tool, the browser shows a "Thank you '
+    'for your time" card, the transcript is saved, the LiveKit server and agent process are '
+    'shut down, and the report screen loads and begins scoring.'
+)
+
+
+# ═════════════════════════════════════════════════════════════════════════
+h1('4. Module Map')
+# ═════════════════════════════════════════════════════════════════════════
+
+para('Twelve modules across four phases, as defined in the project proposal.')
+
+table(
+    ['#', 'Module', 'Technology', 'Where it lives', 'Status'],
+    [
+        ['M1', 'CV parsing', 'Gemini + PyMuPDF', 'core/agents/cv_agent.py', 'Implemented'],
+        ['M2', 'Job description parsing', 'Gemini', 'core/agents/jd_agent.py', 'Implemented'],
+        ['M3', 'Skill knowledge graph', 'NetworkX + ESCO', 'core/graph/skill_graph.py', 'Implemented'],
+        ['M4', 'Question generation', 'Gemini + graph priority', 'core/agents/question_agent.py', 'Implemented'],
+        ['M5', 'Voice interview', 'LiveKit, Deepgram, ElevenLabs', 'core/livekit/run_agent.py', 'Implemented'],
+        ['M6', 'Answer evaluation', 'Gemini LLM-as-Judge', 'core/evaluator/evaluator.py', 'Implemented'],
+        ['M7', 'Attention monitoring', 'MediaPipe FaceLandmarker', 'frontend/src/lib/vision.js', 'Implemented'],
+        ['M8', 'Posture analysis', 'MediaPipe PoseLandmarker', 'frontend/src/lib/vision.js', 'Implemented'],
+        ['M9', 'Behavioural integrity', 'Isolation Forest', 'core/evaluator/integrity.py', 'Implemented'],
+        ['M10', 'Vocal delivery analysis', 'Web Audio prosody', 'frontend/src/lib/voice.js', 'Implemented'],
+        ['M11', 'Weighted fusion', 'Rules + weights', 'core/evaluator/fusion.py', 'Implemented'],
+        ['M12', 'Report assembly', 'Structured templates', 'core/report/generator.py', 'Implemented'],
+    ],
+    widths=[1.0, 3.6, 4.2, 5.0, 2.7],
+)
+
+h2('4.1 A note on M6, M7, M8 and M10')
+para(
+    'The proposal originally specified a second answer-scoring track — Sentence-BERT '
+    'embeddings feeding an XGBoost classifier with SHAP explanations — to be compared '
+    'against the language model judge. That track is not part of the running system. The '
+    'code for it remains in core/evaluator/track_b.py and core/evaluator/train_model.py, '
+    'clearly marked as unwired, and its heavy dependencies are commented out of '
+    'requirements.txt. Re-enabling it means calling track_b_evaluate() from '
+    'evaluate_answer() and restoring the comparison block in the report. Answer evaluation '
+    'is currently done entirely by the Gemini judge described in Section 5.1.'
+)
+para(
+    'M7 and M8 use MediaPipe as specified. M10 was specified as a wav2vec2 speech-emotion '
+    'classifier; it is implemented instead as prosodic analysis — pitch, energy, pause and '
+    'fluency measurement — computed locally in the browser. This substitution is deliberate: '
+    'it requires no model download, runs offline, keeps all audio on the candidate\'s '
+    'machine, and every component of the resulting score is inspectable, which suits an '
+    'explainability-focused system better than an opaque emotion label. Facial emotion is '
+    'additionally captured via face-api.js and reported as context only — it does not feed '
+    'the score.'
+)
+
+
+# ═════════════════════════════════════════════════════════════════════════
+h1('5. Scoring — How Every Number Is Calculated')
+# ═════════════════════════════════════════════════════════════════════════
 
 para(
-    'The platform runs as a web application. The backend is Python (FastAPI) and the '
-    'frontend is React. The AI interviewer speaks using ElevenLabs voice, listens using '
-    'Deepgram speech-to-text, and thinks using Google Gemini LLM.'
+    'This section is the reference for the whole assessment. Each subsection gives the '
+    'formula, the constants, and the file the code is in. All scores are on a 0-100 scale '
+    'unless stated otherwise.',
+    bold=True,
 )
 
-doc.add_page_break()
+# ── 5.1 ──────────────────────────────────────────────────────────────────
+h2('5.1 Answer Score (M6) — core/evaluator/evaluator.py')
 
-# ═══════════════════════════════════════════════════════
-# HOW IT WORKS
-# ═══════════════════════════════════════════════════════
-h1('2. How the System Works (End-to-End Flow)')
+h3('Step 1 — generate a reference answer')
+para(
+    'Before the candidate\'s answer is looked at, Gemini is asked to write an ideal answer '
+    'to the same question, capped at 100 words and phrased the way a strong candidate would '
+    'speak it. This reference is what the candidate is measured against. It is regenerated '
+    'per question, so the standard adapts to the question\'s difficulty rather than being '
+    'fixed in advance.'
+)
 
-para('Here is what happens from start to finish when a user runs an interview:')
+h3('Step 2 — score against a four-criterion rubric')
+para('The judge scores four criteria, each out of 25, giving a natural 0-100 total.')
 
-para('Step 1: The user uploads their CV (PDF file) and pastes the job description text.')
-para('Step 2: The system sends both to Google Gemini LLM which extracts structured data — skills, experience, required qualifications.')
-para('Step 3: The Skill Graph module compares candidate skills against job requirements. It shows three views: matched skills (green), missing skills (red), and extra skills the candidate has but job does not require (purple).')
-para('Step 4: The Question Generator creates interview questions that specifically target the skill gaps. It makes technical questions, behavioral questions, and follow-up questions.')
-para('Step 5: The user sets up their microphone and camera, then clicks "Begin Interview".')
-para('Step 6: The AI interviewer greets the candidate by name and starts asking questions using a natural voice (ElevenLabs). It listens to answers via Deepgram speech-to-text.')
-para('Step 7: During the interview, the camera tracks the candidate\'s face for attention and detects emotions (happy, nervous, neutral, etc.) using face-api.js.')
-para('Step 8: After the interview ends, each answer gets evaluated by TWO different methods (LLM judge + ML model). If they disagree significantly, the answer is flagged.')
-para('Step 9: The Behavioral Integrity module checks for cheating patterns — tab switching, suspiciously fast answers, long pauses.')
-para('Step 10: The Fusion Engine combines everything (answer scores 50%, skill match 20%, integrity 15%, engagement 15%) into a final recommendation.')
-para('Step 11: The Dashboard shows the complete report with emotion timeline, transcript, scores, and hire/no-hire decision.')
-
-doc.add_page_break()
-
-# ═══════════════════════════════════════════════════════
-# MODULE DETAILS
-# ═══════════════════════════════════════════════════════
-h1('3. Module Details')
+table(
+    ['Criterion', 'Out of', 'What it measures'],
+    [
+        ['technical_accuracy', '25', 'Is everything the candidate actually said correct? Only wrong or misleading statements lose marks. Omissions do not.'],
+        ['completeness', '25', 'Did they cover the essential points in the reference? Only genuinely missing concepts lose marks. Brevity does not.'],
+        ['clarity', '25', 'Is the explanation well structured and easy to follow?'],
+        ['relevance', '25', 'Does it address the question that was actually asked?'],
+    ],
+    widths=[4.0, 1.8, 10.7],
+)
 
 para(
-    'Each module is explained below with: what it does, how it works technically, '
-    'what technology it uses, and which file contains the code.'
+    'Accuracy and completeness are deliberately independent. An earlier version forced '
+    'accuracy below 15/25 whenever any reference point was missing, which meant a short but '
+    'entirely correct answer was penalised twice for the same thing and scored 8/25 on '
+    'accuracy. Separating them means the report can distinguish a candidate who is right but '
+    'brief from one who is confidently wrong — these are very different signals to a '
+    'recruiter.'
+)
+para(
+    'The rubric also states that clarity and relevance cannot be high when the answer '
+    'contains no substance, since a candidate cannot clearly explain nothing. Without that '
+    'rule a content-free answer scored around 37/100 purely for being fluent and on-topic; '
+    'with it, such answers score around 11.'
 )
 
-# --- M1 ---
-h2('Module 1 — CV Parsing')
-h3('What it does')
-para('Takes a candidate\'s CV (as a PDF file or plain text) and extracts structured information from it.')
-h3('How it works')
-para('When the user uploads a PDF, the system uses PyMuPDF library to extract all text from every page. This raw text is then sent to Google Gemini LLM with a specific prompt that says: "Extract the following fields from this CV: name, email, phone, skills (as a list), work experience (company, role, duration), education, projects." The LLM returns a structured JSON object with all the extracted data.')
-h3('Technology used')
-bullet('PyMuPDF — reads PDF files and extracts text')
-bullet('Google Gemini LLM — understands the text and extracts structured fields')
-bullet('JSON parsing — converts LLM output into usable data')
-h3('File location')
-para('core/agents/cv_agent.py')
-h3('Status: FULLY WORKING ✅')
+h3('Step 3 — score twice, in two different criterion orders')
+para(
+    'Language-model judges are known to over-weight whichever criterion they read first '
+    '(Stureborg et al., 2024). Each answer is therefore scored twice with the four criteria '
+    'presented in two different orders, and the two totals are averaged.'
+)
+code(
+    'order 1 = technical_accuracy, completeness, clarity, relevance\n'
+    'order 2 = clarity, relevance, technical_accuracy, completeness\n\n'
+    'final_score = (total_call_1 + total_call_2) / 2\n'
+    'spread      = | total_call_1 - total_call_2 |'
+)
 
-# --- M2 ---
-h2('Module 2 — Job Description Understanding')
-h3('What it does')
-para('Takes a job description text and extracts what skills are required, what responsibilities the role has, and what level of seniority is expected.')
-h3('How it works')
-para('The user pastes the job description into a text box. This text is sent to Gemini LLM with a prompt asking it to extract: required skills, nice-to-have skills, responsibilities, experience level, and job title. The LLM returns structured JSON.')
-h3('Technology used')
-bullet('Google Gemini LLM — natural language understanding')
-bullet('Prompt engineering — specific extraction prompts')
-h3('File location')
-para('core/agents/jd_agent.py')
-h3('Status: FULLY WORKING ✅')
+h3('Step 4 — turn the spread into a reliability signal')
+para(
+    'The gap between the two calls is how much the judge disagreed with itself on that '
+    'answer. It is reported per answer and aggregated for the session.'
+)
+table(
+    ['Spread', 'Consistency', 'Meaning'],
+    [
+        ['< 8 points', 'high', 'Stable judgement; the score can be relied on'],
+        ['8 to 16 points', 'moderate', 'Some instability; treat with mild caution'],
+        ['16 points or more', 'low', 'Judge was unstable — the answer is flagged for human review'],
+    ],
+    widths=[3.8, 3.0, 9.7],
+)
 
-# --- M3 ---
-h2('Module 3 — Skill Graph')
-h3('What it does')
-para('Compares the candidate\'s skills against job requirements using a knowledge graph. Shows which skills match, which are missing, and which extra skills the candidate has.')
-h3('How it works')
-para('The system uses the ESCO taxonomy (European Skills, Competences, Qualifications and Occupations) — a standardized database of over 13,000 skills with relationships between them. The candidate skills from M1 and job skills from M2 are mapped into this taxonomy using fuzzy text matching. Then NetworkX builds a graph showing: (1) Matched skills — candidate has what job needs (green), (2) Missing skills — job needs but candidate lacks (red), (3) Extra skills — candidate has but job doesn\'t need (purple). The skill relationships are also tracked (e.g., Python → Machine Learning → Deep Learning).')
-h3('Technology used')
-bullet('NetworkX — Python library for building and analyzing graphs')
-bullet('ESCO taxonomy data — European standard skill classification (stored in data/esco/)')
-bullet('Fuzzy matching — maps real skill names to ESCO entries')
-h3('File location')
-para('core/graph/skill_graph.py')
-h3('Status: FULLY WORKING ✅')
+h3('Step 5 — verdict band')
+code(
+    'score >= 70  ->  "strong"     (SCORE_STRONG_THRESHOLD, core/config.py)\n'
+    'score >= 40  ->  "weak"       (SCORE_WEAK_THRESHOLD,   core/config.py)\n'
+    'otherwise    ->  "gap"'
+)
 
-# --- M4 ---
-h2('Module 4 — Question Generation')
-h3('What it does')
-para('Creates interview questions that are specifically targeted at the candidate\'s skill gaps. If a candidate is missing "Docker" skills, it generates Docker questions.')
-h3('How it works')
-para('Takes the skill graph topics (especially gaps and partially-matched skills) and sends them to Gemini LLM with the full context of the CV and JD. The LLM generates: opening questions (warm-up), technical questions (testing specific skills), behavioral questions (testing soft skills and experience), and closing questions. Each question is tagged with which skill it tests. The system creates follow-up questions too — if a candidate gives a weak answer, the AI asks a simpler version.')
-h3('Technology used')
-bullet('Google Gemini LLM — generates contextual questions')
-bullet('Skill graph topics — determines what to ask about')
-bullet('Adaptive logic — harder questions for strong candidates, simpler for weak')
-h3('File location')
-para('core/agents/question_agent.py')
-h3('Status: FULLY WORKING ✅')
+h3('Which answers get scored')
+para(
+    'Every substantive answer is scored. Each exchange is first classified as technical, '
+    'behavioural, or logistics. Logistics turns — greetings, "are you ready", sign-offs — are '
+    'not scored, because scoring "Yes, I\'m ready" as a failed technical answer would '
+    'corrupt the average. Everything classified technical or behavioural is scored regardless '
+    'of length, so a one-line non-answer appears in the report with a low score rather than '
+    'being silently dropped. Only replies shorter than three words are treated as empty. '
+    'Classification is done in one language-model call for the whole transcript, with a '
+    'keyword fallback if that call fails.'
+)
 
-# --- M5 ---
-h2('Module 5 — Voice Interview (LiveKit Agent)')
-h3('What it does')
-para('Conducts a real-time voice conversation between the AI interviewer and the candidate. The AI speaks questions out loud and listens to spoken answers.')
-h3('How it works')
-para('This is the most complex module. It uses the LiveKit framework for real-time audio streaming. When the interview starts: (1) A LiveKit room is created, (2) The candidate\'s browser connects with their microphone, (3) A Python agent process starts that joins the same room, (4) The agent uses Deepgram API to convert candidate speech to text in real-time, (5) Google Gemini LLM processes the text and generates a response, (6) ElevenLabs API converts the response to natural-sounding speech, (7) The speech audio is sent back to the candidate. The AI has a personality — it greets by name, asks follow-ups naturally, handles off-topic conversations, and gracefully ends the interview.')
-h3('Technology used')
-bullet('LiveKit — real-time audio/video framework (handles WebRTC)')
-bullet('Deepgram API — speech-to-text (converts voice to text with 99% accuracy)')
-bullet('ElevenLabs API — text-to-speech (generates natural AI voice)')
-bullet('Google Gemini LLM — generates conversational responses')
-bullet('System prompt — defines interviewer personality and rules')
-h3('File location')
-para('core/livekit/run_agent.py (main agent), core/livekit/launcher.py (starts LiveKit server)')
-h3('Status: FULLY WORKING ✅')
+h3('The overall answer score')
+code('overall_score = mean(final_score of every scored answer)')
 
-# --- M6 ---
-h2('Module 6 — Answer Evaluation (Dual-Track)')
-h3('What it does')
-para('Scores every candidate answer using TWO independent methods, then compares their results. This is the core research contribution of the dissertation.')
-h3('How Track A works (LLM-as-Judge)')
-para('For each answer: (1) The system first generates an "ideal reference answer" using Gemini — what a perfect candidate would say. (2) Then it sends the candidate\'s actual answer + the reference answer to the LLM with a scoring rubric. (3) The LLM scores on 4 criteria (0-25 each): technical accuracy, completeness, clarity, relevance. (4) To avoid "positional bias" (documented in research), it runs the evaluation TWICE with criteria in different order and averages the results.')
-h3('How Track B works (Trained ML Classifier)')
-para('Instead of asking an LLM to judge, this approach converts the answer into numbers and lets a trained model predict the score. (1) Extract features: semantic similarity (using Sentence-BERT embeddings — 384-dimensional vectors that capture meaning), keyword coverage, word count, sentence count, specificity score (concrete vs filler words), fluency score. (2) Feed these 6 features into an XGBoost classifier that predicts a score 0-100. (3) Compute SHAP values — these explain exactly WHY the model gave that score (e.g., "low score because semantic_similarity was 0.3 and keyword_coverage was 0.2").')
-h3('How the comparison works')
-para('Both tracks score every answer independently. If their scores disagree by more than 20 points, the answer gets flagged for human review. The final score is a weighted average: 60% Track A + 40% Track B. This dual-track approach is the main research question of the dissertation.')
-h3('Technology used')
-bullet('Google Gemini LLM — Track A evaluation')
-bullet('Sentence-BERT (all-MiniLM-L6-v2) — creates semantic embeddings for Track B')
-bullet('XGBoost — gradient boosting classifier for score prediction')
-bullet('SHAP — explains model predictions (feature attribution)')
-h3('File locations')
-para('core/evaluator/evaluator.py (orchestrator + Track A), core/evaluator/track_b.py (Track B), core/evaluator/train_model.py (training script)')
-h3('Status: FULLY WORKING ✅ (Track B uses heuristic fallback until XGBoost is trained)')
+# ── 5.2 ──────────────────────────────────────────────────────────────────
+h2('5.2 Skill Match Percentage (M3) — core/graph/skill_graph.py')
 
-# --- M7 ---
-h2('Module 7 — Vision Monitor (Face Detection)')
-h3('What it does')
-para('Tracks whether the candidate\'s face is visible during the interview. If the face disappears for too long (looking away, leaving), it records a distraction event.')
-h3('How it works')
-para('The browser uses face-api.js (a JavaScript face detection library) with the TinyFaceDetector model. Every 2 seconds it captures a frame from the webcam and checks if a face is present. It uses a threshold of 10 consecutive misses (20+ seconds) before reporting "no face" — this prevents false alarms from brief glances away. Real tab switches are tracked using the browser\'s Page Visibility API (document.hidden).')
-h3('Technology used')
-bullet('face-api.js — pre-trained face detection model running in browser')
-bullet('TinyFaceDetector — lightweight model, works in real-time')
-bullet('Page Visibility API — detects real tab switches')
-h3('File location')
-para('frontend/src/screens/InterviewScreen.jsx (lines ~149-206)')
-h3('Status: FULLY WORKING ✅')
+para(
+    'The percentage shown on the Skill Graph screen and used as the skill_coverage component '
+    'of the final score is simply how many of the role\'s required skills were found on the CV:'
+)
+code(
+    'match_percentage = |candidate_skills  INTERSECT  required_skills|\n'
+    '                   ------------------------------------------------  x 100\n'
+    '                              |required_skills|'
+)
+para(
+    'Both sets are sets of taxonomy node identifiers, not raw strings, so "K8s" on the CV and '
+    '"Kubernetes" in the job description count as the same skill. Nice-to-have skills are '
+    'tracked separately and never affect this percentage.'
+)
 
-# --- M10 ---
-h2('Module 10 — Emotion Detection')
-h3('What it does')
-para('Detects the candidate\'s emotional state during the interview by analyzing their facial expressions in real-time.')
-h3('How it works')
-para('Uses the same face-api.js library as M7 but with the FaceExpressionNet model added. Every 2 seconds it analyzes the detected face and classifies the expression into: happy, sad, angry, fearful, disgusted, surprised, neutral. Each detection includes a confidence score. All emotions are recorded with timestamps so they can be plotted on a timeline in the final report.')
-h3('Technology used')
-bullet('face-api.js with FaceExpressionNet — pre-trained expression classification')
-bullet('Runs entirely in the browser (no server calls needed)')
-bullet('Canvas API — for real-time face overlay visualization')
-h3('File location')
-para('frontend/src/screens/InterviewScreen.jsx (emotion detection loop)')
-h3('Status: FULLY WORKING ✅')
+h3('How a skill string becomes a node')
+para(
+    'Matching is deliberately conservative. A CV skill is mapped to a taxonomy concept only '
+    'if one of these succeeds, in order:'
+)
+bullet('the normalised text equals a preferred label exactly', bold_prefix='Exact label — ')
+bullet('it equals a known alias or abbreviation ("k8s", "postgres", "reactjs")', bold_prefix='Alias — ')
+bullet('it equals a label with its parenthetical stripped, so "Python" reaches '
+       '"Python (computer programming)"', bold_prefix='Base form — ')
+bullet('close string similarity, but only for text of 6 characters or more, at a 0.88 cutoff',
+       bold_prefix='Fuzzy — ')
+para(
+    'If none succeed the skill becomes its own node rather than being forced onto an '
+    'unrelated concept. An earlier version had a bare substring fallback, which mapped '
+    '"Team Leadership", "Leadership", "Scrum" and "Problem Solving" all onto the ESCO skill '
+    '"R", and "Communication" onto "telecommunications engineering". That fallback has been '
+    'removed. Short labels such as "R", "C#" and "SQL" must now match exactly or not at all, '
+    'which is why fuzzy matching has a minimum length.'
+)
+para(
+    'Unmatched skills from the CV and the job description share one namespace, so a skill the '
+    'taxonomy does not know about still registers as matched when it appears on both sides.'
+)
 
-# --- M9 ---
-h2('Module 9 — Behavioral Integrity Detection')
-h3('What it does')
-para('Detects if a candidate might be cheating during the interview by analyzing their behavioral patterns for anomalies.')
-h3('How it works')
-para('Uses an Isolation Forest algorithm — an unsupervised machine learning model that learns what "normal" interview behavior looks like and flags anything unusual. It extracts 8 behavioral features from the interview session: (1) average response time in seconds, (2) response time standard deviation, (3) number of tab switches, (4) inactivity ratio, (5) average answer length in words, (6) answer length variance coefficient, (7) hesitation ratio, (8) engagement score. The model was trained on 200 synthetic "normal" interview patterns. Anything that deviates significantly from normal gets flagged. Returns: integrity score (0-100), verdict (normal/suspicious/flagged), and specific risk factors.')
-h3('Red flags it catches')
-bullet('Response time < 3 seconds — possible copy-paste from another source')
-bullet('Response time > 30 seconds — possible searching for answers')
-bullet('Tab switches > 5 — likely looking up answers')
-bullet('High inactivity — candidate leaving the session')
-bullet('Inconsistent answer lengths — mixing own answers with copied ones')
-h3('Technology used')
-bullet('Isolation Forest (scikit-learn) — unsupervised anomaly detection')
-bullet('No labelled data needed — learns from normal patterns')
-h3('File location')
-para('core/evaluator/integrity.py')
-h3('Status: FULLY WORKING ✅')
+h3('The five node statuses')
+table(
+    ['Status', 'Meaning', 'Colour on screen'],
+    [
+        ['matched', 'On the CV and required by the role', 'Green'],
+        ['missing', 'Required by the role, absent from the CV — a gap', 'Red'],
+        ['bonus', 'A nice-to-have the candidate already has', 'Violet'],
+        ['bonus_missing', 'A nice-to-have the candidate lacks', 'Amber'],
+        ['extra', 'On the CV but not asked for by the role', 'Slate'],
+    ],
+    widths=[3.2, 9.3, 4.0],
+)
+para(
+    'The "Skills in play" figure on the report is the count of distinct nodes across all five '
+    'statuses. It is not candidate skills plus required skills, because a matched skill '
+    'belongs to both sides and must not be counted twice.'
+)
 
-# --- M11 ---
-h2('Module 11 — Fusion Engine (Final Recommendation)')
-h3('What it does')
-para('Combines scores from all modules into one final hiring recommendation with a confidence level.')
-h3('How it works')
-para('Takes four inputs and applies weighted scoring: (1) Answer quality from M6 — weighted 50% (this is the most important), (2) Skill match percentage from M3 — weighted 20%, (3) Behavioral integrity from M9 — weighted 15%, (4) Engagement/emotion score from M10 — weighted 15%. The weighted sum produces a fusion score (0-100). Recommendation thresholds: above 72 = Strong Hire, 55-72 = Hire, 40-55 = Consider, below 40 = No Hire. Special rule: if integrity score is below 30, the candidate is automatically disqualified regardless of other scores.')
-h3('Technology used')
-bullet('Weighted scoring algorithm — configurable weights')
-bullet('Rule-based override — integrity failure = disqualification')
-h3('File location')
-para('core/evaluator/fusion.py')
-h3('Status: FULLY WORKING ✅')
+h3('Interview topic priority')
+para(
+    'Topics are drawn from the gap analysis: up to three missing required skills as high '
+    'priority, up to three matched required skills as medium (to verify depth of knowledge), '
+    'and up to two matched nice-to-haves as low. Question generation then orders technical '
+    'questions by this priority so genuine gaps are probed before the time budget runs out.'
+)
 
-# --- M12 ---
-h2('Module 12 — Report & Dashboard')
-h3('What it does')
-para('Displays the complete interview results in a visual dashboard with charts, transcript, scores, and the final recommendation.')
-h3('How it works')
-para('The React frontend collects all data from the interview (transcript, emotions, distractions, scores) and renders it on the Dashboard screen. It includes: (1) Emotion Timeline — a canvas chart plotting emotions over time with different colors, (2) Emotion Distribution — horizontal bars showing percentage of each emotion, (3) Transcript — Q&A pairs with timestamps and response times, (4) Distraction Events — list with severity badges (low/medium/high), (5) Overall Metrics — dominant emotion, total questions, interview duration, (6) Final Recommendation — hire/no-hire with score breakdown.')
-h3('Technology used')
-bullet('React — UI rendering')
-bullet('Canvas API — custom emotion timeline chart')
-bullet('CSS Grid/Flexbox — responsive layout')
-h3('File location')
-para('frontend/src/screens/DashboardScreen.jsx')
-h3('Status: FULLY WORKING ✅')
+# ── 5.3 ──────────────────────────────────────────────────────────────────
+h2('5.3 Behavioural Integrity (M9) — core/evaluator/integrity.py')
 
-doc.add_page_break()
+para(
+    'An Isolation Forest — an unsupervised anomaly detector — is trained on synthetic normal '
+    'interview behaviour, then asked how unusual the real session looks. It never decides '
+    'anything on its own; it annotates the session for the recruiter.'
+)
 
-# ═══════════════════════════════════════════════════════
-# TECH STACK
-# ═══════════════════════════════════════════════════════
-h1('4. Technology Stack')
+h3('The eight features')
+table(
+    ['Feature', 'How it is measured', 'Normal baseline'],
+    [
+        ['avg_response_time_sec', 'Mean seconds from question start to answer end', 'N(32, 11)'],
+        ['response_time_std', 'Variation in those times', 'N(14, 6)'],
+        ['tab_switches', 'Times the candidate left the browser tab', 'Poisson(0.7)'],
+        ['inactivity_ratio', 'Sustained disengaged time / session length', 'N(0.04, 0.03)'],
+        ['avg_answer_length_words', 'Mean words per answer', 'N(48, 18)'],
+        ['answer_length_variance_coeff', 'Std / mean of answer lengths', 'N(0.45, 0.18)'],
+        ['hesitation_ratio', 'Filler words per word of answer', 'N(0.04, 0.03)'],
+        ['engagement_score', 'Derived from tab switches and inactivity', 'U(0.6, 1.0)'],
+    ],
+    widths=[5.2, 7.3, 4.0],
+)
+para(
+    'The baseline distributions must match what the system actually measures. Response time '
+    'here is measured from the interviewer\'s question starting to the candidate\'s answer '
+    'finishing, so it includes both the question being spoken and the answer being delivered '
+    '— typically 20 to 60 seconds. An earlier baseline assumed a 5 to 15 second "thinking '
+    'time" reading and consequently flagged every ordinary session as anomalous, reporting '
+    '"flagged" with no risk factors to explain it.'
+)
+para(
+    'Natural gaze behaviour is also not treated as inactivity. Only the proportion of the '
+    'session spent looking away above 20 percent counts as idle time, because people '
+    'routinely break eye contact while thinking.'
+)
 
-tbl = doc.add_table(rows=13, cols=3)
-tbl.style = 'Light Shading Accent 1'
-headers = ['Component', 'Technology', 'Why We Use It']
-for i, h in enumerate(headers):
-    tbl.rows[0].cells[i].text = h
+h3('Model and calibration')
+code(
+    'IsolationForest(n_estimators=200, contamination=0.05, random_state=42)\n'
+    'fitted on 400 synthetic normal sessions\n\n'
+    'raw = model.decision_function(session_features)   # roughly -0.3 .. +0.2\n\n'
+    'p01, p99 = 1st and 99th percentile of raw scores across the baseline\n\n'
+    'integrity_score = clamp( 50 + (raw - p01) / (p99 - p01) * 50 , 0 , 100 )'
+)
+para(
+    'The raw decision function is not a number a person can interpret, so it is calibrated '
+    'against the baseline distribution: the 1st percentile of normal sessions maps to 50 and '
+    'the 99th to 100, with genuine anomalies falling below 50. The calibration values are '
+    'stored inside the saved model file, and a model saved before calibration existed is '
+    'rejected and retrained automatically.'
+)
 
-data = [
-    ('Backend Server', 'FastAPI (Python)', 'Fast, handles async, auto-generates API docs'),
-    ('Frontend', 'React + Vite', 'Modern single-page app, fast development'),
-    ('AI Brain', 'Google Gemini', 'Free tier, good reasoning, fast responses'),
-    ('Speech-to-Text', 'Deepgram', 'Real-time transcription, very accurate'),
-    ('Text-to-Speech', 'ElevenLabs', 'Natural sounding voice, low latency'),
-    ('Voice Framework', 'LiveKit', 'Handles WebRTC audio streaming'),
-    ('Skill Graph', 'NetworkX + ESCO', 'Graph operations + standard skill taxonomy'),
-    ('ML Classifier', 'XGBoost', 'Fast, accurate, works with SHAP'),
-    ('Text Embeddings', 'Sentence-BERT', 'Captures semantic meaning as numbers'),
-    ('Explainability', 'SHAP', 'Shows why model made each decision'),
-    ('Anomaly Detection', 'Isolation Forest', 'Finds unusual patterns without labels'),
-    ('Face/Emotion', 'face-api.js', 'Runs in browser, no server needed'),
-]
-for i, (comp, tech, why) in enumerate(data, 1):
-    tbl.rows[i].cells[0].text = comp
-    tbl.rows[i].cells[1].text = tech
-    tbl.rows[i].cells[2].text = why
+h3('Verdict bands')
+code(
+    'integrity_score >= 60  ->  "normal"\n'
+    'integrity_score >= 35  ->  "suspicious"\n'
+    'otherwise              ->  "flagged"'
+)
 
-doc.add_page_break()
+h3('Risk factors')
+para('These are the specific behaviours named on the report. They are thresholds, evaluated independently of the model:')
+table(
+    ['Condition', 'Reported as'],
+    [
+        ['avg_response_time_sec < 6', 'Implausibly fast responses (possible pre-written answers)'],
+        ['avg_response_time_sec > 90', 'Very long response times (possible external assistance)'],
+        ['tab_switches > 5', 'High tab-switch count'],
+        ['inactivity_ratio > 0.3', 'Extended inactivity during the session'],
+        ['answer_length_variance_coeff > 1.2', 'Highly inconsistent answer lengths (possible mixed sources)'],
+        ['engagement_score < 0.4', 'Low engagement throughout the session'],
+    ],
+    widths=[6.5, 10.0],
+)
+para(
+    'If the verdict is adverse but no threshold was crossed, the report says so explicitly '
+    'rather than showing a bare "flagged" with nothing behind it. A verdict a recruiter '
+    'cannot act on is worse than no verdict.'
+)
 
-# ═══════════════════════════════════════════════════════
-# FILE STRUCTURE
-# ═══════════════════════════════════════════════════════
-h1('5. File Structure — What Each File Does')
+# ── 5.4 ──────────────────────────────────────────────────────────────────
+h2('5.4 Presence: Attention, Posture and Voice (M7, M8, M10)')
 
-para('Below is every important file in the project with a one-line explanation of what it does.', bold=True)
+para(
+    'All three run entirely in the candidate\'s browser. No video or audio is recorded, '
+    'stored or transmitted — only the derived per-second numbers leave the machine.'
+)
 
-files = [
-    ('run.bat (in repo root)', 'One-click setup and launch script — the only file you need to run'),
-    ('InterviewAI/SETUP.md', 'Setup instructions document'),
-    ('InterviewAI/server.py', 'Main backend server — all API endpoints live here'),
-    ('InterviewAI/.env.example', 'Template file showing what API keys are needed'),
-    ('InterviewAI/.env', 'Your actual API keys (never share this)'),
-    ('InterviewAI/requirements.txt', 'List of Python packages the project needs'),
-    ('', ''),
-    ('core/config.py', 'Configuration — loads API keys, defines score thresholds'),
-    ('core/llm.py', 'Wrapper for calling Google Gemini API — all LLM calls go through here'),
-    ('', ''),
-    ('core/agents/cv_agent.py', 'M1: Parses CV PDF/text into structured data using LLM'),
-    ('core/agents/jd_agent.py', 'M2: Parses job description text using LLM'),
-    ('core/agents/question_agent.py', 'M4: Generates interview questions from skill topics'),
-    ('', ''),
-    ('core/graph/skill_graph.py', 'M3: Builds skill graph, matches against ESCO, finds gaps'),
-    ('core/graph/state.py', 'Tracks per-skill status during live interview (pending/verified/gap)'),
-    ('core/graph/traversal.py', 'Picks which skill to test next based on current state'),
-    ('', ''),
-    ('core/livekit/run_agent.py', 'M5: The voice interview agent — speaks, listens, responds'),
-    ('core/livekit/launcher.py', 'Starts and stops the LiveKit server process'),
-    ('core/livekit/livekit.yaml', 'LiveKit server configuration'),
-    ('', ''),
-    ('core/evaluator/evaluator.py', 'M6: Orchestrates both tracks — runs Track A + Track B, compares'),
-    ('core/evaluator/track_b.py', 'M6 Track B: Feature extraction + XGBoost + SHAP'),
-    ('core/evaluator/integrity.py', 'M9: Isolation Forest behavioral anomaly detection'),
-    ('core/evaluator/fusion.py', 'M11: Weighted fusion of all scores into recommendation'),
-    ('core/evaluator/train_model.py', 'Script to train the XGBoost model on synthetic data'),
-    ('', ''),
-    ('core/pipeline/interview_loop.py', 'Connects graph state + question selection + evaluation'),
-    ('core/report/generator.py', 'M12: Generates structured report from interview data'),
-    ('', ''),
-    ('data/esco/', 'ESCO taxonomy data files (skill classifications from EU)'),
-    ('', ''),
-    ('frontend/src/App.jsx', 'Main React app — handles step navigation (6 steps)'),
-    ('frontend/src/screens/UploadStep.jsx', 'Step 1: CV upload + JD paste UI'),
-    ('frontend/src/screens/GraphStep.jsx', 'Step 2: Three skill graph visualizations'),
-    ('frontend/src/screens/QuestionsStep.jsx', 'Step 3: Shows generated questions'),
-    ('frontend/src/screens/SetupScreen.jsx', 'Step 4: Camera/microphone device setup'),
-    ('frontend/src/screens/InterviewScreen.jsx', 'Step 5: Live interview + M7 + M10 (face/emotion)'),
-    ('frontend/src/screens/DashboardScreen.jsx', 'Step 6: Final report with charts and metrics'),
-]
+h3('M7 Attention — frontend/src/lib/vision.js')
+para(
+    'MediaPipe FaceLandmarker provides 478 face landmarks per frame, sampled once per second. '
+    'Head orientation is derived from landmark geometry rather than the raw transformation '
+    'matrix, because the ratios are stable across different cameras and are easier to justify:'
+)
+code(
+    'eye_mid   = midpoint of the two outer eye corners (landmarks 33 and 263)\n'
+    'eye_dist  = distance between them\n'
+    'nose      = landmark 1\n\n'
+    'yaw   = (nose.x - eye_mid.x) / eye_dist        horizontal head turn\n'
+    'pitch = (nose.y - eye_mid.y) / eye_dist        vertical head tilt'
+)
+para(
+    'The first thirty detections are used to calibrate the candidate\'s own neutral pose, so '
+    'the score measures deviation from how they naturally sit rather than from an assumed '
+    'ideal. Detection runs at five hertz so the on-screen overlay tracks smoothly; every '
+    'fifth detection is averaged into the one-per-second sample the report uses.'
+)
+code(
+    'yaw_dev   = |yaw   - yaw_baseline|   / 0.42\n'
+    'pitch_dev = |pitch - pitch_baseline| / 0.38\n\n'
+    'attention = clamp01( 1 - (yaw_dev + pitch_dev) / 2 )        0.0 to 1.0\n\n'
+    'looking_away = attention < 0.45\n'
+    '4 consecutive looking-away samples raise a distraction event'
+)
 
-for filepath, desc in files:
-    if not filepath:
-        doc.add_paragraph()
-        continue
-    p = doc.add_paragraph()
-    r1 = p.add_run(filepath)
-    r1.bold = True
-    r1.font.size = Pt(10)
-    r1.font.name = 'Consolas'
-    r2 = p.add_run(f' — {desc}')
-    r2.font.size = Pt(10)
-    r2.font.name = 'Arial'
-    p.paragraph_format.space_after = Pt(2)
+h3('M8 Posture — frontend/src/lib/vision.js')
+para('MediaPipe PoseLandmarker provides body landmarks. Three deviations are measured, each normalised by shoulder width so distance from the camera does not matter:')
+code(
+    'shoulder_width = distance between left and right shoulder\n\n'
+    'tilt   = |left_shoulder.y - right_shoulder.y| / shoulder_width      / 0.22\n'
+    'slouch = drop in head height below the calibrated baseline          / 0.35\n'
+    'lean   = |nose.x - shoulder_midpoint.x| / shoulder_width            / 0.30\n\n'
+    'posture = clamp01( 1 - (tilt + slouch + lean) / 3 )'
+)
+para('Any component exceeding its tolerance is named on the report as "shoulders uneven", "slouching" or "leaning off-centre", along with the proportion of the session it applied to.')
 
-doc.add_page_break()
+h3('M10 Vocal delivery — frontend/src/lib/voice.js')
+para(
+    'The microphone stream is analysed ten times per second with the Web Audio API. '
+    'Fundamental frequency is estimated by autocorrelation bounded to the human speech range '
+    '(75-400 Hz), which keeps it cheap enough to run on the main thread. Frames quieter than '
+    '0.012 RMS are treated as silence.'
+)
+para('Four components, each scored 0 to 1 and equally weighted:')
+table(
+    ['Component', 'Formula', 'What it captures'],
+    [
+        ['projection', 'clamp01(avg_energy / 0.03)', 'Vocal loudness; quiet delivery reads as tentative'],
+        ['fluency', 'full marks for 30-75% voiced time, scaling down outside that band',
+         'Proportion of the turn actually spent speaking'],
+        ['expression', 'full marks for 10-45 Hz pitch variation, scaling down outside',
+         'Monotone and erratic delivery both score below naturally varied speech'],
+        ['composure', 'clamp01(1 - long_pauses_per_minute / 4)',
+         'Hesitation; a pause over 1.2 seconds counts as long'],
+    ],
+    widths=[3.0, 6.5, 7.0],
+)
+code('vocal_confidence = (projection + fluency + expression + composure) / 4  x  100')
 
-# ═══════════════════════════════════════════════════════
-# WHAT IS DONE
-# ═══════════════════════════════════════════════════════
-h1('6. Current Status — What Is Done')
+h3('Combining them into the engagement score')
+para('The three presence modules are combined into the single engagement component used by the final fusion:')
+code(
+    'ENGAGEMENT_WEIGHTS = { attention: 0.45, posture: 0.20, voice: 0.35 }\n\n'
+    'weighted_mean = sum(source x weight) / sum(weights of available sources)\n\n'
+    'distraction_penalty = min( distraction_events x 4 , 30 )\n\n'
+    'engagement = clamp( weighted_mean - distraction_penalty , 0 , 100 )'
+)
+para(
+    'Weights are renormalised over whatever sources actually produced data, so a session '
+    'where posture could not be measured still yields a valid engagement score from attention '
+    'and voice alone. If none of the three produced data — an older browser, or the MediaPipe '
+    'models were unavailable — the score falls back to an estimate from distraction events '
+    'only, and the report marks it as estimated rather than measured.'
+)
 
-para('Every module listed below is fully implemented and working:')
+# ── 5.5 ──────────────────────────────────────────────────────────────────
+h2('5.5 Final Fusion and Recommendation (M11) — core/evaluator/fusion.py')
 
-done_table = doc.add_table(rows=13, cols=3)
-done_table.style = 'Light Shading Accent 1'
-done_table.rows[0].cells[0].text = 'Module'
-done_table.rows[0].cells[1].text = 'Function'
-done_table.rows[0].cells[2].text = 'Status'
+para('Four components, weighted to sum to 1.0:')
+table(
+    ['Component', 'Weight', 'Source', 'Meaning'],
+    [
+        ['answer_quality', '0.50', 'M6', 'Mean of every scored answer'],
+        ['skill_coverage', '0.20', 'M3', 'Skill match percentage'],
+        ['behavioral_integrity', '0.15', 'M9', 'Calibrated integrity score'],
+        ['engagement', '0.15', 'M7 + M8 + M10', 'Attention, posture and vocal delivery'],
+    ],
+    widths=[4.3, 2.0, 3.2, 7.0],
+)
+code(
+    'fusion_score =   answer_quality       x 0.50\n'
+    '               + skill_coverage       x 0.20\n'
+    '               + behavioral_integrity x 0.15\n'
+    '               + engagement           x 0.15'
+)
 
-statuses = [
-    ('M1', 'CV Parsing', '✅ Fully Working'),
-    ('M2', 'JD Understanding', '✅ Fully Working'),
-    ('M3', 'Skill Graph (3 views)', '✅ Fully Working'),
-    ('M4', 'Question Generation', '✅ Fully Working'),
-    ('M5', 'Voice Interview', '✅ Fully Working'),
-    ('M6 Track A', 'LLM-as-Judge Scoring', '✅ Fully Working'),
-    ('M6 Track B', 'ML Classifier + SHAP', '✅ Working (heuristic until trained)'),
-    ('M7', 'Face Detection / Attention', '✅ Fully Working'),
-    ('M9', 'Behavioral Integrity', '✅ Fully Working'),
-    ('M10', 'Emotion Detection', '✅ Fully Working'),
-    ('M11', 'Fusion Recommendation', '✅ Fully Working'),
-    ('M12', 'Dashboard Report', '✅ Fully Working'),
-]
-for i, (mod, func, status) in enumerate(statuses, 1):
-    done_table.rows[i].cells[0].text = mod
-    done_table.rows[i].cells[1].text = func
-    done_table.rows[i].cells[2].text = status
+h3('Recommendation bands')
+table(
+    ['Condition', 'Recommendation', 'Label', 'Confidence'],
+    [
+        ['integrity < 30', 'disqualified', 'Session Integrity Compromised', 'high'],
+        ['fusion >= 72', 'strong_hire', 'Strong Hire', 'high if >= 80, else moderate'],
+        ['fusion >= 55', 'hire', 'Hire — Meets Requirements', 'moderate'],
+        ['fusion >= 40', 'consider', 'Consider — Development Needed', 'moderate'],
+        ['below 40', 'no_hire', 'No Hire — Significant Gaps', 'high if < 25, else moderate'],
+    ],
+    widths=[3.4, 3.4, 6.2, 3.5],
+)
+para(
+    'The integrity check is an override, evaluated before the bands. A session whose '
+    'integrity score falls below 30 is reported as disqualified regardless of how good the '
+    'answers were, because the answers cannot be trusted to be the candidate\'s own.'
+)
+
+h3('Worked example')
+para('A real run of the system produced these numbers:')
+code(
+    'answer_quality        59.8  x 0.50  =  29.9\n'
+    'skill_coverage        57.1  x 0.20  =  11.4\n'
+    'behavioral_integrity  78.5  x 0.15  =  11.8\n'
+    'engagement            68.4  x 0.15  =  10.3\n'
+    '                                      ------\n'
+    'fusion_score                           60.9   ->  "Hire - Meets Requirements"\n\n'
+    'where engagement 68.4 came from:\n'
+    '  attention 79.0 x 0.45 + posture 62.0 x 0.20 + voice 81.2 x 0.35\n'
+    '    = 76.4 weighted mean\n'
+    '  minus 2 distraction events x 4 = 8.0 penalty\n'
+    '    = 68.4'
+)
+para(
+    'Every one of these intermediate values is present in the API response and shown on the '
+    'report screen, including the per-source engagement breakdown, so the arithmetic can be '
+    'checked by hand.'
+)
+
+# ── 5.6 ──────────────────────────────────────────────────────────────────
+h2('5.6 Session Reliability Statistics (M12) — core/report/generator.py')
+
+para(
+    'Because the scores come from a language model, the report includes how self-consistent '
+    'that model was across the whole session:'
+)
+table(
+    ['Statistic', 'Definition'],
+    [
+        ['n', 'Number of answers scored'],
+        ['mean_spread', 'Average gap between the two rubric-order calls, in points'],
+        ['max_spread', 'Largest such gap in the session'],
+        ['consistency_distribution', 'Count of answers at high, moderate and low consistency'],
+        ['flagged_for_review', 'Answers whose spread reached 16 points or more'],
+    ],
+    widths=[5.0, 11.5],
+)
+para(
+    'A session where the judge frequently disagreed with itself is reported as such rather '
+    'than presented as a confident assessment. In testing, an ordinary answer produces a '
+    'spread of 0 to 3 points, while a deliberately misleading answer — confidently stated but '
+    'factually wrong — produced a spread of 20 and was automatically flagged.'
+)
+
+
+# ═════════════════════════════════════════════════════════════════════════
+h2('5.7 Voice Provider Selection and Failure Handling')
+
+para(
+    'Text-to-speech is the one part of the system that depends on a third-party quota, and '
+    'it fails in a way that is easy to misread. A provider whose credits are exhausted still '
+    'accepts the connection and completes the request — it simply returns no audio. The '
+    'symptom is an interviewer that speaks normally at the start of a session and then goes '
+    'silent, while the transcript keeps scrolling correctly. This is not a bug in the agent; '
+    'it is the free-tier character limit running out mid-interview.'
+)
+para(
+    'The agent therefore verifies its voice provider before the interview starts, by '
+    'synthesising two characters and checking that audio frames actually come back. '
+    'Providers are tried in order:'
+)
+table(
+    ['Order', 'Provider', 'Model', 'Key'],
+    [
+        ['1', 'ElevenLabs', 'eleven_turbo_v2_5', 'ELEVENLABS_API_KEY'],
+        ['2', 'Deepgram Aura', 'aura-2-andromeda-en', 'DEEPGRAM_API_KEY'],
+        ['3', 'None — text only', 'Questions displayed, not spoken', '—'],
+    ],
+    widths=[2.0, 4.5, 6.0, 4.0],
+)
+para(
+    'The chosen provider is logged to agent_debug.log and sent to the browser, which shows '
+    '"text only" beside the interviewer if no provider worked. The interview still runs in '
+    'that state: questions appear on screen, answers are still transcribed and scored, and '
+    'the report is unaffected. Voice quality degrades; the assessment does not.'
+)
+para(
+    'To check an ElevenLabs quota directly, POST to '
+    'https://api.elevenlabs.io/v1/text-to-speech/{voice_id} with the xi-api-key header. A '
+    'quota_exceeded response names the exact shortfall. Set ELEVENLABS_VOICE_ID or '
+    'DEEPGRAM_TTS_MODEL in .env to change voices.'
+)
+
+h2('5.8 Reading the Report Screen')
+
+para(
+    'The report is the deliverable, so it takes the full width of the page with no wizard '
+    'sidebar. Everything on it is a percentage — there are no formulas printed on screen. '
+    'The maths behind each figure is in the sections above; the screen just shows results.'
+)
+
+table(
+    ['Section', 'What it tells you'],
+    [
+        ['Recommendation banner', 'The final verdict, the answer score, the fused score and how confident the system is'],
+        ['Score Breakdown', 'The four components that produced the fused score, each as a percentage'],
+        ['Presence', 'Attention, posture and vocal confidence, plus how they combined into engagement'],
+        ['Behavioural Integrity', 'The integrity verdict, the eight measured features, and any risk factors'],
+        ['Scoring Reliability', 'How consistent the judge was with itself, and how many answers were flagged'],
+        ['Skill Breakdown', 'Every skill that was probed, scored worst first'],
+        ['Answer-by-Answer', 'Each question, the answer, the reference answer, and the rubric percentages'],
+        ['Session metrics and charts', 'Duration, exchanges, distractions, emotion timeline and distribution'],
+        ['Transcript', 'The full conversation with timestamps and response times'],
+    ],
+    widths=[4.6, 11.9],
+)
+
+h3('Saving the report as a PDF')
+para(
+    'The Download PDF button expands every collapsed answer card, waits for the page to '
+    'redraw, and then opens the browser print dialog, where "Save as PDF" is the '
+    'destination. A print stylesheet removes the buttons and page chrome, forces background '
+    'colours to render so the bars are visible on paper, and stops cards being split across '
+    'a page break. This uses the browser own PDF engine, so there is no extra dependency '
+    'to install and the output matches what is on screen.'
+)
+
+h1('6. Code Layout')
+# ═════════════════════════════════════════════════════════════════════════
+
+table(
+    ['Path', 'What it does'],
+    [
+        ['run.bat', 'One-click setup and launch from the project root'],
+        ['server.py', 'FastAPI backend: all endpoints, serves the built web app'],
+        ['requirements.txt', 'Python dependencies'],
+        ['.env', 'The three API keys (never committed)'],
+        ['', ''],
+        ['core/config.py', 'Thresholds, model names, environment loading'],
+        ['core/llm.py', 'Gemini client with JSON repair'],
+        ['core/agents/cv_agent.py', 'M1 — CV parsing'],
+        ['core/agents/jd_agent.py', 'M2 — job description parsing'],
+        ['core/agents/question_agent.py', 'M4 — question generation and graph-priority ordering'],
+        ['core/graph/skill_graph.py', 'M3 — ESCO taxonomy, matching, gap analysis, graph payload'],
+        ['core/graph/state.py', 'Per-skill status tracking across the interview'],
+        ['core/graph/traversal.py', 'Decides which skills needed further probing'],
+        ['core/livekit/run_agent.py', 'M5 — the voice interviewer agent'],
+        ['core/livekit/launcher.py', 'Downloads and manages the LiveKit server process'],
+        ['core/evaluator/evaluator.py', 'M6 — LLM-as-Judge answer scoring'],
+        ['core/evaluator/integrity.py', 'M9 — Isolation Forest integrity detection'],
+        ['core/evaluator/fusion.py', 'M11 — engagement and final weighted fusion'],
+        ['core/evaluator/track_b.py', 'Unwired: optional trained-classifier scorer'],
+        ['core/evaluator/train_model.py', 'Unwired: trainer for the above'],
+        ['core/pipeline/session_eval.py', 'Post-interview pipeline tying M6, M9, M11 and M12 together'],
+        ['core/report/generator.py', 'M12 — final report assembly and reliability statistics'],
+        ['data/esco/', 'ESCO taxonomy CSV files (1,201 digital skills)'],
+        ['', ''],
+        ['frontend/src/App.jsx', 'Six-step navigation; the interview takes the full viewport'],
+        ['frontend/src/lib/vision.js', 'M7 and M8 — MediaPipe attention and posture'],
+        ['frontend/src/lib/voice.js', 'M10 — Web Audio prosody analysis'],
+        ['frontend/src/components/LandmarkOverlay.jsx', 'Draws the face mesh, gaze points and pose skeleton on the video'],
+        ['frontend/src/screens/UploadStep.jsx', 'Step 1 — CV upload and JD paste'],
+        ['frontend/src/screens/GraphStep.jsx', 'Step 2 — skill knowledge graph'],
+        ['frontend/src/screens/QuestionsStep.jsx', 'Step 3 — generated questions'],
+        ['frontend/src/screens/SetupScreen.jsx', 'Step 4 — device check, monitoring briefing, prewarm trigger'],
+        ['frontend/src/screens/InterviewScreen.jsx', 'Step 5 — the live interview call UI'],
+        ['frontend/src/screens/DashboardScreen.jsx', 'Step 6 — the assessment report'],
+        ['frontend/scripts/fetch-vision-assets.mjs', 'Stages MediaPipe WASM and models at build time'],
+    ],
+    widths=[6.5, 10.0],
+)
+
+
+# ═════════════════════════════════════════════════════════════════════════
+h1('7. API Endpoints')
+# ═════════════════════════════════════════════════════════════════════════
+
+table(
+    ['Method and path', 'Purpose'],
+    [
+        ['POST /api/parse-cv', 'M1 — upload a CV as PDF or text, returns structured data'],
+        ['POST /api/parse-jd', 'M2 — parse a job description'],
+        ['POST /api/build-graph', 'M3 — build the skill graph, returns gaps, topics and the graph payload'],
+        ['POST /api/generate-questions', 'M4 — generate the question set from graph topics'],
+        ['POST /api/prewarm', 'Boot the media server and agent process early, from the setup screen'],
+        ['POST /api/launch-interview', 'M5 — ensure the LiveKit server is up'],
+        ['GET  /token', 'Issue a LiveKit token and spawn the agent process'],
+        ['POST /api/stop-interview', 'Shut down the agent process and LiveKit server'],
+        ['POST /save_transcript', 'Transcript written by the client'],
+        ['GET  /api/transcript', 'Most recently saved transcript'],
+        ['POST /api/evaluate-session', 'M6+M9+M11+M12 — score a whole interview, returns the report'],
+        ['POST /api/evaluate', 'M6 — score a single answer'],
+        ['POST /api/integrity', 'M9 — integrity assessment for raw telemetry'],
+        ['POST /api/fusion-report', 'M11 — fusion for supplied scores'],
+        ['GET  /api/session', 'Current session state'],
+        ['GET  /api/health', 'Health check and key configuration status'],
+    ],
+    widths=[6.0, 10.5],
+)
+
+para(
+    'The report screen calls /api/evaluate-session automatically when it loads. That request '
+    'runs three Gemini calls per scored answer (one reference answer, two rubric orderings) '
+    'with four answers evaluated concurrently, so a ten-answer interview takes roughly 30 to '
+    '60 seconds to score.'
+)
+
+
+# ═════════════════════════════════════════════════════════════════════════
+h1('8. Configuration and Tuning')
+# ═════════════════════════════════════════════════════════════════════════
+
+para('Everything worth adjusting is in one of these places.')
+
+table(
+    ['Setting', 'File', 'Default', 'Effect'],
+    [
+        ['MAX_INTERVIEW_QUESTIONS', '.env / launch request', '15', 'Question budget before wrap-up'],
+        ['MIN_INTERVIEW_QUESTIONS', '.env', '5', 'Wrap-up will not trigger below this'],
+        ['INTERVIEW_TIME_BUDGET_MINS', '.env / launch request', '30', 'Time budget before wrap-up'],
+        ['GEMINI_MODEL', '.env', 'gemini-2.5-flash', 'Model used for all reasoning'],
+        ['SCORE_STRONG_THRESHOLD', 'core/config.py', '70', 'Answer verdict band'],
+        ['SCORE_WEAK_THRESHOLD', 'core/config.py', '40', 'Answer verdict band'],
+        ['CONSISTENCY_HIGH / MODERATE', 'core/evaluator/evaluator.py', '8 / 16', 'Judge reliability bands'],
+        ['WEIGHTS', 'core/evaluator/fusion.py', '.50/.20/.15/.15', 'Final fusion weighting'],
+        ['ENGAGEMENT_WEIGHTS', 'core/evaluator/fusion.py', '.45/.20/.35', 'Attention / posture / voice mix'],
+        ['NORMAL / SUSPICIOUS_THRESHOLD', 'core/evaluator/integrity.py', '60 / 35', 'Integrity verdict bands'],
+        ['MIN_FUZZY_LEN, FUZZY_CUTOFF', 'core/graph/skill_graph.py', '6, 0.88', 'Skill matching strictness'],
+        ['DISPLAY_LEAD_SECONDS', 'core/livekit/run_agent.py', '0.45', 'Delay between showing and speaking'],
+        ['DETECT_INTERVAL_MS', 'frontend/src/lib/vision.js', '200', 'Landmark detection rate (overlay smoothness)'],
+        ['YAW / PITCH_TOLERANCE', 'frontend/src/lib/vision.js', '0.42 / 0.38', 'Attention sensitivity'],
+    ],
+    widths=[5.0, 4.6, 3.0, 3.9],
+)
+
+para(
+    'If the interview should be shorter for a demonstration, set MAX_INTERVIEW_QUESTIONS to '
+    'about 6 and MIN_INTERVIEW_QUESTIONS to 3 in .env. The wrap-up watchdog checks every five '
+    'seconds and will not trigger before the minimum is reached.'
+)
+
+
+# ═════════════════════════════════════════════════════════════════════════
+h1('9. Status, Limitations and Next Steps')
+# ═════════════════════════════════════════════════════════════════════════
+
+h2('9.1 What is complete')
+bullet('CV and job description parsing into structured data')
+bullet('ESCO skill graph with conservative matching, gap analysis and a clustered visualisation')
+bullet('Graph-prioritised question generation')
+bullet('Live voice interview with display-before-speak, budget enforcement and clean automatic ending')
+bullet('Answer evaluation for every substantive answer, with rubric breakdown and self-consistency checking')
+bullet('MediaPipe attention and posture analysis, calibrated per candidate')
+bullet('Vocal delivery analysis from prosodic features')
+bullet('Behavioural integrity detection, calibrated and always explained')
+bullet('Weighted fusion into a final recommendation with full arithmetic exposed')
+bullet('Report screen showing every component and its inputs')
+
+h2('9.2 Known limitations')
+para(
+    'These are stated plainly because a handover that hides them is not useful.'
+)
+bullet('The trained-classifier evaluation track (Sentence-BERT + XGBoost + SHAP) is not wired in. '
+       'The comparison between a trained classifier and the language-model judge, which the '
+       'proposal frames as its research contribution, therefore has not been run.',
+       bold_prefix='Second evaluation track — ')
+bullet('There is no harness measuring agreement against human ratings, and no paraphrase-consistency '
+       'experiment. Objective 6 of the proposal is not yet evidenced.',
+       bold_prefix='Human agreement study — ')
+bullet('The judge scores against a reference answer that the same model family generated. This is '
+       'reasonable for relative comparison but is not an independent ground truth.',
+       bold_prefix='Reference answers — ')
+bullet('The Isolation Forest baseline is synthetic, chosen to match the ranges the system measures. '
+       'It has not been fitted to real pilot sessions, which the proposal intended.',
+       bold_prefix='Integrity baseline — ')
+bullet('Facial emotion still loads face-api.js and its models from a public CDN. If that is '
+       'unreachable, emotion data is simply absent; the rest of the report is unaffected.',
+       bold_prefix='Emotion detection — ')
+bullet('Session state is held in memory in a single server process. It supports one interview at '
+       'a time, which is appropriate for a dissertation demonstration but not for concurrent use.',
+       bold_prefix='Single session — ')
+bullet('The four rubric criteria are equally weighted at 25 points each, following the proposal. '
+       'This means a fully accurate but partially complete answer can still score around 80.',
+       bold_prefix='Equal rubric weights — ')
+
+h2('9.3 Suggested next steps')
+bullet('Run a small human-rating study over recorded answers and report quadratic-weighted '
+       'Cohen\'s Kappa and Spearman correlation against the judge.')
+bullet('Paraphrase a set of answers and measure score variance within each paraphrase group.')
+bullet('Collect pilot sessions from volunteers and refit the integrity baseline on real data.')
+bullet('If the trained second track is wanted, re-enable track_b.py and restore the comparison block.')
+bullet('Consider weighting technical accuracy and completeness above clarity and relevance, '
+       'if partial answers should score lower.')
+
+h2('9.4 Ethics')
+para(
+    'No real hiring decision is made with this system and no person\'s employment is affected '
+    'by it. All evaluation data is synthetic or supplied by the person testing it. Video and '
+    'audio are analysed in the browser and never recorded or transmitted; only derived numeric '
+    'features leave the machine. Any pilot data collection involving human participants '
+    'requires ethical approval, informed consent, anonymisation, and the right to withdraw.'
+)
+
+
+# ═════════════════════════════════════════════════════════════════════════
+h1('10. Troubleshooting')
+# ═════════════════════════════════════════════════════════════════════════
+
+table(
+    ['Symptom', 'Cause and fix'],
+    [
+        ['"python not found"', 'Reinstall Python with "Add to PATH" ticked'],
+        ['"node not found"', 'Install Node.js LTS from nodejs.org'],
+        ['Agent does not speak at all',
+         'Every voice provider failed. agent_debug.log names each one and why. Most often both '
+         'the ElevenLabs and Deepgram keys are missing, invalid, or out of credit'],
+        ['Agent speaks a few words then goes silent',
+         'Almost always an exhausted ElevenLabs quota — see section 5.7. The agent now detects '
+         'this at startup and falls back to Deepgram automatically'],
+        ['Header shows "text only"',
+         'No voice provider produced audio. Questions are still displayed and the interview '
+         'still works. Top up ElevenLabs or check the Deepgram key'],
+        ['No attention or posture on the report',
+         'The MediaPipe assets did not download. Run: cd frontend && npm run vision-assets'],
+        ['No emotion data', 'face-api.js CDN was unreachable; everything else still works'],
+        ['Camera or microphone blocked', 'Allow access via the lock icon in the browser address bar'],
+        ['Port 8000 already in use', 'Close the previous server, or restart the machine'],
+        ['Report says "Evaluation failed"',
+         'Usually a Gemini rate limit or network error. Press Retry on the report screen'],
+        ['Interview does not end', 'The watchdog force-closes 35 seconds after wrap-up is requested'],
+    ],
+    widths=[5.5, 11.0],
+)
 
 doc.add_paragraph()
+para(
+    'The agent writes a full log to agent_debug.log in the project root on every run. That '
+    'file is the first place to look for anything related to the voice interview.',
+    italic=True,
+)
 
-h2('What Is Left (ML Work Only)')
-para('The only remaining work is machine learning training and dissertation experiments:')
-bullet('Train XGBoost model: Run python -m core.evaluator.train_model (5 minutes, needs API key)')
-bullet('Run comparison experiments: Compare Track A vs Track B, compute Cohen\'s Kappa')
-bullet('Collect real pilot data: Do a few test interviews, use data to improve Isolation Forest')
-bullet('M8 Posture Analysis: Optional module (proposal says it can be descoped)')
-bullet('Write dissertation chapters using experimental results')
 
-doc.add_page_break()
-
-# ═══════════════════════════════════════════════════════
-# API ENDPOINTS
-# ═══════════════════════════════════════════════════════
-h1('7. API Endpoints')
-
-para('These are all the API routes the server exposes:')
-
-api_tbl = doc.add_table(rows=15, cols=3)
-api_tbl.style = 'Light Shading Accent 1'
-api_tbl.rows[0].cells[0].text = 'Endpoint'
-api_tbl.rows[0].cells[1].text = 'Method'
-api_tbl.rows[0].cells[2].text = 'What It Does'
-
-apis = [
-    ('/api/parse-cv', 'POST', 'Upload CV file, get structured data back'),
-    ('/api/parse-jd', 'POST', 'Send JD text, get extracted requirements'),
-    ('/api/build-graph', 'POST', 'Build skill graph from CV + JD data'),
-    ('/api/generate-questions', 'POST', 'Generate interview questions from graph'),
-    ('/api/launch-interview', 'POST', 'Start the voice interview session'),
-    ('/api/stop-interview', 'POST', 'Stop the voice interview'),
-    ('/api/evaluate', 'POST', 'Evaluate one answer (dual-track scoring)'),
-    ('/api/integrity', 'POST', 'Run behavioral integrity assessment'),
-    ('/api/fusion-report', 'POST', 'Generate weighted final recommendation'),
-    ('/api/transcript', 'GET', 'Get the interview transcript'),
-    ('/api/session', 'GET', 'Get current session state'),
-    ('/api/health', 'GET', 'Health check — is server running?'),
-    ('/token', 'GET', 'Get LiveKit token + start agent process'),
-    ('/save_transcript', 'POST', 'Save transcript from frontend'),
-]
-for i, (ep, method, desc) in enumerate(apis, 1):
-    api_tbl.rows[i].cells[0].text = ep
-    api_tbl.rows[i].cells[1].text = method
-    api_tbl.rows[i].cells[2].text = desc
-
-# ═══════════════════════════════════════════════════════
-# SAVE
-# ═══════════════════════════════════════════════════════
-out_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'PROJECT_DOCS.docx')
-doc.save(out_path)
-print(f'Generated: {out_path}')
+# ═════════════════════════════════════════════════════════════════════════
+doc.save('PROJECT_DOCS.docx')
+print('PROJECT_DOCS.docx written')

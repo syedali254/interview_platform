@@ -53,9 +53,23 @@ python server.py
 |---------|-----|
 | "python not found" | Reinstall Python with "Add to PATH" checked |
 | "node not found" | Install Node.js from nodejs.org |
-| Agent not speaking | Check API keys in .env |
+| **Agent speaks a few words then goes silent** | **ElevenLabs free quota is exhausted.** The agent now detects this and falls back to Deepgram automatically — check `agent_debug.log` for `Voice provider:`. To restore ElevenLabs, top up the account. |
+| Header shows "text only" | No voice provider worked. Questions still display and the interview still scores normally. Check both `ELEVENLABS_API_KEY` and `DEEPGRAM_API_KEY`. |
+| Agent not speaking at all | Check the 3 keys in `.env`, then read `agent_debug.log` |
+| No attention/posture in report | Run `cd frontend && npm run vision-assets` |
 | Camera blocked | Allow in browser (click lock icon in address bar) |
 | Port 8000 in use | Restart computer |
+
+### Checking your ElevenLabs quota
+
+```bash
+curl -X POST "https://api.elevenlabs.io/v1/text-to-speech/JBFqnCBsd6RMkjVDRZzb" \
+  -H "xi-api-key: YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"text":"test","model_id":"eleven_turbo_v2_5"}'
+```
+
+A `quota_exceeded` response means the account is out of credits. The interview
+will still run — it falls back to Deepgram's voice.
 
 ---
 

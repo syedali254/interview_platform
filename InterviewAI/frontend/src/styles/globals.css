@@ -47,3 +47,66 @@ body {
 .gradient-bg {
   background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 50%, #f5f3ff 100%);
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Print / Save-as-PDF
+   The report's Download PDF button expands every answer card and
+   then calls window.print(). These rules strip the interactive
+   chrome and keep cards from being split across pages.
+   ───────────────────────────────────────────────────────────── */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  html, body {
+    background: #fff !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Buttons, toggles and anything else that cannot be clicked on paper */
+  .no-print,
+  button[title="Save this report as a PDF"] {
+    display: none !important;
+  }
+
+  /* Flatten the app shell so the report is the whole document */
+  .gradient-bg {
+    background: #fff !important;
+  }
+
+  .glass-card {
+    background: #fff !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    border: 1px solid #e2e8f0 !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Keep a heading with the content it introduces */
+  h1, h2, h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* Scrollable panels must print in full, not clipped to their box */
+  .max-h-\[500px\] {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  /* Force background fills on bars and badges to actually render */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Animations settle to their final state before printing */
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

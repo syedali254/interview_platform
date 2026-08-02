@@ -1,17 +1,70 @@
-"""Module 3 — Skill Knowledge Graph using ESCO Taxonomy (EU Standard).
+"""Module 3 — Skill Knowledge Graph using the ESCO taxonomy (EU standard).
 
-Builds a NetworkX DiGraph from ESCO digital skills collection (1,201 IT skills).
-Maps candidate CV skills and job requirements to the ESCO taxonomy, then performs
-gap analysis and generates interview topics.
+Builds a NetworkX DiGraph from the ESCO digital skills collection (1,201 IT
+skills) and extends it with a modern technology stack and a soft-skill
+taxonomy that ESCO v1.1.1 does not cover. Candidate CV skills and job
+requirements are mapped onto that taxonomy, then compared to produce gap
+analysis, interview topics, and a graph payload the UI renders directly.
+
+Matching is deliberately conservative. A skill is mapped only when it:
+  1. matches a preferred label exactly, or
+  2. matches a known alias/abbreviation exactly, or
+  3. matches the base form of a parenthesised ESCO label
+     ("python" -> "Python (computer programming)"), or
+  4. is a close fuzzy match on a string long enough for fuzzy matching to
+     be meaningful.
+
+Anything else becomes its own node rather than being forced onto an unrelated
+concept. An earlier version used a bare substring fallback, which mapped
+"Team Leadership" onto the ESCO skill "R" and "Communication" onto
+"telecommunications engineering"; that fallback is gone.
 """
 
-import networkx as nx
-import pandas as pd
+import re
 from difflib import get_close_matches
 from pathlib import Path
 
+import networkx as nx
+import pandas as pd
+
 # Path to ESCO data files
 DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "esco"
+
+# Node statuses used by the UI and the gap analysis
+STATUS_MATCHED = "matched"              # candidate has it and the job requires it
+STATUS_MISSING = "missing"              # job requires it, candidate lacks it
+STATUS_BONUS = "bonus"                  # candidate has a nice-to-have
+STATUS_BONUS_MISSING = "bonus_missing"  # nice-to-have the candidate lacks
+STATUS_EXTRA = "extra"                  # candidate has it, job does not ask for it
+
+# Fuzzy matching is only meaningful on reasonably long strings. Short labels
+# such as "R", "C#" or "SQL" must match exactly or not at all.
+MIN_FUZZY_LEN = 6
+FUZZY_CUTOFF = 0.88
+
+_PAREN_RE = re.compile(r"\s*\([^)]*\)")
+_PUNCT_RE = re.compile(r"[^a-z0-9+#./ -]")
+_SPACE_RE = re.compile(r"\s+")
+
+
+def normalise(text: str) -> str:
+    """Lowercase, strip punctuation noise and collapse whitespace."""
+    t = str(text).lower().strip()
+    t = _PUNCT_RE.sub(" ", t)
+    return _SPACE_RE.sub(" ", t).strip()
+
+
+def base_form(label: str) -> str:
+    """Strip a trailing parenthetical qualifier from an ESCO label."""
+    return _PAREN_RE.sub("", str(label)).strip()
+
+
+def display_name(label: str) -> str:
+    """Human-facing form of a label: no parenthetical, leading capital."""
+    clean = base_form(label)
+    if not clean:
+        return str(label)
+    return clean[0].upper() + clean[1:]
 
 
 class SkillGraph:
@@ -19,56 +72,69 @@ class SkillGraph:
 
     def __init__(self):
         self.G = nx.DiGraph()
-        self._label_to_uri = {}       # lowercase label -> URI
-        self._uri_to_label = {}       # URI -> preferred label
-        self._alt_labels = {}         # lowercase alt label -> URI
-        self._categories = {}         # URI -> category name
+        self._label_to_uri = {}    # normalised preferred label -> URI
+        self._alt_labels = {}      # normalised alias/base form -> URI
+        self._fuzzy_pool = []      # normalised labels eligible for fuzzy matching
+
         self._candidate_uris = set()
         self._required_uris = set()
         self._nice_uris = set()
+
+        # Original input text -> resolved URI, so we can report how many raw
+        # skills were supplied even when several of them resolve to one node.
+        self._candidate_inputs = {}
+        self._required_inputs = {}
+        self._nice_inputs = {}
+
         self._load_esco_taxonomy()
 
+    # ── Taxonomy loading ──────────────────────────────────────────────────
+
     def _load_esco_taxonomy(self):
-        """Load ESCO digital skills + supplementary modern tech stack into the graph."""
+        """Load ESCO digital skills plus supplementary taxonomies."""
         skills_path = DATA_DIR / "digitalSkillsCollection_en.csv"
         if not skills_path.exists():
             raise FileNotFoundError(f"ESCO data not found at {skills_path}")
 
         df = pd.read_csv(skills_path)
 
-        # Add ESCO skill nodes
         for _, row in df.iterrows():
             uri = row["conceptUri"]
             label = str(row["preferredLabel"]).strip()
-            category = str(row.get("broaderConceptPT", "")).strip()
-            skill_type = str(row.get("skillType", "")).strip()
+            category = self._clean_category(row.get("broaderConceptPT", ""))
 
-            self.G.add_node(uri, label=label, category=category,
-                           skill_type=skill_type, type="skill")
+            self.G.add_node(
+                uri,
+                label=display_name(label),
+                esco_label=label,
+                category=category,
+                skill_type=str(row.get("skillType", "")).strip(),
+                type="skill",
+                source="esco",
+            )
 
-            # Build lookup indexes
-            self._label_to_uri[label.lower()] = uri
-            self._uri_to_label[uri] = label
+            self._index(normalise(label), uri, preferred=True)
 
-            if category:
-                self._categories[uri] = category
+            # Index the base form so "Python" reaches
+            # "Python (computer programming)" without a substring search.
+            base = normalise(base_form(label))
+            if base and base != normalise(label):
+                self._index(base, uri)
 
-            # Index alternative labels for fuzzy matching
             alt = row.get("altLabels", "")
             if pd.notna(alt):
                 for alt_label in str(alt).split("\n"):
-                    alt_label = alt_label.strip()
-                    if alt_label:
-                        self._alt_labels[alt_label.lower()] = uri
+                    if alt_label.strip():
+                        self._index(normalise(alt_label), uri)
 
-            # Add category node and edge
             if category:
                 cat_node = f"cat:{category}"
                 if cat_node not in self.G:
-                    self.G.add_node(cat_node, label=category, type="category")
+                    self.G.add_node(cat_node, label=display_name(category),
+                                    type="category")
                 self.G.add_edge(cat_node, uri, relation="contains")
 
-        # Load broader relations for hierarchy edges between skills
+        # Real ESCO hierarchy edges between digital skills
         relations_path = DATA_DIR / "broaderRelationsSkillPillar.csv"
         if relations_path.exists():
             rel_df = pd.read_csv(relations_path)
@@ -79,239 +145,202 @@ class SkillGraph:
                 if child in digital_uris and parent in digital_uris:
                     self.G.add_edge(parent, child, relation="broader")
 
-        # ─── Supplementary Modern Tech Stack Extension ────────────────────
-        # ESCO (v1.1.1) lacks many modern tools/frameworks. We extend with
-        # industry-standard technologies commonly found in job descriptions.
-        # This extension is categorized to align with ESCO's structure.
-        self._load_tech_extension()
+        self._load_extension(TECH_EXTENSION, prefix="tech")
+        self._load_extension(SOFT_SKILL_EXTENSION, prefix="soft")
 
-    def _load_tech_extension(self):
-        """Add modern technology stack that ESCO doesn't yet include."""
-        TECH_EXTENSION = {
-            # Cloud Platforms
-            "cloud platforms & infrastructure": [
-                "AWS", "Azure", "GCP", "Heroku", "DigitalOcean",
-                "AWS Lambda", "EC2", "S3", "CloudFormation",
-            ],
-            # Containers & Orchestration
-            "containerization & orchestration": [
-                "Docker", "Kubernetes", "Docker Compose", "Helm",
-                "Container Registry", "Podman",
-            ],
-            # DevOps & CI/CD
-            "devops & ci/cd": [
-                "CI/CD", "Jenkins", "GitHub Actions", "GitLab CI",
-                "Terraform", "Ansible", "ArgoCD", "Prometheus", "Grafana",
-            ],
-            # Backend Frameworks
-            "backend frameworks": [
-                "FastAPI", "Django", "Flask", "Express.js", "NestJS",
-                "Spring Boot", "Ruby on Rails", "ASP.NET Core", "Gin",
-            ],
-            # Frontend Frameworks
-            "frontend frameworks": [
-                "React", "Angular", "Vue.js", "Next.js", "Svelte",
-                "Tailwind CSS", "Bootstrap", "Material UI",
-            ],
-            # JavaScript Runtime & Tools
-            "javascript ecosystem": [
-                "Node.js", "TypeScript", "Deno", "Bun", "NPM", "Webpack",
-                "Vite", "ESLint",
-            ],
-            # Databases
-            "databases & data stores": [
-                "PostgreSQL", "MySQL", "MongoDB", "Redis", "Elasticsearch",
-                "DynamoDB", "Cassandra", "Neo4j", "InfluxDB",
-            ],
-            # Message Queues & Streaming
-            "messaging & event streaming": [
-                "Kafka", "RabbitMQ", "Apache Pulsar", "Redis Streams",
-                "Amazon SQS", "NATS",
-            ],
-            # AI/ML Frameworks
-            "ai & machine learning tools": [
-                "TensorFlow", "PyTorch", "scikit-learn", "Keras",
-                "Hugging Face", "LangChain", "LlamaIndex", "OpenAI API",
-                "Pandas", "NumPy", "XGBoost", "LightGBM",
-            ],
-            # Architecture Patterns
-            "architecture & design patterns": [
-                "Microservices", "REST API", "GraphQL", "gRPC",
-                "Event-Driven Architecture", "CQRS", "Domain-Driven Design",
-                "System Design",
-            ],
-            # Version Control & Collaboration
-            "version control & collaboration": [
-                "Git", "GitHub", "GitLab", "Bitbucket",
-            ],
-            # API & Integration
-            "api & integration": [
-                "REST", "GraphQL", "WebSocket", "OAuth", "JWT",
-                "API Gateway", "Swagger/OpenAPI",
-            ],
-            # Testing
-            "testing & quality assurance": [
-                "Jest", "Pytest", "Selenium", "Cypress", "JUnit",
-                "Unit Testing", "Integration Testing", "TDD",
-            ],
-            # Data Engineering
-            "data engineering": [
-                "Apache Spark", "Airflow", "dbt", "ETL",
-                "Data Pipeline", "Data Warehouse", "Snowflake",
-            ],
-        }
+        # Build the fuzzy pool once, after every label is indexed.
+        self._fuzzy_pool = [
+            label for label in self._label_to_uri
+            if len(label) >= MIN_FUZZY_LEN
+        ]
 
-        for category, skills in TECH_EXTENSION.items():
-            cat_uri = f"ext:cat:{category}"
-            self.G.add_node(cat_uri, label=category.title(), type="category")
+    def _index(self, key: str, uri: str, preferred: bool = False):
+        """Register a lookup key, without letting aliases shadow real labels."""
+        if not key:
+            return
+        if preferred:
+            self._label_to_uri.setdefault(key, uri)
+            return
+        # An alias must never override an exact preferred label.
+        if key in self._label_to_uri:
+            return
+        self._alt_labels.setdefault(key, uri)
+
+    def _load_extension(self, taxonomy: dict, prefix: str):
+        """Add a supplementary taxonomy ESCO does not cover."""
+        for category, skills in taxonomy.items():
+            cat_uri = f"{prefix}:cat:{category}"
+            self.G.add_node(cat_uri, label=display_name(category), type="category")
 
             for skill in skills:
-                skill_uri = f"ext:{skill.lower().replace(' ', '_')}"
-                self.G.add_node(skill_uri, label=skill, category=category,
-                               type="skill", source="extension")
+                skill_uri = f"{prefix}:{normalise(skill).replace(' ', '_')}"
+                self.G.add_node(
+                    skill_uri,
+                    label=skill,
+                    esco_label=skill,
+                    category=category,
+                    type="skill",
+                    source="extension",
+                )
                 self.G.add_edge(cat_uri, skill_uri, relation="contains")
 
-                # Index for matching
-                self._label_to_uri[skill.lower()] = skill_uri
-                self._uri_to_label[skill_uri] = skill
+                # Extension labels take precedence: they are the modern,
+                # recognisable form of the concept ("Docker", "Leadership").
+                self._label_to_uri[normalise(skill)] = skill_uri
+                for alias in ALIAS_MAP.get(skill, []):
+                    self._alt_labels[normalise(alias)] = skill_uri
 
-                # Add common abbreviations/aliases
-                aliases = _get_aliases(skill)
-                for alias in aliases:
-                    self._alt_labels[alias.lower()] = skill_uri
+    @staticmethod
+    def _clean_category(raw) -> str:
+        """ESCO categories are pipe-separated; keep the first, trimmed."""
+        if not raw or pd.isna(raw):
+            return ""
+        return str(raw).split(" | ")[0].strip()
+
+    # ── Matching ──────────────────────────────────────────────────────────
 
     def match_skill(self, skill_text: str) -> str | None:
-        """Match a free-text skill name to an ESCO URI using fuzzy matching."""
-        text = skill_text.lower().strip()
+        """Map free text to a taxonomy URI, or None when there is no safe match."""
+        text = normalise(skill_text)
+        if not text:
+            return None
 
-        # Exact match on preferred label
         if text in self._label_to_uri:
             return self._label_to_uri[text]
-
-        # Exact match on alt labels
         if text in self._alt_labels:
             return self._alt_labels[text]
 
-        # Fuzzy match on preferred labels (cutoff 0.75)
-        all_labels = list(self._label_to_uri.keys())
-        matches = get_close_matches(text, all_labels, n=1, cutoff=0.75)
-        if matches:
-            return self._label_to_uri[matches[0]]
-
-        # Fuzzy match on alt labels (cutoff 0.8)
-        alt_list = list(self._alt_labels.keys())
-        matches = get_close_matches(text, alt_list, n=1, cutoff=0.8)
-        if matches:
-            return self._alt_labels[matches[0]]
-
-        # Partial substring match (for skills like "React" matching "React (JavaScript framework)")
-        for label, uri in self._label_to_uri.items():
-            if text in label or label in text:
-                return uri
+        # Fuzzy matching, only for strings long enough to be meaningful.
+        if len(text) >= MIN_FUZZY_LEN:
+            hit = get_close_matches(text, self._fuzzy_pool, n=1, cutoff=FUZZY_CUTOFF)
+            if hit:
+                return self._label_to_uri[hit[0]]
 
         return None
 
+    def _resolve(self, skill_text: str) -> str:
+        """Return the URI for a skill, creating a custom node when unmatched.
+
+        Unmatched skills share one namespace across the CV and the JD, so a
+        skill ESCO does not know about still registers as a match when it
+        appears on both sides.
+        """
+        uri = self.match_skill(skill_text)
+        if uri and uri in self.G:
+            return uri
+
+        key = normalise(skill_text)
+        custom_uri = f"custom:{key}"
+        if custom_uri not in self.G:
+            self.G.add_node(
+                custom_uri,
+                label=display_name(skill_text),
+                esco_label=str(skill_text).strip(),
+                category="Other / Not in taxonomy",
+                type="skill",
+                source="unmatched",
+            )
+        return custom_uri
+
+    # ── Population ────────────────────────────────────────────────────────
+
     def add_candidate_skills(self, skills: list):
-        """Map and add candidate's skills to the graph."""
-        for skill_text in skills:
-            if not isinstance(skill_text, str):
+        """Map and add the candidate's skills to the graph."""
+        for skill_text in skills or []:
+            if not isinstance(skill_text, str) or not skill_text.strip():
                 continue
-            uri = self.match_skill(skill_text)
-            if uri and uri in self.G:
-                self.G.nodes[uri]["has"] = True
-                self._candidate_uris.add(uri)
-            else:
-                # Add as unmatched skill node
-                custom_uri = f"custom:candidate:{skill_text.lower().strip()}"
-                self.G.add_node(custom_uri, label=skill_text, type="unmatched",
-                               has=True, category="Unmatched")
-                self._candidate_uris.add(custom_uri)
+            uri = self._resolve(skill_text)
+            self.G.nodes[uri]["has"] = True
+            self._candidate_uris.add(uri)
+            self._candidate_inputs[skill_text.strip()] = uri
 
     def add_job_skills(self, required: list, nice_to_have: list = None):
         """Map and add job requirement skills to the graph."""
-        for skill_text in required:
-            if not isinstance(skill_text, str):
+        for skill_text in required or []:
+            if not isinstance(skill_text, str) or not skill_text.strip():
                 continue
-            uri = self.match_skill(skill_text)
-            if uri and uri in self.G:
-                self.G.nodes[uri]["required"] = True
-                self._required_uris.add(uri)
-            else:
-                custom_uri = f"custom:required:{skill_text.lower().strip()}"
-                self.G.add_node(custom_uri, label=skill_text, type="unmatched",
-                               required=True, category="Unmatched")
-                self._required_uris.add(custom_uri)
+            uri = self._resolve(skill_text)
+            self.G.nodes[uri]["required"] = True
+            self._required_uris.add(uri)
+            self._required_inputs[skill_text.strip()] = uri
 
-        for skill_text in (nice_to_have or []):
-            if not isinstance(skill_text, str):
+        for skill_text in nice_to_have or []:
+            if not isinstance(skill_text, str) or not skill_text.strip():
                 continue
-            uri = self.match_skill(skill_text)
-            if uri and uri in self.G:
-                self.G.nodes[uri]["nice"] = True
-                self._nice_uris.add(uri)
-            else:
-                custom_uri = f"custom:nice:{skill_text.lower().strip()}"
-                self.G.add_node(custom_uri, label=skill_text, type="unmatched",
-                               nice=True, category="Unmatched")
-                self._nice_uris.add(custom_uri)
+            uri = self._resolve(skill_text)
+            self.G.nodes[uri]["nice"] = True
+            self._nice_uris.add(uri)
+            self._nice_inputs[skill_text.strip()] = uri
+
+    # ── Analysis ──────────────────────────────────────────────────────────
+
+    def status_map(self) -> dict:
+        """URI -> status for every skill involved in this comparison."""
+        statuses = {}
+        # Applied least-specific first so the strongest status wins.
+        for uri in self._candidate_uris - self._required_uris - self._nice_uris:
+            statuses[uri] = STATUS_EXTRA
+        for uri in self._nice_uris - self._candidate_uris - self._required_uris:
+            statuses[uri] = STATUS_BONUS_MISSING
+        for uri in self._candidate_uris & self._nice_uris:
+            statuses[uri] = STATUS_BONUS
+        for uri in self._required_uris - self._candidate_uris:
+            statuses[uri] = STATUS_MISSING
+        for uri in self._candidate_uris & self._required_uris:
+            statuses[uri] = STATUS_MATCHED
+        return statuses
 
     def analyse_gaps(self) -> dict:
-        """Perform gap analysis between candidate skills and job requirements."""
-        matched_req = sorted(
-            [self._get_label(u) for u in self._candidate_uris & self._required_uris]
-        )
-        missing_req = sorted(
-            [self._get_label(u) for u in self._required_uris - self._candidate_uris]
-        )
-        matched_nice = sorted(
-            [self._get_label(u) for u in self._candidate_uris & self._nice_uris]
-        )
-        missing_nice = sorted(
-            [self._get_label(u) for u in self._nice_uris - self._candidate_uris]
-        )
-        extra = sorted(
-            [self._get_label(u) for u in
-             self._candidate_uris - self._required_uris - self._nice_uris]
-        )
+        """Compare candidate skills against job requirements."""
+        def labels(uris):
+            return sorted({self._get_label(u) for u in uris}, key=str.lower)
+
+        matched = self._candidate_uris & self._required_uris
+        missing = self._required_uris - self._candidate_uris
+        matched_nice = self._candidate_uris & self._nice_uris
+        missing_nice = self._nice_uris - self._candidate_uris - self._required_uris
+        extra = self._candidate_uris - self._required_uris - self._nice_uris
 
         total_req = max(len(self._required_uris), 1)
-        pct = round(len(self._candidate_uris & self._required_uris) / total_req * 100, 1)
+        pct = round(len(matched) / total_req * 100, 1)
 
+        involved = self._candidate_uris | self._required_uris | self._nice_uris
         return {
             "match_percentage": pct,
-            "matched_required": matched_req,
-            "missing_required": missing_req,
-            "matched_nice_to_have": matched_nice,
-            "missing_nice_to_have": missing_nice,
-            "extra_skills": extra,
+            "matched_required": labels(matched),
+            "missing_required": labels(missing),
+            "matched_nice_to_have": labels(matched_nice),
+            "missing_nice_to_have": labels(missing_nice),
+            "extra_skills": labels(extra),
             "total_candidate": len(self._candidate_uris),
             "total_required": len(self._required_uris),
             "esco_matched_count": len(
-                [u for u in self._candidate_uris | self._required_uris | self._nice_uris
-                 if not u.startswith("custom:")]
+                [u for u in involved if not u.startswith("custom:")]
+            ),
+            "unmatched_count": len(
+                [u for u in involved if u.startswith("custom:")]
             ),
         }
 
     def get_interview_topics(self, max_topics: int = 8) -> list:
-        """Generate prioritised interview topics from gap analysis."""
+        """Generate prioritised interview topics from the gap analysis."""
         gaps = self.analyse_gaps()
         topics = []
+        seen = set()
+
+        def add(skill, reason, priority):
+            key = skill.lower()
+            if key in seen:
+                return
+            seen.add(key)
+            topics.append({"skill": skill, "reason": reason, "priority": priority})
 
         for s in gaps["missing_required"][:3]:
-            topics.append({
-                "skill": s, "reason": "Required but not on CV — assess if learnable",
-                "priority": "high"
-            })
+            add(s, "Required but not on CV — assess if learnable", "high")
         for s in gaps["matched_required"][:3]:
-            topics.append({
-                "skill": s, "reason": "Listed on CV — verify depth of knowledge",
-                "priority": "medium"
-            })
+            add(s, "Listed on CV — verify depth of knowledge", "medium")
         for s in gaps["matched_nice_to_have"][:2]:
-            topics.append({
-                "skill": s, "reason": "Bonus skill present — explore proficiency",
-                "priority": "low"
-            })
+            add(s, "Bonus skill present — explore proficiency", "low")
 
         return topics[:max_topics]
 
@@ -321,48 +350,82 @@ class SkillGraph:
             "nodes": self.G.number_of_nodes(),
             "edges": self.G.number_of_edges(),
             "candidate_skills": len(self._candidate_uris),
+            "candidate_skills_supplied": len(self._candidate_inputs),
             "job_required": len(self._required_uris),
             "job_nice": len(self._nice_uris),
-            "esco_taxonomy_size": len(self._label_to_uri),
+            "taxonomy_size": len(self._label_to_uri),
         }
 
-    def get_skill_categories(self) -> dict:
-        """Get skills grouped by ESCO category for visualization."""
-        result = {"candidate": {}, "required": {}, "nice": {}}
+    def to_graph_payload(self) -> dict:
+        """Node-link graph grouped by category, ready for the UI to render.
 
-        for uri in self._candidate_uris:
-            cat = self._get_category(uri)
-            result["candidate"].setdefault(cat, []).append(self._get_label(uri))
+        Each cluster is one category hub plus its skills. Hierarchy edges are
+        the real ESCO 'broader' relations between skills that are in play.
+        """
+        statuses = self.status_map()
 
-        for uri in self._required_uris:
-            cat = self._get_category(uri)
-            result["required"].setdefault(cat, []).append(self._get_label(uri))
+        clusters = {}
+        for uri, status in statuses.items():
+            category = self._get_category(uri)
+            clusters.setdefault(category, []).append({
+                "id": uri,
+                "label": self._get_label(uri),
+                "status": status,
+                "source": self.G.nodes[uri].get("source", "esco"),
+            })
 
-        for uri in self._nice_uris:
-            cat = self._get_category(uri)
-            result["nice"].setdefault(cat, []).append(self._get_label(uri))
+        # Real taxonomy edges between the skills on screen.
+        in_play = set(statuses)
+        hierarchy = [
+            {"source": u, "target": v}
+            for u, v, d in self.G.edges(data=True)
+            if d.get("relation") == "broader" and u in in_play and v in in_play
+        ]
 
-        return result
+        cluster_list = [
+            {
+                "category": category,
+                "skills": sorted(skills, key=lambda s: (s["status"], s["label"].lower())),
+            }
+            for category, skills in clusters.items()
+        ]
+        # Biggest, most relevant clusters first.
+        cluster_list.sort(
+            key=lambda c: (
+                -sum(1 for s in c["skills"] if s["status"] in (STATUS_MATCHED, STATUS_MISSING)),
+                -len(c["skills"]),
+                c["category"].lower(),
+            )
+        )
+
+        counts = {}
+        for status in statuses.values():
+            counts[status] = counts.get(status, 0) + 1
+
+        return {
+            "clusters": cluster_list,
+            "hierarchy_edges": hierarchy,
+            "counts": counts,
+            "total_nodes": len(statuses),
+        }
+
+    # ── Helpers ───────────────────────────────────────────────────────────
 
     def _get_label(self, uri: str) -> str:
-        """Get human-readable label for a URI."""
         if uri in self.G:
             return self.G.nodes[uri].get("label", uri)
         return uri.split(":")[-1]
 
     def _get_category(self, uri: str) -> str:
-        """Get the ESCO category for a skill URI."""
         if uri in self.G:
             cat = self.G.nodes[uri].get("category", "")
-            if cat and cat != "Unmatched":
-                # Shorten long ESCO category names
-                parts = cat.split(" | ")
-                return parts[0][:40] if parts else cat[:40]
+            if cat:
+                return display_name(cat)
         return "Other"
 
 
 def build_graph(cv_data: dict, jd_data: dict) -> SkillGraph:
-    """Build a complete ESCO skill graph from parsed CV and JD."""
+    """Build a complete ESCO skill graph from a parsed CV and JD."""
     sg = SkillGraph()
     sg.add_candidate_skills(cv_data.get("skills", []))
     sg.add_job_skills(
@@ -372,52 +435,167 @@ def build_graph(cv_data: dict, jd_data: dict) -> SkillGraph:
     return sg
 
 
-def _get_aliases(skill: str) -> list:
-    """Return common aliases/abbreviations for a tech skill."""
-    ALIAS_MAP = {
-        "AWS": ["amazon web services", "amazon aws"],
-        "GCP": ["google cloud platform", "google cloud"],
-        "Azure": ["microsoft azure", "azure cloud"],
-        "Docker": ["docker containers", "docker engine"],
-        "Kubernetes": ["k8s"],
-        "CI/CD": ["cicd", "continuous integration", "continuous deployment",
-                   "ci cd", "ci-cd"],
-        "PostgreSQL": ["postgres", "psql"],
-        "MongoDB": ["mongo"],
-        "Node.js": ["nodejs", "node"],
-        "React": ["reactjs", "react.js"],
-        "Vue.js": ["vuejs", "vue"],
-        "Angular": ["angularjs"],
-        "TypeScript": ["ts"],
-        "JavaScript": ["js"],
-        "Express.js": ["express", "expressjs"],
-        "Next.js": ["nextjs"],
-        "REST API": ["restful api", "rest apis", "restful"],
-        "GraphQL": ["graph ql"],
-        "TensorFlow": ["tf"],
-        "PyTorch": ["pytorch framework"],
-        "scikit-learn": ["sklearn", "scikit learn"],
-        "Pandas": ["python pandas"],
-        "NumPy": ["numpy", "python numpy"],
-        "Machine Learning": ["ml"],
-        "Deep Learning": ["dl"],
-        "FastAPI": ["fast api"],
-        "Django": ["django framework", "python django"],
-        "Flask": ["python flask"],
-        "Spring Boot": ["springboot", "spring-boot"],
-        "Docker Compose": ["docker-compose"],
-        "Terraform": ["terraform iac", "hashicorp terraform"],
-        "Kafka": ["apache kafka"],
-        "RabbitMQ": ["rabbit mq"],
-        "Elasticsearch": ["elastic search", "elastic"],
-        "GitHub Actions": ["gh actions"],
-        "Hugging Face": ["huggingface", "hf"],
-        "LangChain": ["langchain framework"],
-        "Redis": ["redis cache"],
-        "Microservices": ["micro services", "microservice architecture"],
-        "Git": ["git vcs"],
-        "XGBoost": ["xg boost"],
-        "LightGBM": ["light gbm", "lightgbm"],
-        "Tailwind CSS": ["tailwind", "tailwindcss"],
-    }
-    return ALIAS_MAP.get(skill, [])
+# ─── Supplementary taxonomies ────────────────────────────────────────────────
+# ESCO v1.1.1 predates most of the modern stack and covers soft skills only
+# sparsely. These extensions are categorised to mirror ESCO's own structure.
+
+TECH_EXTENSION = {
+    "Cloud Platforms & Infrastructure": [
+        "AWS", "Azure", "GCP", "Heroku", "DigitalOcean",
+        "AWS Lambda", "EC2", "S3", "CloudFormation",
+    ],
+    "Containerisation & Orchestration": [
+        "Docker", "Kubernetes", "Docker Compose", "Helm",
+        "Container Registry", "Podman",
+    ],
+    "DevOps & CI/CD": [
+        "CI/CD", "Jenkins", "GitHub Actions", "GitLab CI",
+        "Terraform", "Ansible", "ArgoCD", "Prometheus", "Grafana",
+    ],
+    "Backend Frameworks": [
+        "FastAPI", "Django", "Flask", "Express.js", "NestJS",
+        "Spring Boot", "Ruby on Rails", "ASP.NET Core", "Gin",
+    ],
+    "Frontend Frameworks": [
+        "React", "Angular", "Vue.js", "Next.js", "Svelte",
+        "Tailwind CSS", "Bootstrap", "Material UI",
+    ],
+    "JavaScript Ecosystem": [
+        "Node.js", "TypeScript", "Deno", "Bun", "NPM", "Webpack",
+        "Vite", "ESLint",
+    ],
+    "Databases & Data Stores": [
+        "PostgreSQL", "MySQL", "MongoDB", "Redis", "Elasticsearch",
+        "DynamoDB", "Cassandra", "Neo4j", "InfluxDB",
+    ],
+    "Messaging & Event Streaming": [
+        "Kafka", "RabbitMQ", "Apache Pulsar", "Redis Streams",
+        "Amazon SQS", "NATS",
+    ],
+    "AI & Machine Learning Tools": [
+        "TensorFlow", "PyTorch", "scikit-learn", "Keras",
+        "Hugging Face", "LangChain", "LlamaIndex", "OpenAI API",
+        "Pandas", "NumPy", "XGBoost", "LightGBM",
+    ],
+    "Architecture & Design Patterns": [
+        "Microservices", "REST API", "GraphQL", "gRPC",
+        "Event-Driven Architecture", "CQRS", "Domain-Driven Design",
+        "System Design",
+    ],
+    "Version Control & Collaboration": [
+        "Git", "GitHub", "GitLab", "Bitbucket", "Jira", "Confluence",
+    ],
+    "API & Integration": [
+        "REST", "WebSocket", "OAuth", "JWT",
+        "API Gateway", "Swagger/OpenAPI",
+    ],
+    "Testing & Quality Assurance": [
+        "Jest", "Pytest", "Selenium", "Cypress", "JUnit",
+        "Unit Testing", "Integration Testing", "TDD",
+    ],
+    "Data Engineering": [
+        "Apache Spark", "Airflow", "dbt", "ETL",
+        "Data Pipeline", "Data Warehouse", "Snowflake",
+    ],
+    "Office & Productivity Tools": [
+        "Microsoft Excel", "Microsoft Word", "PowerPoint", "Google Sheets",
+        "Power BI", "Tableau", "Looker",
+    ],
+}
+
+SOFT_SKILL_EXTENSION = {
+    "Communication & Collaboration": [
+        "Communication", "Written Communication", "Presentation Skills",
+        "Public Speaking", "Active Listening", "Teamwork",
+        "Cross-Functional Collaboration", "Stakeholder Management",
+        "Client Facing", "Negotiation",
+    ],
+    "Leadership & Management": [
+        "Leadership", "Team Leadership", "Mentoring", "Coaching",
+        "People Management", "Delegation", "Conflict Resolution",
+        "Decision Making", "Strategic Thinking",
+    ],
+    "Problem Solving & Thinking": [
+        "Problem Solving", "Critical Thinking", "Analytical Thinking",
+        "Attention to Detail", "Creativity", "Innovation",
+        "Research Skills", "Troubleshooting",
+    ],
+    "Personal Effectiveness": [
+        "Time Management", "Organisation", "Adaptability", "Resilience",
+        "Self Motivation", "Work Ethic", "Curiosity",
+        "Continuous Learning", "Emotional Intelligence",
+    ],
+    "Ways of Working": [
+        "Agile", "Scrum", "Kanban", "Waterfall", "Code Review",
+        "Pair Programming", "Documentation", "Project Management",
+        "Requirements Gathering",
+    ],
+}
+
+# Common abbreviations and spelling variants, keyed by extension label.
+ALIAS_MAP = {
+    "AWS": ["amazon web services", "amazon aws"],
+    "GCP": ["google cloud platform", "google cloud"],
+    "Azure": ["microsoft azure", "azure cloud"],
+    "Docker": ["docker containers", "docker engine"],
+    "Kubernetes": ["k8s"],
+    "CI/CD": ["cicd", "continuous integration", "continuous deployment",
+              "ci cd", "ci-cd", "continuous delivery"],
+    "PostgreSQL": ["postgres", "psql"],
+    "MongoDB": ["mongo"],
+    "Node.js": ["nodejs", "node"],
+    "React": ["reactjs", "react.js"],
+    "Vue.js": ["vuejs", "vue"],
+    "Angular": ["angularjs"],
+    "TypeScript": ["ts"],
+    "Express.js": ["express", "expressjs"],
+    "Next.js": ["nextjs"],
+    "REST API": ["restful api", "rest apis", "restful", "rest services"],
+    "GraphQL": ["graph ql"],
+    "TensorFlow": ["tensor flow"],
+    "scikit-learn": ["sklearn", "scikit learn"],
+    "Pandas": ["python pandas"],
+    "NumPy": ["python numpy"],
+    "FastAPI": ["fast api"],
+    "Django": ["django framework", "python django"],
+    "Flask": ["python flask"],
+    "Spring Boot": ["springboot", "spring-boot"],
+    "Docker Compose": ["docker-compose"],
+    "Terraform": ["terraform iac", "hashicorp terraform"],
+    "Kafka": ["apache kafka"],
+    "RabbitMQ": ["rabbit mq"],
+    "Elasticsearch": ["elastic search", "elastic"],
+    "GitHub Actions": ["gh actions"],
+    "Hugging Face": ["huggingface"],
+    "Redis": ["redis cache"],
+    "Microservices": ["micro services", "microservice architecture",
+                      "microservices architecture"],
+    "XGBoost": ["xg boost"],
+    "LightGBM": ["light gbm", "lightgbm"],
+    "Tailwind CSS": ["tailwind", "tailwindcss"],
+    "Microsoft Excel": ["excel", "ms excel", "advanced excel"],
+    "Microsoft Word": ["word", "ms word"],
+    "PowerPoint": ["ms powerpoint", "powerpoints"],
+    "Power BI": ["powerbi", "power-bi"],
+    "Unit Testing": ["unit tests"],
+    "Communication": ["communication skills", "verbal communication",
+                      "strong communicator", "interpersonal skills"],
+    "Teamwork": ["team work", "team player", "collaboration"],
+    "Leadership": ["leadership skills"],
+    "Team Leadership": ["team lead", "leading teams", "team management"],
+    "Problem Solving": ["problem-solving", "problem solving skills"],
+    "Critical Thinking": ["critical thought"],
+    "Analytical Thinking": ["analytical skills", "analytical"],
+    "Attention to Detail": ["detail oriented", "detail-oriented"],
+    "Time Management": ["time-management", "prioritisation", "prioritization"],
+    "Organisation": ["organization", "organisational skills",
+                     "organizational skills"],
+    "Adaptability": ["flexible", "flexibility"],
+    "Continuous Learning": ["lifelong learning", "eager to learn",
+                            "willingness to learn"],
+    "Agile": ["agile methodology", "agile methodologies", "agile development"],
+    "Scrum": ["scrum master", "scrum methodology"],
+    "Project Management": ["project manager", "project delivery"],
+    "Mentoring": ["mentorship", "mentoring juniors"],
+    "Stakeholder Management": ["stakeholder engagement"],
+}

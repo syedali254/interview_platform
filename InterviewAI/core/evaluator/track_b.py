@@ -1,5 +1,14 @@
 """M6 Track B: Trained ML classifier using Sentence-BERT embeddings + XGBoost.
 
+NOT WIRED INTO THE RUNNING SYSTEM. Answer evaluation is done by the Gemini
+LLM-as-Judge in core/evaluator/evaluator.py. This module and its companion
+core/evaluator/train_model.py are kept as optional future work: if the
+trained-classifier comparison is picked up later, call track_b_evaluate()
+from evaluate_answer() and re-add the comparison to the report.
+
+Running it requires the optional extras in requirements.txt
+(sentence-transformers, xgboost, shap), which are not installed by default.
+
 Features extracted per answer:
   1. S-BERT embedding cosine similarity (answer vs reference)
   2. Keyword coverage score
@@ -15,12 +24,9 @@ that produces comparable outputs (suitable for dissertation demo).
 SHAP explanations are computed for every prediction.
 """
 
-import os
 import re
-import math
 import numpy as np
 from pathlib import Path
-from typing import Optional
 
 # Lazy imports to avoid startup penalty
 _sbert_model = None
@@ -163,7 +169,7 @@ def extract_features(candidate_answer: str, reference_answer: str) -> dict:
 
 
 def _load_xgb_model():
-    """Load trained XGBoost model if available."""
+    """Load the trained XGBoost model if one has been produced."""
     global _xgb_model
     if _xgb_model is not None:
         return _xgb_model

@@ -31,8 +31,11 @@ export default function App() {
     transcript: [],
     emotions: [],
     distractions: [],
+    vision: [],        // M7/M8 attention + posture samples
+    voice: [],         // M10 prosody samples
     startTime: null,
     qCount: 0,
+    maxQuestions: 15,
     phase: 'setup',
     duration: 0,
   })
@@ -48,6 +51,25 @@ export default function App() {
     if (idx === 2) return session.graphData
     if (idx >= 3) return session.questions
     return true
+  }
+
+  // The live interview takes the whole viewport — a call UI with a wizard
+  // sidebar next to it reads as a form, not a meeting.
+  if (step === 'interview') {
+    return (
+      <InterviewScreen
+        mediaStream={mediaStream}
+        sessionData={interviewData}
+        setSessionData={setInterviewData}
+        onEnd={() => setStep('dashboard')}
+      />
+    )
+  }
+
+  // The report is the deliverable — it gets the full page, and the wizard
+  // sidebar would only reappear in the printed PDF.
+  if (step === 'dashboard') {
+    return <DashboardScreen sessionData={interviewData} />
   }
 
   return (
@@ -97,17 +119,6 @@ export default function App() {
                   setStep('interview')
                 }}
               />
-            )}
-            {step === 'interview' && (
-              <InterviewScreen
-                mediaStream={mediaStream}
-                sessionData={interviewData}
-                setSessionData={setInterviewData}
-                onEnd={() => setStep('dashboard')}
-              />
-            )}
-            {step === 'dashboard' && (
-              <DashboardScreen sessionData={interviewData} />
             )}
           </motion.div>
         </AnimatePresence>

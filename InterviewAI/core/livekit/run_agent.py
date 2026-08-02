@@ -1,11 +1,18 @@
-"""LiveKit voice agent — adaptive AI interviewer.
+"""M5: LiveKit voice agent — the AI interviewer.
 
-Conducts a truly adaptive voice interview:
-- Greets candidate, waits for readiness confirmation
-- Uses Gemini LLM natively via LiveKit plugin for streaming responses
-- Ends based on topic coverage / time budget
-- Publishes real-time data to client
-- Saves full session transcript on completion
+Conducts an adaptive voice interview:
+  - Greets the candidate and waits for them to confirm they are ready
+  - Streams questions through Gemini, Deepgram STT and ElevenLabs TTS
+  - Publishes each question to the client *before* speaking it
+  - Ends cleanly when the budget is spent or the candidate asks to stop
+  - Saves the full transcript plus behavioural telemetry on completion
+
+Speech handling note: the agent buffers each complete utterance before
+synthesising it, rather than piping the LLM's token stream straight into the
+TTS socket. Streaming partial tokens into ElevenLabs produced truncated
+audio — the agent would speak a few words and fall silent while the full text
+still appeared on screen. Buffering also gives us the ordering the interview
+needs: the question is displayed first, then spoken.
 """
 
 import asyncio
@@ -31,6 +38,7 @@ load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
 
 from livekit import rtc
 from livekit.api import AccessToken, VideoGrants
+from livekit.agents import APIConnectOptions, function_tool, RunContext
 from livekit.agents import llm as lk_llm, utils as agent_utils
 from livekit.agents.voice import Agent, AgentSession
 from livekit.plugins import deepgram, elevenlabs, google
@@ -39,6 +47,15 @@ from livekit.plugins import deepgram, elevenlabs, google
 MAX_QUESTIONS = int(os.environ.get("MAX_INTERVIEW_QUESTIONS", "15"))
 MIN_QUESTIONS = int(os.environ.get("MIN_INTERVIEW_QUESTIONS", "5"))
 TIME_BUDGET_MINS = int(os.environ.get("INTERVIEW_TIME_BUDGET_MINS", "30"))
+
+# How long the question stays on screen before the agent starts speaking it.
+DISPLAY_LEAD_SECONDS = 0.45
+
+# Grace period after the closing statement before the room is torn down.
+CLOSING_GRACE_SECONDS = 12
+
+# How long a prewarmed agent sits in the room waiting for the candidate.
+CANDIDATE_WAIT_TIMEOUT = 600
 
 
 def _load_json_env(key: str, default=None):
@@ -65,24 +82,30 @@ def _load_seed_questions() -> list[str]:
 
 def _build_system_prompt(cv_data: dict, jd_data: dict, seed_questions: list[str]) -> str:
     position = jd_data.get("job_title", "the role")
-    company = jd_data.get("company", "our company")
+    company = jd_data.get("company") or "our company"
     cv_skills = ", ".join(cv_data.get("skills", [])[:12])
     jd_skills = ", ".join(jd_data.get("required_skills", [])[:12])
     cv_name = cv_data.get("name", "the candidate")
+
     experience = cv_data.get("experience", [])
     exp_summary = ""
     if experience:
         latest = experience[0] if isinstance(experience[0], dict) else {}
-        exp_summary = f"Most recent role: {latest.get('title', 'N/A')} at {latest.get('company', 'N/A')}"
+        exp_summary = (f"Most recent role: {latest.get('title', 'N/A')} "
+                       f"at {latest.get('company', 'N/A')}")
 
     seed_text = ""
     if seed_questions:
-        seed_text = "\n\nQUESTION BANK (use as starting points — rephrase naturally, adapt based on conversation):\n"
-        seed_text += "\n".join(f"- {q}" for q in seed_questions[:10])
+        seed_text = (
+            "\n\nQUESTION BANK (ordered by priority from the skill-gap "
+            "analysis — work through these, rephrasing naturally and adapting "
+            "to the conversation):\n"
+        )
+        seed_text += "\n".join(f"- {q}" for q in seed_questions[:12])
 
     return f"""You are a senior interviewer at {company}, conducting a real-time voice interview for: {position}.
 
-You are warm, professional, and conversational — like a real human interviewer, not a quiz machine. Speak naturally. Use transitions like "That's interesting...", "Great, let me ask you about...", "Building on what you said...".
+You are warm, professional and conversational — like a real human interviewer, not a quiz machine. Speak naturally. Use transitions like "That's interesting...", "Great, let me ask you about...", "Building on what you said...".
 
 ABOUT THE CANDIDATE:
 - Name: {cv_name}
@@ -93,28 +116,102 @@ ROLE REQUIREMENTS:
 - Must-have skills: {jd_skills}
 
 YOUR APPROACH:
-- Open with a warm greeting. Use the candidate's name. Mention the role. Briefly explain you'll cover technical and behavioral questions. Ask if they're ready.
+- Open with a warm greeting. Use the candidate's name. Mention the role. Briefly explain you'll cover technical and behavioural questions. Ask if they're ready.
 - Ask ONE question at a time. Listen to their full answer before responding.
+- Keep every reply to 1-3 sentences. Never lecture.
 - Be genuinely adaptive:
-  * Strong answer → acknowledge it ("That's a solid approach"), then probe deeper or move to a harder topic
-  * Weak/vague answer → encourage ("Could you walk me through a specific example?") or simplify
-  * Great insight → show interest ("That's a really interesting perspective. Tell me more about...")
-- Vary your question style: scenario-based ("Imagine you're building..."), experience-based ("Tell me about a time when..."), knowledge checks ("How would you approach..."), opinion ("What's your take on...").
-- Keep responses to 1-3 sentences. Don't lecture.
+  * Strong answer -> acknowledge it, then probe deeper or move to a harder topic
+  * Weak or vague answer -> encourage with "Could you walk me through a specific example?"
+  * Great insight -> show interest and ask them to expand
+- Vary your question style: scenario-based, experience-based, knowledge checks, opinion.
 
 STAYING ON TRACK:
-- If the candidate goes off-topic, gently redirect: "That's interesting, but let's focus back on [topic]. Can you tell me about..."
-- If they go off-topic again, be direct: "I appreciate your thoughts, but we need to stay focused on the interview questions. Let's move on."
-- If it happens a third time: "I need to flag this — staying on topic is part of the evaluation. Let's continue with the next question."
+- If the candidate goes off-topic, gently redirect them to the question.
+- If it happens repeatedly, be direct: staying on topic is part of the evaluation.
 
-ENDING:
-- If the candidate asks to end the interview, confirm: "Sure, are you certain? We've covered [X] questions so far."
-- When you've covered enough topics, wrap up naturally: "I think we've covered great ground today. Thank you for your time, {cv_name}. We'll have your evaluation report ready shortly. Best of luck!"
-- After closing, if they keep talking, simply say: "The interview has concluded. Thanks again!"
+ENDING THE INTERVIEW — follow this exactly:
+- If the candidate asks to stop, pause, or end: ask ONE short confirmation question, for example "Are you sure you'd like to end the interview here?".
+  * If they confirm (yes, end it, I'm done, etc.), say one short thank-you sentence and then call the end_interview tool with reason "candidate_request".
+  * If they say no or want to continue, carry on with the next question and do not ask again.
+- When you have covered the important topics, or you are told the interview limit is reached: give one short closing statement thanking {cv_name} by name and mentioning their report will be ready shortly, then call the end_interview tool with reason "completed".
+- Never call end_interview without speaking a closing sentence first.
+- Never ask more questions after calling end_interview.
 {seed_text}"""
 
 
-# ── Token helper ───────────────────────────────────────────────────────────
+async def _probe_tts(engine) -> bool:
+    """Confirm a text-to-speech engine actually returns audio.
+
+    A provider can accept the connection and then return nothing — an
+    exhausted ElevenLabs quota behaves exactly like this, which is why the
+    agent could appear to speak at the start of a session and fall silent
+    later while the transcript kept scrolling. Two characters are cheap
+    enough to spend on finding that out before the interview starts.
+    """
+    try:
+        # No retries: a dead provider should cost a fraction of a second to
+        # rule out, not the ~5s the default retry policy spends on it.
+        async with engine.stream(
+            conn_options=APIConnectOptions(max_retry=0, timeout=8)
+        ) as stream:
+            async def _feed():
+                stream.push_text("Hi")
+                stream.end_input()
+
+            task = asyncio.create_task(_feed())
+            try:
+                async for ev in stream:
+                    if ev.frame.samples_per_channel > 0:
+                        return True
+            finally:
+                await agent_utils.aio.cancel_and_wait(task)
+    except Exception as exc:
+        print(f"[Agent] TTS probe error: {type(exc).__name__}: {str(exc)[:160]}")
+    return False
+
+
+async def _select_tts(elevenlabs_key: str, deepgram_key: str):
+    """Pick the first voice provider that genuinely produces audio."""
+    candidates = []
+
+    if elevenlabs_key:
+        candidates.append((
+            "ElevenLabs",
+            lambda: elevenlabs.TTS(
+                model="eleven_turbo_v2_5",
+                voice_id=os.environ.get("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb"),
+                api_key=elevenlabs_key,
+                sync_alignment=False,
+                enable_ssml_parsing=False,
+            ),
+        ))
+
+    if deepgram_key:
+        candidates.append((
+            "Deepgram Aura",
+            lambda: deepgram.TTS(
+                model=os.environ.get("DEEPGRAM_TTS_MODEL", "aura-2-andromeda-en"),
+                api_key=deepgram_key,
+            ),
+        ))
+
+    for name, factory in candidates:
+        try:
+            engine = factory()
+        except Exception as exc:
+            print(f"[Agent] {name} could not be created: {exc}")
+            continue
+
+        if await _probe_tts(engine):
+            print(f"[Agent] Voice provider: {name}")
+            return engine, name
+
+        print(f"[Agent] {name} returned no audio — falling back to the next provider")
+
+    print("[Agent] WARNING: no working voice provider. The interview will run "
+          "in text-only mode; questions will still be displayed.")
+    return None, None
+
 
 def _generate_agent_token(room_name: str) -> str:
     api_key = os.environ.get("LIVEKIT_API_KEY", "devkey")
@@ -133,32 +230,160 @@ def _generate_agent_token(room_name: str) -> str:
     )
 
 
-# ── Main loop ─────────────────────────────────────────────────────────────
-
 class InterviewerAgent(Agent):
-    """Agent that speaks first when entering the room."""
+    """Interviewer that displays each utterance before speaking it."""
+
+    def __init__(self, instructions: str, hooks: "AgentHooks"):
+        super().__init__(instructions=instructions)
+        self._hooks = hooks
 
     async def on_enter(self):
-        """Trigger the greeting immediately when agent enters the session."""
-        await asyncio.sleep(1.0)
+        """Greet once the candidate is actually in the room.
+
+        The agent process is started early — while the candidate is still on
+        the device-setup screen — so that importing livekit-agents and its
+        plugins (around 12 seconds) happens before they press Begin
+        Interview. That means the agent is usually in the room first and must
+        wait, rather than greeting an empty room.
+        """
+        waited = 0.0
+        while not self._hooks.candidate_joined and waited < CANDIDATE_WAIT_TIMEOUT:
+            await asyncio.sleep(0.25)
+            waited += 0.25
+
+        if not self._hooks.candidate_joined:
+            print("[Agent] No candidate joined within the wait window")
+            return
+
+        await asyncio.sleep(0.6)
         if self.session:
             self.session.generate_reply()
+
+    async def tts_node(self, text, model_settings):
+        """Buffer the full utterance, publish it, then synthesise it.
+
+        Feeding the LLM's token stream directly to ElevenLabs caused the
+        socket to drop mid-utterance, so the agent spoke only the opening
+        words. Synthesising one complete string fixes that and lets the UI
+        render the question before the audio starts.
+        """
+        parts = []
+        async for chunk in text:
+            parts.append(chunk)
+        utterance = "".join(parts).strip()
+
+        if not utterance:
+            return
+
+        await self._hooks.publish_agent_speech(utterance)
+
+        # No working voice provider: the question is still delivered, on
+        # screen, rather than the interview failing outright.
+        if not self._hooks.tts_provider:
+            return
+
+        await asyncio.sleep(DISPLAY_LEAD_SECONDS)
+
+        async def _complete_text():
+            yield utterance
+
+        async for frame in Agent.default.tts_node(self, _complete_text(), model_settings):
+            yield frame
+
+    @function_tool
+    async def end_interview(self, ctx: RunContext, reason: str = "completed") -> str:
+        """End the interview session.
+
+        Call this only after speaking a closing statement. Use reason
+        "candidate_request" when the candidate confirmed they want to stop,
+        or "completed" when the interview has run its course.
+        """
+        print(f"[Agent] end_interview tool called (reason={reason})")
+        self._hooks.request_end(reason)
+        return "The interview has been closed."
+
+
+class AgentHooks:
+    """Shared state and callbacks between the agent and the session loop."""
+
+    def __init__(self, room: rtc.Room, start_time: float):
+        self.room = room
+        self.start_time = start_time
+        self.transcript: list[dict] = []
+        self.distraction_events: list[dict] = []
+        self.emotion_timeline: list[dict] = []
+        self.attention_events: list[dict] = []
+        self.voice_samples: list[dict] = []
+        self.turn_count = 0
+        self.q_count = 0
+        self.ending = False
+        self.candidate_joined = False
+        self.tts_provider: str | None = None
+        self.end_reason: str | None = None
+        self.end_event = asyncio.Event()
+        self._published: set[str] = set()
+
+    def elapsed_seconds(self) -> float:
+        return time.time() - self.start_time
+
+    async def publish(self, payload: dict):
+        try:
+            await self.room.local_participant.publish_data(
+                json.dumps(payload).encode()
+            )
+        except Exception as exc:
+            print(f"[Agent] publish failed: {exc}")
+
+    async def publish_agent_speech(self, text: str):
+        """Send an interviewer utterance to the client before it is spoken."""
+        self.turn_count += 1
+        if "?" in text:
+            self.q_count += 1
+
+        self._published.add(text)
+        self.transcript.append({"role": "agent", "text": text})
+        print(f"[Agent] Turn {self.turn_count} (Q{self.q_count}): {text[:80]}")
+
+        await self.publish({
+            "type": "agent_speech",
+            "text": text,
+            "phase": "closing" if self.ending else
+                     ("interviewing" if self.turn_count > 1 else "greeting"),
+            "q_count": self.q_count,
+            "turn_count": self.turn_count,
+            "max_questions": MAX_QUESTIONS,
+            "elapsed_mins": round(self.elapsed_seconds() / 60, 1),
+        })
+
+    def already_published(self, text: str) -> bool:
+        return text in self._published
+
+    def request_end(self, reason: str):
+        self.ending = True
+        self.end_reason = reason
+        asyncio.get_event_loop().call_later(
+            CLOSING_GRACE_SECONDS, self.end_event.set
+        )
+
 
 async def run_interview(room_name: str):
     ws_url = os.environ.get("LIVEKIT_URL", "ws://localhost:7880")
     deepgram_key = os.environ.get("DEEPGRAM_API_KEY", "")
-    elevenlabs_key = os.environ.get("ELEVENLABS_API_KEY", "") or os.environ.get("ELEVEN_API_KEY", "")
+    elevenlabs_key = (os.environ.get("ELEVENLABS_API_KEY", "")
+                      or os.environ.get("ELEVEN_API_KEY", ""))
     gemini_api_key = os.environ.get("GEMINI_API_KEY", "")
 
     seed_questions = _load_seed_questions()
     cv_data = _load_json_env("CV_DATA")
     jd_data = _load_json_env("JD_DATA")
 
-    position = jd_data.get("job_title", "the role")
-    print(f"[Agent] Room: {room_name} | Position: {position}")
-    print(f"[Agent] Config: max_q={MAX_QUESTIONS}, min_q={MIN_QUESTIONS}, time={TIME_BUDGET_MINS}min")
+    print(f"[Agent] Room: {room_name} | Position: {jd_data.get('job_title', 'the role')}")
+    print(f"[Agent] Config: max_q={MAX_QUESTIONS}, min_q={MIN_QUESTIONS}, "
+          f"time={TIME_BUDGET_MINS}min")
     print(f"[Agent] Seed questions: {len(seed_questions)}")
-    print(f"[Agent] API keys: gemini={'yes' if gemini_api_key else 'NO'}, deepgram={'yes' if deepgram_key else 'NO'}, elevenlabs={'yes' if elevenlabs_key else 'NO'}")
+    print(f"[Agent] API keys: gemini={'yes' if gemini_api_key else 'NO'}, "
+          f"deepgram={'yes' if deepgram_key else 'NO'}, "
+          f"elevenlabs={'yes' if elevenlabs_key else 'NO'}")
 
     system_prompt = _build_system_prompt(cv_data, jd_data, seed_questions)
 
@@ -167,6 +392,26 @@ async def run_interview(room_name: str):
         room = rtc.Room()
         await room.connect(ws_url, token)
         print(f"[Agent] Connected to room '{room_name}'")
+
+        hooks = AgentHooks(room, time.time())
+
+        def _mark_candidate_joined(source: str):
+            if hooks.candidate_joined:
+                return
+            hooks.candidate_joined = True
+            # The clock starts when the candidate arrives, not when the agent
+            # was prewarmed, or the time budget would be spent before they
+            # even joined.
+            hooks.start_time = time.time()
+            print(f"[Agent] Candidate joined ({source}) — starting interview")
+
+        @room.on("participant_connected")
+        def _on_participant(participant):
+            _mark_candidate_joined(participant.identity)
+
+        # The candidate may already be present if prewarm did not run.
+        if room.remote_participants:
+            _mark_candidate_joined("already present")
 
         llm_instance = google.LLM(
             model=os.environ.get("GEMINI_MODEL", "gemini-2.0-flash"),
@@ -181,115 +426,168 @@ async def run_interview(room_name: str):
             api_key=deepgram_key,
             endpointing_ms=500,
         )
-        tts = elevenlabs.TTS(
-            model="eleven_flash_v2_5",
-            voice_id="JBFqnCBsd6RMkjVDRZzb",
-            api_key=elevenlabs_key,
-            streaming_latency=4,
-        )
 
-        agent = InterviewerAgent(
-            instructions=system_prompt,
+        # Verified at startup rather than assumed: a provider that has run
+        # out of quota accepts the connection and returns silence.
+        tts, tts_provider = await _select_tts(elevenlabs_key, deepgram_key)
+        hooks.tts_provider = tts_provider
+
+        agent = InterviewerAgent(instructions=system_prompt, hooks=hooks)
+
+        session_kwargs = {"tts": tts} if tts is not None else {}
+        session = AgentSession(
             stt=stt,
             llm=llm_instance,
-            tts=tts,
-            allow_interruptions=False,
-            min_endpointing_delay=1.2,
-            max_endpointing_delay=5.0,
+            **session_kwargs,
+            # AgentSession supplies the bundled Silero VAD by default.
+            # Interruptions are allowed so a candidate who starts answering
+            # early is still heard — with them disabled the framework logged
+            # "skipping reply to user input" and silently dropped answers.
+            allow_interruptions=True,
+            min_interruption_duration=0.7,
+            min_interruption_words=2,
+            min_endpointing_delay=0.8,
+            max_endpointing_delay=6.0,
         )
-
-        session = AgentSession(
-            allow_interruptions=False,
-            min_endpointing_delay=1.2,
-            max_endpointing_delay=5.0,
-        )
-
-        # Track questions for client
-        q_count = 0
-        transcript = []
-        distraction_events = []
-        emotion_timeline = []
-        start_time = time.time()
 
         @session.on("conversation_item_added")
         def _on_item(ev):
-            nonlocal q_count
             item = ev.item
-            if isinstance(item, lk_llm.ChatMessage):
-                text = item.text_content
-                if not text:
-                    return
-                if item.role == "assistant":
-                    q_count += 1
-                    transcript.append({"role": "agent", "text": text})
-                    print(f"[Agent] Q{q_count}: {text[:80]}")
-                    asyncio.ensure_future(
-                        room.local_participant.publish_data(
-                            json.dumps({
-                                "type": "agent_speech",
-                                "text": text,
-                                "phase": "interviewing" if q_count > 1 else "greeting",
-                                "q_count": q_count,
-                                "elapsed_mins": round((time.time() - start_time) / 60, 1),
-                            }).encode()
-                        )
-                    )
-                elif item.role == "user":
-                    transcript.append({"role": "candidate", "text": text})
-                    print(f"[Agent] Candidate: {text[:80]}")
-                    asyncio.ensure_future(
-                        room.local_participant.publish_data(
-                            json.dumps({
-                                "type": "transcript",
-                                "text": text,
-                                "is_final": True,
-                                "q_count": q_count,
-                            }).encode()
-                        )
-                    )
+            if not isinstance(item, lk_llm.ChatMessage):
+                return
+            text = item.text_content
+            if not text:
+                return
 
-        # Handle data from client (distraction/emotion events)
+            if item.role == "assistant":
+                # tts_node normally publishes first; this is the fallback for
+                # anything that reached the transcript without being spoken.
+                if not hooks.already_published(text):
+                    asyncio.ensure_future(hooks.publish_agent_speech(text))
+            elif item.role == "user":
+                hooks.transcript.append({"role": "candidate", "text": text})
+                print(f"[Agent] Candidate: {text[:80]}")
+                asyncio.ensure_future(hooks.publish({
+                    "type": "transcript",
+                    "text": text,
+                    "is_final": True,
+                    "q_count": hooks.q_count,
+                }))
+
         @room.on("data_received")
-        def _on_data(data_packet):
+        def _on_data(packet):
+            """Collect client-side telemetry: distraction, emotion, attention, voice."""
             try:
-                payload = json.loads(data_packet.data.decode())
-                msg_type = payload.get("type", "")
-                if msg_type == "distraction":
-                    payload["timestamp"] = time.time()
-                    payload["question_number"] = q_count
-                    distraction_events.append(payload)
-                    print(f"[Agent] Distraction: {payload.get('detail', 'unknown')} at Q{q_count}")
-                elif msg_type == "emotion":
-                    payload["timestamp"] = time.time()
-                    emotion_timeline.append(payload)
+                payload = json.loads(packet.data.decode())
             except Exception:
-                pass
+                return
+
+            msg_type = payload.get("type", "")
+            payload["timestamp"] = time.time()
+            payload["question_number"] = hooks.q_count
+
+            if msg_type == "distraction":
+                hooks.distraction_events.append(payload)
+                print(f"[Agent] Distraction: {payload.get('detail', 'unknown')} "
+                      f"at Q{hooks.q_count}")
+            elif msg_type == "emotion":
+                hooks.emotion_timeline.append(payload)
+            elif msg_type == "attention":
+                hooks.attention_events.append(payload)
+            elif msg_type == "voice":
+                hooks.voice_samples.append(payload)
 
         await session.start(agent=agent, room=room)
         print("[Agent] Session started - waiting for candidate")
 
-        disconnect_event = asyncio.Event()
-        room.on("disconnected", lambda *_: disconnect_event.set())
-        await disconnect_event.wait()
+        # Tell the client which voice provider is live so it can warn the
+        # candidate if the interview is running text-only.
+        await hooks.publish({
+            "type": "session_info",
+            "tts_provider": tts_provider,
+            "voice_enabled": tts is not None,
+            "max_questions": MAX_QUESTIONS,
+        })
 
-        # Save transcript
-        _save_transcript(room_name, transcript, distraction_events, emotion_timeline,
-                        q_count, start_time, cv_data, jd_data)
-        print("[Agent] Disconnected")
+        room.on("disconnected", lambda *_: hooks.end_event.set())
+
+        async def _budget_watchdog():
+            """Ask the agent to wrap up once the question or time budget is spent."""
+            asked_to_wrap = False
+            while not hooks.end_event.is_set():
+                await asyncio.sleep(5)
+                if asked_to_wrap or hooks.ending or hooks.q_count < MIN_QUESTIONS:
+                    continue
+
+                elapsed_mins = hooks.elapsed_seconds() / 60
+                over_questions = hooks.q_count >= MAX_QUESTIONS
+                over_time = elapsed_mins >= TIME_BUDGET_MINS
+                if not (over_questions or over_time):
+                    continue
+
+                asked_to_wrap = True
+                reason = "question limit" if over_questions else "time budget"
+                print(f"[Agent] Wrap-up triggered ({reason}) at Q{hooks.q_count} "
+                      f"/ {elapsed_mins:.1f} min")
+
+                await hooks.publish({"type": "wrap_up", "reason": reason})
+                try:
+                    session.generate_reply(instructions=(
+                        "The interview has reached its limit. Give one short "
+                        "closing statement thanking the candidate by name and "
+                        "telling them their report will be ready shortly, then "
+                        "call the end_interview tool with reason 'completed'. "
+                        "Do not ask any further questions."
+                    ))
+                except Exception as exc:
+                    print(f"[Agent] Wrap-up reply failed: {exc}")
+
+                # Safety net: close even if the model never calls the tool.
+                await asyncio.sleep(35)
+                hooks.end_event.set()
+
+        watchdog = asyncio.create_task(_budget_watchdog())
+        try:
+            await hooks.end_event.wait()
+        finally:
+            watchdog.cancel()
+
+        await hooks.publish({
+            "type": "interview_ended",
+            "reason": hooks.end_reason or "disconnected",
+            "q_count": hooks.q_count,
+        })
+        # Give the client a moment to receive the final packet.
+        await asyncio.sleep(0.6)
+
+        _save_transcript(room_name, hooks, cv_data, jd_data)
+
+        try:
+            await session.aclose()
+        except Exception:
+            pass
+        try:
+            await room.disconnect()
+        except Exception:
+            pass
+        print(f"[Agent] Interview ended (reason={hooks.end_reason or 'disconnected'})")
 
 
-def _save_transcript(room_name, transcript, distraction_events, emotion_timeline,
-                     q_count, start_time, cv_data, jd_data):
+def _save_transcript(room_name: str, hooks: AgentHooks, cv_data: dict, jd_data: dict):
     out_dir = Path(tempfile.gettempdir()) / "interviewai_transcripts"
     out_dir.mkdir(exist_ok=True)
     data = {
         "session": room_name,
         "completed": True,
-        "questions_count": q_count,
-        "elapsed_mins": round((time.time() - start_time) / 60, 1),
-        "conversation": transcript,
-        "distraction_events": distraction_events,
-        "emotion_timeline": emotion_timeline,
+        "end_reason": hooks.end_reason or "disconnected",
+        "questions_count": hooks.q_count,
+        "turns_count": hooks.turn_count,
+        "elapsed_mins": round(hooks.elapsed_seconds() / 60, 1),
+        "conversation": hooks.transcript,
+        "distraction_events": hooks.distraction_events,
+        "emotion_timeline": hooks.emotion_timeline,
+        "attention_events": hooks.attention_events,
+        "voice_samples": hooks.voice_samples,
         "config": {
             "max_questions": MAX_QUESTIONS,
             "min_questions": MIN_QUESTIONS,

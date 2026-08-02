@@ -1,33 +1,10 @@
-"""M6b: Graph traversal — chooses next skill during interview.
+"""Graph traversal rules over the live skill state.
 
-Strategy: adaptive — picks the lowest-scored incomplete skill first,
-avoiding repeating the same skill consecutively.
+Used after the interview to identify skills whose evidence was too thin to
+support a confident verdict — the ones that warranted another question.
 """
 
-from typing import Optional
-
 from core.graph.state import InterviewState
-
-
-def pick_next_skill(
-    state: InterviewState,
-    last_skill: Optional[str] = None,
-) -> Optional[str]:
-    incomplete = state.incomplete_skills
-    if not incomplete:
-        return None
-
-    scored = []
-    for skill in incomplete:
-        node = state.get_node(skill)
-        avg = node.avg_score if node else 0
-        priority_weight = {"high": 0, "medium": 1, "low": 2}.get(
-            getattr(node, "priority", "medium"), 1
-        )
-        scored.append((avg, priority_weight, 0 if skill != last_skill else 1, skill))
-
-    scored.sort(key=lambda x: (x[0], x[1], x[2]))
-    return scored[0][3]
 
 
 def decide_follow_up(

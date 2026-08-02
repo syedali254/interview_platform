@@ -1,18 +1,28 @@
-"""FastAPI backend for InterviewAI platform.
+"""FastAPI backend for the InterviewAI platform.
 
-Endpoints:
-  POST /api/parse-cv         — Upload CV PDF or text, return parsed data
-  POST /api/parse-jd         — Parse job description text
-  POST /api/build-graph      — Build skill graph from CV + JD data
-  POST /api/generate-questions — Generate interview questions from graph topics
-  POST /api/launch-interview — Launch LiveKit interview session
-  POST /api/stop-interview   — Stop LiveKit session
-  GET  /api/transcript       — Get latest transcript
-  POST /api/evaluate         — Evaluate a single answer
-  GET  /api/session          — Get current session state
-  GET  /api/health           — Health check
-  GET  /token                — LiveKit token (for client)
-  POST /save_transcript      — Save transcript from client
+Pre-interview:
+  POST /api/parse-cv           M1 — parse a CV from PDF or text
+  POST /api/parse-jd           M2 — parse a job description
+  POST /api/build-graph        M3 — map CV + JD onto the ESCO skill graph
+  POST /api/generate-questions M4 — generate questions from graph topics
+
+Interview:
+  POST /api/launch-interview   M5 — start the LiveKit voice session
+  GET  /token                  LiveKit token; also spawns the agent process
+  POST /api/stop-interview     tear down the agent and LiveKit server
+  POST /save_transcript        transcript written by the client
+  GET  /api/transcript         most recent saved transcript
+
+Assessment:
+  POST /api/evaluate-session   M6 + M9 + M11 + M12 — score a whole interview
+                               and return the final report
+  POST /api/evaluate           M6 — score a single answer
+  POST /api/integrity          M9 — behavioural integrity for raw telemetry
+  POST /api/fusion-report      M11 — weighted fusion for supplied scores
+
+Misc:
+  GET  /api/session            current session state
+  GET  /api/health             health check
 """
 
 import json
@@ -27,9 +37,10 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
 
@@ -63,10 +74,62 @@ _session = {
     "questions": None,
     "livekit_launched": False,
     "livekit_url": None,
+    "prewarmed_room": None,
+    "report": None,
 }
 
 # Currently running agent subprocess (one at a time)
 _agent_proc = None
+
+
+def _prepare_interview_env(max_questions: int = 15, time_budget_mins: int = 30):
+    """Populate the environment the agent subprocess reads on startup.
+
+    Questions are flattened in graph-priority order so the skills the graph
+    flagged as gaps are asked before the time budget runs out.
+    """
+    cv_data = _session["cv_data"] or {}
+    jd_data = _session["jd_data"] or {}
+    questions = _session["questions"] or {}
+    topics = (_session["graph_data"] or {}).get("topics", [])
+
+    flow = build_interview_flow(questions, topics)
+    q_list = [step["question"] for step in flow if step.get("question")]
+
+    os.environ["MAX_INTERVIEW_QUESTIONS"] = str(max_questions)
+    os.environ["INTERVIEW_TIME_BUDGET_MINS"] = str(time_budget_mins)
+    os.environ["INTERVIEW_QUESTIONS"] = json.dumps(q_list)
+    os.environ["CV_DATA"] = json.dumps(cv_data)
+    os.environ["JD_DATA"] = json.dumps(jd_data)
+    os.environ["RESUME_TEXT"] = (cv_data.get("full_text") or "")[:3000]
+    os.environ["JD_TEXT"] = (jd_data.get("full_text") or "")[:3000]
+
+
+def _agent_is_alive() -> bool:
+    return _agent_proc is not None and _agent_proc.poll() is None
+
+
+def _spawn_agent(room_name: str):
+    """Start the voice agent subprocess for a room, replacing any previous one."""
+    global _agent_proc
+    _stop_agent_process()
+
+    agent_script = Path(__file__).parent / "core" / "livekit" / "run_agent.py"
+    agent_log = Path(__file__).parent / "agent_debug.log"
+
+    env = os.environ.copy()
+    env["LIVEKIT_URL"] = os.environ.get("LIVEKIT_URL", "ws://localhost:7880")
+    env["LIVEKIT_API_KEY"] = os.environ.get("LIVEKIT_API_KEY", "devkey")
+    env["LIVEKIT_API_SECRET"] = os.environ.get("LIVEKIT_API_SECRET", "secret")
+    env["PYTHONUNBUFFERED"] = "1"
+
+    log_fh = open(agent_log, "w")
+    _agent_proc = subprocess.Popen(
+        [sys.executable, "-u", str(agent_script), room_name],
+        stdout=log_fh, stderr=subprocess.STDOUT,
+        env=env, cwd=str(Path(__file__).parent),
+    )
+    print(f"[server] Agent process started for room '{room_name}'")
 
 
 def _stop_agent_process():
@@ -104,6 +167,12 @@ class EvalInput(BaseModel):
 class InterviewConfig(BaseModel):
     max_questions: Optional[int] = 15
     time_budget_mins: Optional[int] = 30
+
+class SessionEvalInput(BaseModel):
+    # Role-tagged transcript: [{"role": "agent"|"candidate", "text", "time"}]
+    conversation: Optional[list] = None
+    # Client-side behavioural telemetry for M9 + M11
+    telemetry: Optional[dict] = None
 
 
 # ── Health ──
@@ -161,17 +230,23 @@ async def api_build_graph():
         topics = sg.get_interview_topics()
         gaps = sg.analyse_gaps()
         stats = sg.get_stats()
+        graph = sg.to_graph_payload()
 
         graph_data = {
             "topics": topics,
             "summary": {
-                "total_skills": stats["candidate_skills"] + stats["job_required"],
+                # Distinct skills in play across CV and JD — matched skills
+                # belong to both sides and must not be counted twice.
+                "total_skills": graph["total_nodes"],
                 "matched": len(gaps["matched_required"]),
                 "gaps": len(gaps["missing_required"]),
+                "bonus": len(gaps["matched_nice_to_have"]),
+                "extra": len(gaps["extra_skills"]),
                 "match_percentage": gaps["match_percentage"],
             },
             "gaps": gaps,
             "stats": stats,
+            "graph": graph,
         }
 
         _session["graph_data"] = graph_data
@@ -196,40 +271,59 @@ async def api_generate_questions():
         raise HTTPException(500, str(e))
 
 
+# ── Pre-warm the media server and the agent process ──
+@app.post("/api/prewarm")
+async def api_prewarm(config: InterviewConfig = InterviewConfig()):
+    """Get everything slow out of the way while the candidate reads the briefing.
+
+    Two things dominate the wait after pressing Begin Interview: booting the
+    LiveKit server, and the agent process importing livekit-agents and its
+    plugins — around 12 seconds of pure import time. Both are started here,
+    on the device-setup screen, so by the time the candidate is ready the
+    agent is already connected to the room and waiting for them.
+    """
+    try:
+        from core.livekit.launcher import start_livekit_server
+        ok = await run_in_threadpool(start_livekit_server)
+        if not ok:
+            return {"success": False, "ready": False, "agent_ready": False}
+
+        _session["livekit_launched"] = True
+        _session["livekit_url"] = os.environ.get("LIVEKIT_URL", "ws://localhost:7880")
+
+        # The agent can only be started once we know what to ask.
+        agent_ready = False
+        if _session["questions"] and _session["cv_data"] and _session["jd_data"]:
+            _prepare_interview_env(config.max_questions, config.time_budget_mins)
+            room_name = f"interview-{uuid.uuid4().hex[:8]}"
+            _spawn_agent(room_name)
+            _session["prewarmed_room"] = room_name
+            agent_ready = True
+
+        return {"success": True, "ready": True, "agent_ready": agent_ready}
+    except Exception as e:
+        # Never block the setup screen on this — the real launch retries.
+        return {"success": False, "ready": False, "detail": str(e)}
+
+
 # ── Step 4: Launch LiveKit Interview ──
 @app.post("/api/launch-interview")
 async def api_launch_interview(config: InterviewConfig = InterviewConfig()):
     if not _session["questions"]:
         raise HTTPException(400, "Generate questions first")
     try:
-        cv_data = _session["cv_data"]
-        jd_data = _session["jd_data"]
-        questions = _session["questions"]
+        # Usually a no-op: /api/prewarm did this while the candidate was on
+        # the device-setup screen.
+        _prepare_interview_env(config.max_questions, config.time_budget_mins)
 
-        # Collect all questions as seed
-        q_list = []
-        for section in ("opening", "technical", "behavioural", "closing"):
-            for q in questions.get(section, []):
-                q_list.append(q.get("question", ""))
-
-        # Set env vars for interview config
-        os.environ["MAX_INTERVIEW_QUESTIONS"] = str(config.max_questions)
-        os.environ["INTERVIEW_TIME_BUDGET_MINS"] = str(config.time_budget_mins)
-
-        from core.livekit.launcher import launch
-        url = launch(
-            resume_text=cv_data.get("full_text", ""),
-            jd_text=jd_data.get("full_text", ""),
-            questions=q_list or None,
-            cv_data=cv_data,
-            jd_data=jd_data,
-        )
-        if url:
-            _session["livekit_launched"] = True
-            _session["livekit_url"] = url
-            return {"success": True, "url": url}
-        else:
+        from core.livekit.launcher import start_livekit_server
+        if not await run_in_threadpool(start_livekit_server):
             raise HTTPException(500, "Failed to start LiveKit server")
+
+        url = os.environ.get("LIVEKIT_URL", "ws://localhost:7880")
+        _session["livekit_launched"] = True
+        _session["livekit_url"] = url
+        return {"success": True, "url": url}
     except HTTPException:
         raise
     except Exception as e:
@@ -243,6 +337,7 @@ async def api_stop_interview():
     cleanup()
     _stop_agent_process()
     _session["livekit_launched"] = False
+    _session["prewarmed_room"] = None
     return {"success": True}
 
 
@@ -270,6 +365,40 @@ async def api_evaluate(body: EvalInput):
         raise HTTPException(500, str(e))
 
 
+# ── M6 + M9 + M11 + M12: Full post-interview assessment ──
+@app.post("/api/evaluate-session")
+async def api_evaluate_session(body: SessionEvalInput):
+    """Score a completed interview and return the final report.
+
+    Runs the LLM-as-Judge evaluator over every substantive answer, assesses
+    behavioural integrity, fuses the results, and assembles the M12 report.
+    """
+    conversation = body.conversation
+    if not conversation:
+        # Fall back to the transcript the agent saved on disconnect.
+        transcript_dir = Path(tempfile.gettempdir()) / "interviewai_transcripts"
+        files = list(transcript_dir.glob("*.json")) if transcript_dir.exists() else []
+        if files:
+            latest = max(files, key=lambda f: f.stat().st_mtime)
+            conversation = json.loads(latest.read_text()).get("conversation", [])
+
+    if not conversation:
+        raise HTTPException(400, "No interview transcript available to evaluate")
+
+    try:
+        from core.pipeline.session_eval import evaluate_session
+        report = await run_in_threadpool(
+            evaluate_session,
+            conversation=conversation,
+            graph_data=_session["graph_data"],
+            telemetry=body.telemetry or {},
+        )
+        _session["report"] = report
+        return {"success": True, "data": report}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
 # ── Get Session State ──
 @app.get("/api/session")
 async def api_session():
@@ -284,6 +413,7 @@ async def api_session():
         "jd_data": _session["jd_data"],
         "graph_data": _session["graph_data"],
         "questions": _session["questions"],
+        "report": _session["report"],
     }
 
 
@@ -296,7 +426,12 @@ async def get_token():
     LIVEKIT_API_SECRET = os.environ.get("LIVEKIT_API_SECRET", "secret")
     LIVEKIT_WS_URL = os.environ.get("LIVEKIT_URL", "ws://localhost:7880")
 
-    room_name = f"interview-{uuid.uuid4().hex[:8]}"
+    # Reuse the agent started during prewarm if it is still alive — it has
+    # already paid the ~12 second import cost and is sitting in the room
+    # waiting. Only spawn a fresh one if prewarm never ran or the process died.
+    prewarmed = _session.get("prewarmed_room")
+    reused = bool(prewarmed and _agent_is_alive())
+    room_name = prewarmed if reused else f"interview-{uuid.uuid4().hex[:8]}"
     identity = f"candidate-{uuid.uuid4().hex[:6]}"
 
     grants = VideoGrants(
@@ -312,34 +447,20 @@ async def get_token():
         .to_jwt()
     )
 
-    # Start agent subprocess (kill any previous one first)
-    global _agent_proc
-    _stop_agent_process()
-    agent_script = Path(__file__).parent / "core" / "livekit" / "run_agent.py"
-    agent_log = Path(__file__).parent / "agent_debug.log"
-    env = os.environ.copy()
-    env["LIVEKIT_URL"] = LIVEKIT_WS_URL
-    env["LIVEKIT_API_KEY"] = LIVEKIT_API_KEY
-    env["LIVEKIT_API_SECRET"] = LIVEKIT_API_SECRET
-    env["PYTHONUNBUFFERED"] = "1"
-    for env_key in ("INTERVIEW_QUESTIONS", "CV_DATA", "JD_DATA",
-                    "MAX_INTERVIEW_QUESTIONS", "MIN_INTERVIEW_QUESTIONS",
-                    "INTERVIEW_TIME_BUDGET_MINS"):
-        if env_key in os.environ:
-            env[env_key] = os.environ[env_key]
+    if reused:
+        print(f"[server] Reusing prewarmed agent in room '{room_name}'")
+    else:
+        _spawn_agent(room_name)
 
-    with open(agent_log, "w") as log_fh:
-        _agent_proc = subprocess.Popen(
-            [sys.executable, "-u", str(agent_script), room_name],
-            stdout=log_fh, stderr=subprocess.STDOUT,
-            env=env, cwd=str(Path(__file__).parent),
-        )
+    # One agent serves one interview; clear it so a later run starts fresh.
+    _session["prewarmed_room"] = None
 
     return {
         "token": token,
         "url": LIVEKIT_WS_URL,
         "room": room_name,
         "identity": identity,
+        "agent_prewarmed": reused,
     }
 
 
