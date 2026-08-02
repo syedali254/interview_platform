@@ -75,11 +75,20 @@ _session = {
     "livekit_launched": False,
     "livekit_url": None,
     "prewarmed_room": None,
+    "text_interview": None,
     "report": None,
 }
 
 # Currently running agent subprocess (one at a time)
 _agent_proc = None
+
+
+def _save_transcript_record(record: dict):
+    """Write a finished interview where /api/transcript can find it."""
+    out_dir = Path(tempfile.gettempdir()) / "interviewai_transcripts"
+    out_dir.mkdir(exist_ok=True)
+    session_id = record.get("session") or f"session-{uuid.uuid4().hex[:8]}"
+    (out_dir / f"{session_id}.json").write_text(json.dumps(record, indent=2))
 
 
 def _prepare_interview_env(max_questions: int = 15, time_budget_mins: int = 30):
@@ -167,6 +176,9 @@ class EvalInput(BaseModel):
 class InterviewConfig(BaseModel):
     max_questions: Optional[int] = 15
     time_budget_mins: Optional[int] = 30
+
+class TextAnswerInput(BaseModel):
+    answer: str
 
 class SessionEvalInput(BaseModel):
     # Role-tagged transcript: [{"role": "agent"|"candidate", "text", "time"}]
@@ -328,6 +340,61 @@ async def api_launch_interview(config: InterviewConfig = InterviewConfig()):
         raise
     except Exception as e:
         raise HTTPException(500, str(e))
+
+
+# ── Text interview mode ──
+# The typed equivalent of the voice interview. Same interviewer prompt, same
+# budgets, same transcript shape — so /api/evaluate-session scores it with no
+# knowledge of which mode produced it.
+
+@app.post("/api/text-interview/start")
+async def api_text_start(config: InterviewConfig = InterviewConfig()):
+    if not _session["questions"]:
+        raise HTTPException(400, "Generate questions first")
+    try:
+        from core.pipeline.text_interview import TextInterview
+
+        topics = (_session["graph_data"] or {}).get("topics", [])
+        flow = build_interview_flow(_session["questions"], topics)
+        q_list = [step["question"] for step in flow if step.get("question")]
+
+        interview = TextInterview(
+            cv_data=_session["cv_data"],
+            jd_data=_session["jd_data"],
+            seed_questions=q_list,
+            max_questions=config.max_questions,
+            min_questions=int(os.environ.get("MIN_INTERVIEW_QUESTIONS", "5")),
+            time_budget_mins=config.time_budget_mins,
+        )
+        _session["text_interview"] = interview
+        result = await run_in_threadpool(interview.start)
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.post("/api/text-interview/answer")
+async def api_text_answer(body: TextAnswerInput):
+    interview = _session.get("text_interview")
+    if interview is None:
+        raise HTTPException(400, "No text interview in progress")
+    try:
+        result = await run_in_threadpool(interview.submit, body.answer)
+        if result.get("finished"):
+            _save_transcript_record(interview.to_session_record())
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.post("/api/text-interview/end")
+async def api_text_end():
+    interview = _session.get("text_interview")
+    if interview is None:
+        raise HTTPException(400, "No text interview in progress")
+    result = interview.end_now("candidate_request")
+    _save_transcript_record(interview.to_session_record())
+    return {"success": True, "data": result}
 
 
 # ── Stop Interview ──

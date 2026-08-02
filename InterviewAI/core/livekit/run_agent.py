@@ -43,9 +43,13 @@ from livekit.agents import llm as lk_llm, utils as agent_utils
 from livekit.agents.voice import Agent, AgentSession
 from livekit.plugins import deepgram, elevenlabs, google
 
+from core.agents.interviewer_prompt import build_system_prompt
+
 # Configurable via env
 MAX_QUESTIONS = int(os.environ.get("MAX_INTERVIEW_QUESTIONS", "15"))
-MIN_QUESTIONS = int(os.environ.get("MIN_INTERVIEW_QUESTIONS", "5"))
+# The floor must never sit above the ceiling, or a short demo run configured
+# with MAX_INTERVIEW_QUESTIONS=3 would never reach its own limit.
+MIN_QUESTIONS = min(int(os.environ.get("MIN_INTERVIEW_QUESTIONS", "5")), MAX_QUESTIONS)
 TIME_BUDGET_MINS = int(os.environ.get("INTERVIEW_TIME_BUDGET_MINS", "30"))
 
 # How long the question stays on screen before the agent starts speaking it.
@@ -81,62 +85,15 @@ def _load_seed_questions() -> list[str]:
 
 
 def _build_system_prompt(cv_data: dict, jd_data: dict, seed_questions: list[str]) -> str:
-    position = jd_data.get("job_title", "the role")
-    company = jd_data.get("company") or "our company"
-    cv_skills = ", ".join(cv_data.get("skills", [])[:12])
-    jd_skills = ", ".join(jd_data.get("required_skills", [])[:12])
-    cv_name = cv_data.get("name", "the candidate")
-
-    experience = cv_data.get("experience", [])
-    exp_summary = ""
-    if experience:
-        latest = experience[0] if isinstance(experience[0], dict) else {}
-        exp_summary = (f"Most recent role: {latest.get('title', 'N/A')} "
-                       f"at {latest.get('company', 'N/A')}")
-
-    seed_text = ""
-    if seed_questions:
-        seed_text = (
-            "\n\nQUESTION BANK (ordered by priority from the skill-gap "
-            "analysis — work through these, rephrasing naturally and adapting "
-            "to the conversation):\n"
-        )
-        seed_text += "\n".join(f"- {q}" for q in seed_questions[:12])
-
-    return f"""You are a senior interviewer at {company}, conducting a real-time voice interview for: {position}.
-
-You are warm, professional and conversational — like a real human interviewer, not a quiz machine. Speak naturally. Use transitions like "That's interesting...", "Great, let me ask you about...", "Building on what you said...".
-
-ABOUT THE CANDIDATE:
-- Name: {cv_name}
-- Key skills: {cv_skills}
-- {exp_summary}
-
-ROLE REQUIREMENTS:
-- Must-have skills: {jd_skills}
-
-YOUR APPROACH:
-- Open with a warm greeting. Use the candidate's name. Mention the role. Briefly explain you'll cover technical and behavioural questions. Ask if they're ready.
-- Ask ONE question at a time. Listen to their full answer before responding.
-- Keep every reply to 1-3 sentences. Never lecture.
-- Be genuinely adaptive:
-  * Strong answer -> acknowledge it, then probe deeper or move to a harder topic
-  * Weak or vague answer -> encourage with "Could you walk me through a specific example?"
-  * Great insight -> show interest and ask them to expand
-- Vary your question style: scenario-based, experience-based, knowledge checks, opinion.
-
-STAYING ON TRACK:
-- If the candidate goes off-topic, gently redirect them to the question.
-- If it happens repeatedly, be direct: staying on topic is part of the evaluation.
-
-ENDING THE INTERVIEW — follow this exactly:
-- If the candidate asks to stop, pause, or end: ask ONE short confirmation question, for example "Are you sure you'd like to end the interview here?".
-  * If they confirm (yes, end it, I'm done, etc.), say one short thank-you sentence and then call the end_interview tool with reason "candidate_request".
-  * If they say no or want to continue, carry on with the next question and do not ask again.
-- When you have covered the important topics, or you are told the interview limit is reached: give one short closing statement thanking {cv_name} by name and mentioning their report will be ready shortly, then call the end_interview tool with reason "completed".
-- Never call end_interview without speaking a closing sentence first.
-- Never ask more questions after calling end_interview.
-{seed_text}"""
+    """Shared interviewer instructions, plus the voice-only tool contract."""
+    base = build_system_prompt(cv_data, jd_data, seed_questions, mode="voice")
+    return base + (
+        "\n\nHOW TO END: when the rules above say to end the interview, call "
+        "the end_interview tool. Use reason \"candidate_request\" when the "
+        "candidate confirmed they want to stop, or \"completed\" when the "
+        "interview has run its course. Always speak your closing sentence "
+        "before calling it."
+    )
 
 
 async def _probe_tts(engine) -> bool:

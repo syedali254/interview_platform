@@ -29,6 +29,24 @@ Open browser: **http://localhost:8000**
 
 ---
 
+## Two Interview Modes
+
+On the Setup screen you choose how to answer:
+
+| | Voice interview | Text interview |
+|---|---|---|
+| Answering | Speak out loud | Type in a chat |
+| Needs | Camera + microphone | Camera only |
+| Attention & posture | Tracked | Tracked |
+| Vocal delivery | Measured | Not applicable |
+| Extra integrity check | Speech hesitation | Pasted answers flagged |
+| Questions & report | **Identical** | **Identical** |
+
+Both modes use the same interviewer, the same questions in the same order,
+the same time and question limits, and produce the same report.
+
+---
+
 ## Manual Setup (If run.bat Fails)
 
 ```bash

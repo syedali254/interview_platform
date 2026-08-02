@@ -258,8 +258,8 @@ table(
         ['1', 'Upload & Parse', 'CV (PDF or text) and job description are parsed into structured data', 'M1, M2'],
         ['2', 'Skill Graph', 'Both skill sets are mapped onto the ESCO taxonomy and compared', 'M3'],
         ['3', 'Questions', 'Questions are generated for the gaps and ordered by priority', 'M4'],
-        ['4', 'Device Setup', 'Camera and microphone are selected and tested', '—'],
-        ['5', 'Live Interview', 'Voice interview runs; attention, posture, voice and behaviour are recorded', 'M5, M7, M8, M10'],
+        ['4', 'Setup & Mode', 'Candidate picks voice or text, tests devices, and acknowledges what is monitored', '—'],
+        ['5', 'Live Interview', 'Voice or text interview runs; attention, posture and behaviour are recorded throughout', 'M5, M7, M8, M10'],
         ['6', 'Report', 'Every answer is scored, behaviour assessed, and everything fused', 'M6, M9, M11, M12'],
     ],
     widths=[1.3, 3.2, 8.5, 3.5],
@@ -318,7 +318,48 @@ para(
     'the old amount of time.'
 )
 
-h2('3.2 How the interview ends')
+h2('3.2 Two interview modes')
+
+para(
+    'The candidate chooses between a voice interview and a text interview on the setup '
+    'screen. They are the same interview. Both use one shared set of interviewer '
+    'instructions (core/agents/interviewer_prompt.py), the same question bank in the same '
+    'graph-priority order, the same question and time budgets, and the same ending rules, '
+    'and both produce the same transcript. The report pipeline never learns which one ran.'
+)
+
+table(
+    ['', 'Voice mode', 'Text mode'],
+    [
+        ['How the question arrives', 'Displayed, then spoken aloud', 'Written into the chat'],
+        ['How the candidate answers', 'Speaks; Deepgram transcribes', 'Types; Enter sends'],
+        ['Transport', 'LiveKit room and agent subprocess', 'One HTTP request per answer'],
+        ['Devices needed', 'Camera and microphone', 'Camera only'],
+        ['M7 attention', 'Yes', 'Yes'],
+        ['M8 posture', 'Yes', 'Yes'],
+        ['M10 vocal delivery', 'Yes', 'Not applicable - nothing is spoken'],
+        ['Extra integrity signal', 'Speech hesitation', 'Pasted answers are flagged'],
+        ['Scoring and report', 'Identical', 'Identical'],
+    ],
+    widths=[4.4, 6.0, 6.1],
+)
+
+para(
+    'Text mode has no vocal delivery to measure, so that signal is absent rather than zero. '
+    'The fusion engine renormalises the engagement weights across whichever presence signals '
+    'actually arrived, so a typed interview still yields a complete engagement score from '
+    'attention and posture instead of one with a hole in it. In place of vocal analysis, '
+    'text mode contributes an integrity signal of its own: an answer that was pasted rather '
+    'than typed is flagged and shown on the report.'
+)
+
+para(
+    'Only voice mode needs the media server and the agent subprocess, so only voice mode '
+    'triggers the prewarm described above. A text interview begins as soon as the first '
+    'request returns.'
+)
+
+h2('3.3 How the interview ends')
 para('There are three ways an interview finishes, and all of them end the same way.')
 bullet('the agent gives a short closing statement, then the report screen appears automatically.',
        bold_prefix='All questions covered — ')
@@ -904,6 +945,8 @@ table(
         ['core/evaluator/fusion.py', 'M11 — engagement and final weighted fusion'],
         ['core/evaluator/track_b.py', 'Unwired: optional trained-classifier scorer'],
         ['core/evaluator/train_model.py', 'Unwired: trainer for the above'],
+        ['core/agents/interviewer_prompt.py', 'The interviewer instructions shared by both modes'],
+        ['core/pipeline/text_interview.py', 'Text mode - the typed interview engine'],
         ['core/pipeline/session_eval.py', 'Post-interview pipeline tying M6, M9, M11 and M12 together'],
         ['core/report/generator.py', 'M12 — final report assembly and reliability statistics'],
         ['data/esco/', 'ESCO taxonomy CSV files (1,201 digital skills)'],
@@ -915,8 +958,9 @@ table(
         ['frontend/src/screens/UploadStep.jsx', 'Step 1 — CV upload and JD paste'],
         ['frontend/src/screens/GraphStep.jsx', 'Step 2 — skill knowledge graph'],
         ['frontend/src/screens/QuestionsStep.jsx', 'Step 3 — generated questions'],
-        ['frontend/src/screens/SetupScreen.jsx', 'Step 4 — device check, monitoring briefing, prewarm trigger'],
-        ['frontend/src/screens/InterviewScreen.jsx', 'Step 5 — the live interview call UI'],
+        ['frontend/src/screens/SetupScreen.jsx', 'Step 4 — mode choice, device check, briefing, prewarm trigger'],
+        ['frontend/src/screens/InterviewScreen.jsx', 'Step 5 — the voice interview call UI'],
+        ['frontend/src/screens/TextInterviewScreen.jsx', 'Step 5 — the typed interview chat UI'],
         ['frontend/src/screens/DashboardScreen.jsx', 'Step 6 — the assessment report'],
         ['frontend/scripts/fetch-vision-assets.mjs', 'Stages MediaPipe WASM and models at build time'],
     ],
@@ -937,6 +981,9 @@ table(
         ['POST /api/generate-questions', 'M4 — generate the question set from graph topics'],
         ['POST /api/prewarm', 'Boot the media server and agent process early, from the setup screen'],
         ['POST /api/launch-interview', 'M5 — ensure the LiveKit server is up'],
+        ['POST /api/text-interview/start', 'Text mode — begin a typed interview, returns the greeting'],
+        ['POST /api/text-interview/answer', 'Text mode — submit an answer, returns the next question'],
+        ['POST /api/text-interview/end', 'Text mode — close the interview at the candidate request'],
         ['GET  /token', 'Issue a LiveKit token and spawn the agent process'],
         ['POST /api/stop-interview', 'Shut down the agent process and LiveKit server'],
         ['POST /save_transcript', 'Transcript written by the client'],
@@ -1002,6 +1049,7 @@ bullet('CV and job description parsing into structured data')
 bullet('ESCO skill graph with conservative matching, gap analysis and a clustered visualisation')
 bullet('Graph-prioritised question generation')
 bullet('Live voice interview with display-before-speak, budget enforcement and clean automatic ending')
+bullet('Text interview mode sharing the same interviewer, budgets, monitoring and report')
 bullet('Answer evaluation for every substantive answer, with rubric breakdown and self-consistency checking')
 bullet('MediaPipe attention and posture analysis, calibrated per candidate')
 bullet('Vocal delivery analysis from prosodic features')

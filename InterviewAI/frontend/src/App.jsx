@@ -6,13 +6,14 @@ import GraphStep from './screens/GraphStep'
 import QuestionsStep from './screens/QuestionsStep'
 import SetupScreen from './screens/SetupScreen'
 import InterviewScreen from './screens/InterviewScreen'
+import TextInterviewScreen from './screens/TextInterviewScreen'
 import DashboardScreen from './screens/DashboardScreen'
 
 const STEPS = [
   { id: 'upload', label: 'Upload & Parse', icon: '📄', num: 1 },
   { id: 'graph', label: 'Skill Graph', icon: '🧠', num: 2 },
   { id: 'questions', label: 'Questions', icon: '❓', num: 3 },
-  { id: 'setup', label: 'Device Setup', icon: '🎤', num: 4 },
+  { id: 'setup', label: 'Setup & Mode', icon: '🎤', num: 4 },
   { id: 'interview', label: 'Live Interview', icon: '🎧', num: 5 },
   { id: 'dashboard', label: 'Report', icon: '📊', num: 6 },
 ]
@@ -27,6 +28,7 @@ export default function App() {
     interviewUrl: null,
   })
   const [mediaStream, setMediaStream] = useState(null)
+  const [interviewMode, setInterviewMode] = useState('voice')
   const [interviewData, setInterviewData] = useState({
     transcript: [],
     emotions: [],
@@ -37,6 +39,7 @@ export default function App() {
     qCount: 0,
     maxQuestions: 15,
     phase: 'setup',
+    mode: 'voice',
     duration: 0,
   })
 
@@ -54,10 +57,12 @@ export default function App() {
   }
 
   // The live interview takes the whole viewport — a call UI with a wizard
-  // sidebar next to it reads as a form, not a meeting.
+  // sidebar next to it reads as a form, not a meeting. Both modes produce
+  // the same session data, so the report does not care which one ran.
   if (step === 'interview') {
+    const Screen = interviewMode === 'text' ? TextInterviewScreen : InterviewScreen
     return (
-      <InterviewScreen
+      <Screen
         mediaStream={mediaStream}
         sessionData={interviewData}
         setSessionData={setInterviewData}
@@ -114,8 +119,9 @@ export default function App() {
             )}
             {step === 'setup' && (
               <SetupScreen
-                onReady={(stream) => {
+                onReady={(stream, mode) => {
                   setMediaStream(stream)
+                  setInterviewMode(mode || 'voice')
                   setStep('interview')
                 }}
               />
