@@ -49,42 +49,16 @@ cd /d "%~dp0InterviewAI"
 rem ---------------------------------------------------------------
 rem  [2/7] Settings file
 rem
-rem  Deliberately the FIRST thing that needs a human. Everything after
-rem  this point is unattended, so the one manual action happens while
-rem  there is nothing to wait for, rather than interrupting the middle
-rem  of a five minute install.
+rem  Created silently with placeholders. Nothing opens and nothing is
+rem  asked here: the whole setup runs unattended, and the keys are
+rem  checked once at the end.
 rem ---------------------------------------------------------------
-echo [2/7] Preparing your settings file...
+echo [2/7] Preparing the settings file...
 if not exist ".env" (
     copy ".env.example" ".env" >nul
     echo       Created: %CD%\.env
-)
-call :check_keys
-if "%KEYSOK%"=="1" (
-    echo       API keys already set.
 ) else (
-    echo.
-    echo   ============================================================
-    echo     ONE THING TO DO - then you can walk away
-    echo   ============================================================
-    echo.
-    echo     Notepad is opening your settings file now.
-    echo.
-    echo     Paste the two keys you were sent after the equals sign.
-    echo     No spaces, no quotes. It should end up looking like:
-    echo.
-    echo        GEMINI_API_KEY=AIza...
-    echo        DEEPGRAM_API_KEY=abc123...
-    echo.
-    echo     Leave every other line exactly as it is.
-    echo     ELEVENLABS_API_KEY is optional - ignore it if you were
-    echo     not given one.
-    echo.
-    echo     Then SAVE the file, close Notepad, and press any key here.
-    echo     Everything after this is automatic.
-    echo.
-    notepad ".env"
-    pause >nul
+    echo       Already present.
 )
 
 rem ---------------------------------------------------------------
@@ -155,33 +129,9 @@ if errorlevel 1 (
 echo       Python packages OK.
 
 rem ---------------------------------------------------------------
-rem  [6/7] API keys  (verified here; the file was created in step 2)
+rem  [6/7] Web app
 rem ---------------------------------------------------------------
-:env_verify
-echo [6/7] Verifying API keys...
-call :check_keys
-if not "%KEYSOK%"=="1" (
-    echo.
-    echo   The two required keys are not filled in yet.
-    echo.
-    echo   Notepad will open your settings file. Paste the keys you
-    echo   were sent after the equals sign, with no spaces or quotes:
-    echo.
-    echo     GEMINI_API_KEY=your-key-here
-    echo     DEEPGRAM_API_KEY=your-key-here
-    echo.
-    echo   Then SAVE, close Notepad, and press any key here.
-    echo.
-    notepad ".env"
-    pause >nul
-    goto env_verify
-)
-echo       API keys OK.
-
-rem ---------------------------------------------------------------
-rem  [7/7] Web app
-rem ---------------------------------------------------------------
-echo [7/7] Building the web app...
+echo [6/7] Building the web app...
 cd /d "%~dp0InterviewAI\frontend"
 if not exist "node_modules" (
     echo       Installing web packages - first time takes a few minutes...
@@ -217,9 +167,15 @@ if not exist "frontend\dist\index.html" (
 echo       Web app OK.
 
 rem ---------------------------------------------------------------
-rem  Launch
+rem  [7/7] Launch, or stop and explain what is still needed
+rem
+rem  Setup is complete either way by this point. The only thing that
+rem  can be missing is the two API keys, which arrive separately.
 rem ---------------------------------------------------------------
-echo Starting InterviewAI...
+echo [7/7] Checking API keys...
+call :check_keys
+if not "%KEYSOK%"=="1" goto :keys_needed
+echo       API keys OK.
 echo.
 echo ============================================================
 echo   InterviewAI is starting.
@@ -239,6 +195,37 @@ venv\Scripts\python.exe server.py
 
 echo.
 echo   Server stopped.
+pause
+exit /b 0
+
+
+rem ---------------------------------------------------------------
+:keys_needed
+echo.
+echo ============================================================
+echo   SETUP IS COMPLETE
+echo ============================================================
+echo.
+echo   Everything is installed and ready. Only the API keys are
+echo   still missing.
+echo.
+echo   1. Open this file in Notepad:
+echo.
+echo        %CD%\.env
+echo.
+echo   2. Paste the keys you were sent after the equals sign,
+echo      with no spaces and no quotes:
+echo.
+echo        GEMINI_API_KEY=paste-here
+echo        DEEPGRAM_API_KEY=paste-here
+echo.
+echo      Leave every other line exactly as it is.
+echo.
+echo   3. Save the file, then double-click run.bat again.
+echo      It will start straight away this time.
+echo.
+echo ============================================================
+echo.
 pause
 exit /b 0
 
