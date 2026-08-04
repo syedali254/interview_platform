@@ -47,9 +47,50 @@ if not exist "%~dp0InterviewAI\server.py" (
 cd /d "%~dp0InterviewAI"
 
 rem ---------------------------------------------------------------
-rem  [2/7] Python  (installed automatically via winget if missing)
+rem  [2/7] Settings file
+rem
+rem  Deliberately the FIRST thing that needs a human. Everything after
+rem  this point is unattended, so the one manual action happens while
+rem  there is nothing to wait for, rather than interrupting the middle
+rem  of a five minute install.
 rem ---------------------------------------------------------------
-echo [2/7] Checking Python...
+echo [2/7] Preparing your settings file...
+if not exist ".env" (
+    copy ".env.example" ".env" >nul
+    echo       Created: %CD%\.env
+)
+call :check_keys
+if "%KEYSOK%"=="1" (
+    echo       API keys already set.
+) else (
+    echo.
+    echo   ============================================================
+    echo     ONE THING TO DO - then you can walk away
+    echo   ============================================================
+    echo.
+    echo     Notepad is opening your settings file now.
+    echo.
+    echo     Paste the two keys you were sent after the equals sign.
+    echo     No spaces, no quotes. It should end up looking like:
+    echo.
+    echo        GEMINI_API_KEY=AIza...
+    echo        DEEPGRAM_API_KEY=abc123...
+    echo.
+    echo     Leave every other line exactly as it is.
+    echo     ELEVENLABS_API_KEY is optional - ignore it if you were
+    echo     not given one.
+    echo.
+    echo     Then SAVE the file, close Notepad, and press any key here.
+    echo     Everything after this is automatic.
+    echo.
+    notepad ".env"
+    pause >nul
+)
+
+rem ---------------------------------------------------------------
+rem  [3/7] Python  (installed automatically via winget if missing)
+rem ---------------------------------------------------------------
+echo [3/7] Checking Python...
 call :find_python
 if not "%PYOK%"=="1" (
     echo       Python 3.11+ not found. Installing it for you...
@@ -62,9 +103,9 @@ if not "%PYOK%"=="1" goto :python_restart
 echo       Python OK.
 
 rem ---------------------------------------------------------------
-rem  [3/7] Node.js  (installed automatically via winget if missing)
+rem  [4/7] Node.js  (installed automatically via winget if missing)
 rem ---------------------------------------------------------------
-echo [3/7] Checking Node.js...
+echo [4/7] Checking Node.js...
 call node -v >nul 2>&1
 if errorlevel 1 (
     echo       Node.js not found. Installing it for you...
@@ -77,9 +118,9 @@ if errorlevel 1 (
 echo       Node.js OK.
 
 rem ---------------------------------------------------------------
-rem  [4/7] Python environment
+rem  [5/7] Python environment
 rem ---------------------------------------------------------------
-echo [4/7] Setting up the Python environment...
+echo [5/7] Setting up the Python environment...
 if not exist "venv\Scripts\python.exe" (
     echo       Creating virtual environment...
     call %PYEXE% -m venv venv
@@ -114,50 +155,33 @@ if errorlevel 1 (
 echo       Python packages OK.
 
 rem ---------------------------------------------------------------
-rem  [5/7] API keys
+rem  [6/7] API keys  (verified here; the file was created in step 2)
 rem ---------------------------------------------------------------
-:env_check
-echo [5/7] Checking API keys...
-if not exist ".env" (
-    copy ".env.example" ".env" >nul
+:env_verify
+echo [6/7] Verifying API keys...
+call :check_keys
+if not "%KEYSOK%"=="1" (
     echo.
-    echo   A new settings file was created:
-    echo       %CD%\.env
+    echo   The two required keys are not filled in yet.
     echo.
-    echo   Notepad will open it now. Replace the placeholder values
-    echo   with your own free API keys:
+    echo   Notepad will open your settings file. Paste the keys you
+    echo   were sent after the equals sign, with no spaces or quotes:
     echo.
-    echo     GEMINI_API_KEY      https://aistudio.google.com/apikey
-    echo     DEEPGRAM_API_KEY    https://console.deepgram.com
-    echo     ELEVENLABS_API_KEY  https://elevenlabs.io
+    echo     GEMINI_API_KEY=your-key-here
+    echo     DEEPGRAM_API_KEY=your-key-here
     echo.
-    echo   Gemini and Deepgram are required.
-    echo   ElevenLabs is optional - if it is missing or out of
-    echo   credit, the interviewer uses the Deepgram voice instead.
-    echo.
-    echo   Save and close Notepad, then press any key here.
-    echo   Press Ctrl+C if you do not have the keys yet.
+    echo   Then SAVE, close Notepad, and press any key here.
     echo.
     notepad ".env"
     pause >nul
-)
-findstr /i "your_gemini_api_key_here your_deepgram_api_key_here" ".env" >nul 2>&1
-if not errorlevel 1 (
-    echo.
-    echo   Your .env file still has placeholder keys in it.
-    echo   Open it, paste your real Gemini and Deepgram keys,
-    echo   save, close, then press any key.
-    echo.
-    notepad ".env"
-    pause >nul
-    goto env_check
+    goto env_verify
 )
 echo       API keys OK.
 
 rem ---------------------------------------------------------------
-rem  [6/7] Web app
+rem  [7/7] Web app
 rem ---------------------------------------------------------------
-echo [6/7] Building the web app...
+echo [7/7] Building the web app...
 cd /d "%~dp0InterviewAI\frontend"
 if not exist "node_modules" (
     echo       Installing web packages - first time takes a few minutes...
@@ -193,9 +217,9 @@ if not exist "frontend\dist\index.html" (
 echo       Web app OK.
 
 rem ---------------------------------------------------------------
-rem  [7/7] Run
+rem  Launch
 rem ---------------------------------------------------------------
-echo [7/7] Starting InterviewAI...
+echo Starting InterviewAI...
 echo.
 echo ============================================================
 echo   InterviewAI is starting.
@@ -235,6 +259,23 @@ for %%C in ("python" "py -3.12" "py -3.11" "py -3") do (
         )
     )
 )
+exit /b 0
+
+rem --- Are the two required keys filled in? Sets KEYSOK=1 when yes. ---
+rem Rejects both the shipped placeholders and an empty value, so a half-edited
+rem file is caught rather than failing later with a confusing API error.
+:check_keys
+set "KEYSOK=1"
+if not exist ".env" (
+    set "KEYSOK="
+    exit /b 0
+)
+findstr /i /c:"your_gemini_api_key_here" ".env" >nul 2>&1 && set "KEYSOK="
+findstr /i /c:"your_deepgram_api_key_here" ".env" >nul 2>&1 && set "KEYSOK="
+findstr /r /c:"^GEMINI_API_KEY= *$" ".env" >nul 2>&1 && set "KEYSOK="
+findstr /r /c:"^DEEPGRAM_API_KEY= *$" ".env" >nul 2>&1 && set "KEYSOK="
+findstr /r /c:"^GEMINI_API_KEY=" ".env" >nul 2>&1 || set "KEYSOK="
+findstr /r /c:"^DEEPGRAM_API_KEY=" ".env" >nul 2>&1 || set "KEYSOK="
 exit /b 0
 
 rem --- Install a winget package. Returns errorlevel 1 if it cannot. ---

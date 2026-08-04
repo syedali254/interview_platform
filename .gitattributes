@@ -1,0 +1,16 @@
+# Keep Windows batch files CRLF whatever the cloning machine's core.autocrlf
+# is set to. cmd.exe can mis-parse labels and goto targets in a .bat file that
+# arrives with LF-only endings, which would break run.bat on a fresh clone.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary assets must never be line-ending converted.
+*.docx   binary
+*.pdf    binary
+*.png    binary
+*.jpg    binary
+*.ico    binary
+*.joblib binary
+*.task   binary
+*.wasm   binary
