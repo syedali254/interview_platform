@@ -6,9 +6,11 @@ color 0A
 echo ============================================================
 echo   InterviewAI - One-Click Setup and Run
 echo.
-echo   This checks, installs and starts everything for you.
-echo   The FIRST run takes a few minutes (it downloads packages
-echo   and the face/posture models). Later runs start in seconds.
+echo   This installs and starts everything for you, including
+echo   Python and Node.js if they are missing.
+echo.
+echo   The FIRST run takes about 5-10 minutes. Later runs start
+echo   in seconds.
 echo.
 echo   If Windows shows a SmartScreen warning, click "More info"
 echo   then "Run anyway".
@@ -45,48 +47,32 @@ if not exist "%~dp0InterviewAI\server.py" (
 cd /d "%~dp0InterviewAI"
 
 rem ---------------------------------------------------------------
-rem  [2/7] Python
+rem  [2/7] Python  (installed automatically via winget if missing)
 rem ---------------------------------------------------------------
 echo [2/7] Checking Python...
-set "PYEXE=python"
-call %PYEXE% -V >nul 2>&1
-if errorlevel 1 set "PYEXE=py -3"
-call %PYEXE% -V >nul 2>&1
-if errorlevel 1 (
-    echo.
-    echo   ERROR: Python is not installed, or not on PATH.
-    echo   Install Python 3.11 or newer from:
-    echo       https://www.python.org/downloads/
-    echo   IMPORTANT: tick "Add python.exe to PATH" during install.
-    echo   Then run this file again.
-    echo.
-    pause
-    exit /b 1
+call :find_python
+if not "%PYOK%"=="1" (
+    echo       Python 3.11+ not found. Installing it for you...
+    call :winget_install "Python.Python.3.12" "Python 3.12"
+    if errorlevel 1 goto :python_manual
+    call :refresh_path
+    call :find_python
 )
-call %PYEXE% -c "import sys; raise SystemExit(0 if sys.version_info >= (3,11) else 1)" >nul 2>&1
-if errorlevel 1 (
-    echo.
-    echo   ERROR: Your Python is too old. Version 3.11 or newer is needed.
-    echo   Get it from https://www.python.org/downloads/
-    echo.
-    pause
-    exit /b 1
-)
+if not "%PYOK%"=="1" goto :python_restart
 echo       Python OK.
 
 rem ---------------------------------------------------------------
-rem  [3/7] Node.js
+rem  [3/7] Node.js  (installed automatically via winget if missing)
 rem ---------------------------------------------------------------
 echo [3/7] Checking Node.js...
 call node -v >nul 2>&1
 if errorlevel 1 (
-    echo.
-    echo   ERROR: Node.js is not installed.
-    echo   Install the LTS version from https://nodejs.org
-    echo   Then run this file again.
-    echo.
-    pause
-    exit /b 1
+    echo       Node.js not found. Installing it for you...
+    call :winget_install "OpenJS.NodeJS.LTS" "Node.js LTS"
+    if errorlevel 1 goto :node_manual
+    call :refresh_path
+    call node -v >nul 2>&1
+    if errorlevel 1 goto :node_restart
 )
 echo       Node.js OK.
 
@@ -230,3 +216,97 @@ venv\Scripts\python.exe server.py
 echo.
 echo   Server stopped.
 pause
+exit /b 0
+
+
+rem ===============================================================
+rem  Helpers
+rem ===============================================================
+
+rem --- Locate a Python 3.11+ interpreter, setting PYEXE and PYOK ---
+:find_python
+set "PYOK="
+for %%C in ("python" "py -3.12" "py -3.11" "py -3") do (
+    if not defined PYOK (
+        call %%~C -c "import sys; raise SystemExit(0 if sys.version_info >= (3,11) else 1)" >nul 2>&1
+        if not errorlevel 1 (
+            set "PYEXE=%%~C"
+            set "PYOK=1"
+        )
+    )
+)
+exit /b 0
+
+rem --- Install a winget package. Returns errorlevel 1 if it cannot. ---
+:winget_install
+call winget --version >nul 2>&1
+if errorlevel 1 (
+    echo       Automatic install needs winget, which this Windows does not have.
+    exit /b 1
+)
+echo       Installing %~2 - this takes a few minutes, please wait...
+call winget install --id %~1 --exact --silent ^
+    --accept-package-agreements --accept-source-agreements ^
+    --disable-interactivity
+if errorlevel 1 (
+    echo       Automatic install of %~2 did not succeed.
+    exit /b 1
+)
+echo       %~2 installed.
+exit /b 0
+
+rem --- Pick up a fresh install without needing a new window ---
+rem Deliberately ADDS the standard install locations rather than rebuilding
+rem PATH from the registry. Registry Path values are REG_EXPAND_SZ and hold
+rem unexpanded %VAR% references that do not survive being assigned here, so
+rem rebuilding silently corrupts PATH - including the WindowsApps folder that
+rem winget itself lives in. Appending can only ever help.
+:refresh_path
+set "PATH=%PATH%;%LOCALAPPDATA%\Microsoft\WindowsApps"
+for %%V in (313 312 311) do (
+    set "PATH=%PATH%;%LOCALAPPDATA%\Programs\Python\Python%%V;%LOCALAPPDATA%\Programs\Python\Python%%V\Scripts"
+    set "PATH=%PATH%;%ProgramFiles%\Python%%V;%ProgramFiles%\Python%%V\Scripts"
+)
+set "PATH=%PATH%;%ProgramFiles%\nodejs"
+if defined ProgramFiles(x86) set "PATH=%PATH%;%ProgramFiles(x86)%\nodejs"
+exit /b 0
+
+
+rem ===============================================================
+rem  Failure paths
+rem ===============================================================
+
+:python_manual
+echo.
+echo   Could not install Python automatically.
+echo   Please install it yourself, then run this file again:
+echo       https://www.python.org/downloads/
+echo   IMPORTANT: tick "Add python.exe to PATH" during install.
+echo.
+pause
+exit /b 1
+
+:python_restart
+echo.
+echo   Python was installed, but this window cannot see it yet.
+echo   Close this window and double-click run.bat again - that is all.
+echo.
+pause
+exit /b 1
+
+:node_manual
+echo.
+echo   Could not install Node.js automatically.
+echo   Please install the LTS version yourself, then run this file again:
+echo       https://nodejs.org
+echo.
+pause
+exit /b 1
+
+:node_restart
+echo.
+echo   Node.js was installed, but this window cannot see it yet.
+echo   Close this window and double-click run.bat again - that is all.
+echo.
+pause
+exit /b 1

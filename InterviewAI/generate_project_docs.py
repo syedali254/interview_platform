@@ -203,8 +203,8 @@ h2('2.1 Prerequisites')
 table(
     ['Requirement', 'Where to get it', 'Notes'],
     [
-        ['Python 3.11+', 'python.org/downloads', 'Tick "Add python.exe to PATH" during install'],
-        ['Node.js 18+', 'nodejs.org', 'LTS version'],
+        ['Python 3.11+', 'Installed automatically', 'run.bat installs it via winget if missing'],
+        ['Node.js LTS', 'Installed automatically', 'run.bat installs it via winget if missing'],
         ['GEMINI_API_KEY', 'aistudio.google.com/apikey', 'All language model work'],
         ['DEEPGRAM_API_KEY', 'console.deepgram.com', 'Speech to text, and the fallback voice'],
         ['ELEVENLABS_API_KEY', 'elevenlabs.io', 'OPTIONAL - preferred voice. Falls back to Deepgram if absent'],
@@ -215,6 +215,12 @@ table(
 h2('2.2 Running it')
 para('From the project root folder, double-click run.bat, or from a terminal:')
 code('run.bat')
+para(
+    'If Python or Node.js are missing, run.bat installs them with winget, which ships with '
+    'Windows 10 1709 and later. After an automatic install the script asks you to close the '
+    'window and run it once more, so Windows picks up the new PATH. If winget is not '
+    'available it says exactly what to install by hand.'
+)
 para(
     'The first run creates the virtual environment, installs Python and Node packages, '
     'downloads the MediaPipe vision models, prompts for the three API keys, and builds the '

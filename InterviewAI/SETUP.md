@@ -2,15 +2,21 @@
 
 ## Prerequisites
 
-1. **Python 3.11+** → https://www.python.org/downloads/ (CHECK "Add Python to PATH")
-2. **Node.js 18+** → https://nodejs.org/ (LTS version)
-3. **3 Free API Keys:**
+**Python and Node.js install themselves.** `run.bat` checks for them and, if
+they are missing, installs them via `winget` (built into Windows 10 1709+ and
+all Windows 11). If winget is unavailable it tells you exactly what to install.
 
-| Key | Get it from | Purpose |
-|-----|-------------|---------|
-| GEMINI_API_KEY | https://aistudio.google.com/apikey | AI brain |
-| DEEPGRAM_API_KEY | https://console.deepgram.com/signup | Voice → text |
-| ELEVENLABS_API_KEY | https://elevenlabs.io/ | AI voice |
+After an automatic install, close the window and double-click `run.bat` once
+more so Windows picks up the new PATH.
+
+**You do need API keys.** `run.bat` creates `.env` for you and opens it in
+Notepad — just paste the values in:
+
+| Key | Get it from | Required? |
+|-----|-------------|-----------|
+| GEMINI_API_KEY | https://aistudio.google.com/apikey | **Yes** — parsing, questions, scoring |
+| DEEPGRAM_API_KEY | https://console.deepgram.com/signup | **Yes** — speech-to-text + fallback voice |
+| ELEVENLABS_API_KEY | https://elevenlabs.io/ | No — preferred voice; falls back to Deepgram |
 
 ---
 
