@@ -99,9 +99,6 @@ class InterviewState:
             if feedback:
                 node.feedback.append(feedback)
 
-    def is_complete(self) -> bool:
-        return len(self.incomplete_skills) == 0
-
     def summary(self) -> dict:
         return {
             "total": len(self.nodes),

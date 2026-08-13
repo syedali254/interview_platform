@@ -13,7 +13,5 @@ node_modules/
 frontend/dist/
 frontend/node_modules/
 core/evaluator/models/*.joblib
-core/evaluator/models/training_data.json
-core/evaluator/models/training_metrics.json
 # Staged by frontend/scripts/fetch-vision-assets.mjs on build
 frontend/public/mediapipe/

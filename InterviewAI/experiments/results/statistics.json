@@ -1,0 +1,234 @@
+{
+  "meta": {
+    "generated_at": "2026-08-09 16:52:37",
+    "quick_mode": true,
+    "n_questions": 6,
+    "n_graded_answers": 18,
+    "n_paraphrase_scores": 9,
+    "n_verbosity_pairs": 2,
+    "elapsed_seconds": 2339.4,
+    "api_usage": {
+      "calls": 68,
+      "by_model": {
+        "gemini-flash-lite-latest": 9,
+        "gemini-2.5-flash": 59
+      },
+      "seconds": 2339.4,
+      "errors": 1
+    },
+    "rubric_orders": [
+      [
+        "technical_accuracy",
+        "completeness",
+        "clarity",
+        "relevance"
+      ],
+      [
+        "clarity",
+        "relevance",
+        "technical_accuracy",
+        "completeness"
+      ]
+    ],
+    "criteria": [
+      "technical_accuracy",
+      "completeness",
+      "clarity",
+      "relevance"
+    ]
+  },
+  "e1_discriminant_validity": {
+    "n": 18,
+    "spearman_rho": 0.9204,
+    "spearman_p": 6.29e-08,
+    "quadratic_weighted_kappa": 0.56,
+    "exact_band_agreement": 0.3889,
+    "within_one_band": 1.0,
+    "by_level": {
+      "weak": {
+        "n": 6,
+        "mean": 53.0,
+        "sd": 21.41,
+        "min": 11.0,
+        "max": 67.0
+      },
+      "medium": {
+        "n": 6,
+        "mean": 92.75,
+        "sd": 4.56,
+        "min": 86.5,
+        "max": 96.5
+      },
+      "strong": {
+        "n": 6,
+        "mean": 98.25,
+        "sd": 1.29,
+        "min": 96.0,
+        "max": 100.0
+      }
+    },
+    "separation": {
+      "strong_vs_weak_cohens_d": 2.983,
+      "strong_vs_medium_cohens_d": 1.642,
+      "medium_vs_weak_cohens_d": 2.568,
+      "mann_whitney_u_strong_gt_weak": 36.0,
+      "mann_whitney_p": 0.002386
+    }
+  },
+  "e2_positional_bias": {
+    "n": 18,
+    "order_a_mean": 81.94,
+    "order_b_mean": 80.72,
+    "mean_signed_difference": 1.222,
+    "mean_absolute_spread": 2.222,
+    "median_absolute_spread": 2.0,
+    "max_absolute_spread": 9.0,
+    "sd_of_paired_difference": 2.861,
+    "sd_of_averaged_score_estimate": 1.43,
+    "variance_reduction_from_averaging": "50% (SE of the mean of two draws)",
+    "wilcoxon_statistic": 28.0,
+    "wilcoxon_p": 0.0669,
+    "systematic_order_effect": false,
+    "consistency_distribution": {
+      "high": 17,
+      "moderate": 1,
+      "low": 0
+    },
+    "pct_flagged_low_consistency": 0.0
+  },
+  "e3_paraphrase_invariance": {
+    "n_groups": 3,
+    "variants_per_group": 3,
+    "mean_within_group_sd": 1.53,
+    "max_within_group_sd": 4.01,
+    "mean_within_group_range": 3.0,
+    "max_within_group_range": 8.0,
+    "groups": [
+      {
+        "group": "REST APIs",
+        "n": 3,
+        "mean": 94.67,
+        "sd": 4.01,
+        "range": 8.0
+      },
+      {
+        "group": "Python",
+        "n": 3,
+        "mean": 98.83,
+        "sd": 0.58,
+        "range": 1.0
+      },
+      {
+        "group": "SQL",
+        "n": 3,
+        "mean": 100.0,
+        "sd": 0.0,
+        "range": 0.0
+      }
+    ],
+    "between_group_sd": 2.8
+  },
+  "e4_criterion_independence": {
+    "criteria": [
+      "technical_accuracy",
+      "completeness",
+      "clarity",
+      "relevance"
+    ],
+    "correlation_matrix": [
+      [
+        1.0,
+        0.7441,
+        0.8308,
+        0.8594
+      ],
+      [
+        0.7441,
+        1.0,
+        0.8852,
+        0.83
+      ],
+      [
+        0.8308,
+        0.8852,
+        1.0,
+        0.9279
+      ],
+      [
+        0.8594,
+        0.83,
+        0.9279,
+        1.0
+      ]
+    ],
+    "pairwise": [
+      {
+        "pair": "clarity / relevance",
+        "r": 0.9279
+      },
+      {
+        "pair": "completeness / clarity",
+        "r": 0.8852
+      },
+      {
+        "pair": "technical_accuracy / relevance",
+        "r": 0.8594
+      },
+      {
+        "pair": "technical_accuracy / clarity",
+        "r": 0.8308
+      },
+      {
+        "pair": "completeness / relevance",
+        "r": 0.83
+      },
+      {
+        "pair": "technical_accuracy / completeness",
+        "r": 0.7441
+      }
+    ],
+    "mean_inter_criterion_r": 0.8462,
+    "min_inter_criterion_r": 0.7441,
+    "max_inter_criterion_r": 0.9279,
+    "criterion_means": {
+      "technical_accuracy": 21.81,
+      "completeness": 16.33,
+      "clarity": 20.97,
+      "relevance": 22.22
+    },
+    "criterion_sds": {
+      "technical_accuracy": 6.5,
+      "completeness": 8.52,
+      "clarity": 5.35,
+      "relevance": 5.14
+    }
+  },
+  "e5_verbosity": {
+    "n": 2,
+    "mean_delta": -1.5,
+    "median_delta": -1.5,
+    "n_increased": 0,
+    "n_decreased": 2,
+    "n_unchanged": 0,
+    "wilcoxon_p": 0.5,
+    "rewards_padding": false,
+    "pairs": [
+      {
+        "topic": "Python",
+        "original_score": 98.5,
+        "padded_score": 96.0,
+        "delta": -2.5,
+        "original_words": 101,
+        "padded_words": 158
+      },
+      {
+        "topic": "REST APIs",
+        "original_score": 98.5,
+        "padded_score": 98.0,
+        "delta": -0.5,
+        "original_words": 103,
+        "padded_words": 160
+      }
+    ]
+  }
+}

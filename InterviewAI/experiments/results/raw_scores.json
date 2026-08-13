@@ -1,0 +1,605 @@
+{
+  "meta": {
+    "generated_at": "2026-08-09 16:52:37",
+    "quick_mode": true,
+    "n_questions": 6,
+    "n_graded_answers": 18,
+    "n_paraphrase_scores": 9,
+    "n_verbosity_pairs": 2,
+    "elapsed_seconds": 2339.4,
+    "api_usage": {
+      "calls": 68,
+      "by_model": {
+        "gemini-flash-lite-latest": 9,
+        "gemini-2.5-flash": 59
+      },
+      "seconds": 2339.4,
+      "errors": 1
+    },
+    "rubric_orders": [
+      [
+        "technical_accuracy",
+        "completeness",
+        "clarity",
+        "relevance"
+      ],
+      [
+        "clarity",
+        "relevance",
+        "technical_accuracy",
+        "completeness"
+      ]
+    ],
+    "criteria": [
+      "technical_accuracy",
+      "completeness",
+      "clarity",
+      "relevance"
+    ]
+  },
+  "graded": [
+    {
+      "score": 67.0,
+      "call_scores": [
+        66.0,
+        68.0
+      ],
+      "spread": 2.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 20.5,
+        "completeness": 7.0,
+        "clarity": 18.0,
+        "relevance": 21.5
+      },
+      "topic": "Python",
+      "question": "Explain how Python's garbage collection works, specifically focusing on reference counting and how circular references are handled.",
+      "level": "weak",
+      "expected_rank": 0,
+      "answer": "Python handles memory automatically using a garbage collector. It deletes variables when you don't use them anymore so you don't run out of RAM. I think it uses reference counting to keep track of objects, and if something gets stuck in a loop, the garbage collector comes along later and deletes it."
+    },
+    {
+      "score": 96.5,
+      "call_scores": [
+        97.0,
+        96.0
+      ],
+      "spread": 1.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 25.0,
+        "completeness": 22.0,
+        "clarity": 24.5,
+        "relevance": 25.0
+      },
+      "topic": "Python",
+      "question": "Explain how Python's garbage collection works, specifically focusing on reference counting and how circular references are handled.",
+      "level": "medium",
+      "expected_rank": 1,
+      "answer": "Python manages memory mainly through reference counting. Every object keeps track of how many references point to it. If the reference count drops to zero, Python deletes the object to free up space. But reference counting has a flaw with circular references, like when object A points to object B and B points to A. Their counts never reach zero. To fix this, Python has a built-in garbage collector that periodically sweeps through memory to find these isolated loops and clear them out."
+    },
+    {
+      "score": 98.5,
+      "call_scores": [
+        100.0,
+        97.0
+      ],
+      "spread": 3.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 25.0,
+        "completeness": 24.5,
+        "clarity": 24.0,
+        "relevance": 25.0
+      },
+      "topic": "Python",
+      "question": "Explain how Python's garbage collection works, specifically focusing on reference counting and how circular references are handled.",
+      "level": "strong",
+      "expected_rank": 2,
+      "answer": "Python primarily uses reference counting for memory management. Every time an object is assigned a new name or placed in a container, its reference count increases. When it goes out of scope or is deleted with del, the count decreases. Once the count hits zero, the memory is deallocated immediately. However, reference counting alone cannot handle circular references, where two objects reference each other. To solve this, Python uses a generational garbage collector that runs periodically. It focuses on container objects and uses a cycle detection algorithm that tracks objects across three generations to find and clean up isolated reference cycles."
+    },
+    {
+      "score": 60.0,
+      "call_scores": [
+        60.0,
+        60.0
+      ],
+      "spread": 0.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 20.0,
+        "completeness": 6.5,
+        "clarity": 13.5,
+        "relevance": 20.0
+      },
+      "topic": "SQL",
+      "question": "Explain the difference between a `LEFT JOIN` and an `INNER JOIN`, and describe a scenario where using a `LEFT JOIN` incorrectly in the `WHERE` clause effectively turns it into an `INNER JOIN`.",
+      "level": "weak",
+      "expected_rank": 0,
+      "answer": "A left join shows all records from the left table and matching ones from the right, and an inner join just shows the matching ones. If you put a condition in the where clause, it might break the join and act like an inner join, but I usually just use inner joins anyway."
+    },
+    {
+      "score": 96.5,
+      "call_scores": [
+        98.0,
+        95.0
+      ],
+      "spread": 3.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 25.0,
+        "completeness": 23.0,
+        "clarity": 23.5,
+        "relevance": 25.0
+      },
+      "topic": "SQL",
+      "question": "Explain the difference between a `LEFT JOIN` and an `INNER JOIN`, and describe a scenario where using a `LEFT JOIN` incorrectly in the `WHERE` clause effectively turns it into an `INNER JOIN`.",
+      "level": "medium",
+      "expected_rank": 1,
+      "answer": "An `INNER JOIN` only gives you rows that match in both tables, while a `LEFT JOIN` gives you everything from the left table even if there isn't a match on the right, putting `NULL`s in the missing spots. As for the second part, if you put a filter in the `WHERE` clause on a column from the right table, it can accidentally act like an inner join because it removes the rows where the right table data became `NULL`. You usually have to put those filters in the `ON` clause instead."
+    },
+    {
+      "score": 100.0,
+      "call_scores": [
+        100.0,
+        100.0
+      ],
+      "spread": 0.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 25.0,
+        "completeness": 25.0,
+        "clarity": 25.0,
+        "relevance": 25.0
+      },
+      "topic": "SQL",
+      "question": "Explain the difference between a `LEFT JOIN` and an `INNER JOIN`, and describe a scenario where using a `LEFT JOIN` incorrectly in the `WHERE` clause effectively turns it into an `INNER JOIN`.",
+      "level": "strong",
+      "expected_rank": 2,
+      "answer": "An `INNER JOIN` returns only the rows that have matching values in both tables, dropping unmatched records from either side. A `LEFT JOIN` returns all records from the left table, and the matched records from the right table, filling in `NULL`s where there's no match. The trap happens when you put a condition on the right table's columns in the `WHERE` clause\u2014like `WHERE right_table.status = 'active'`. Because `NULL` values fail boolean evaluations, this filters out all the unmatched rows that got `NULL`s, inadvertently converting your `LEFT JOIN` into an `INNER JOIN`. To avoid this, the condition needs to go into the `ON` clause or handle the `NULL` explicitly."
+    },
+    {
+      "score": 11.0,
+      "call_scores": [
+        10.0,
+        12.0
+      ],
+      "spread": 2.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 1.0,
+        "completeness": 0.0,
+        "clarity": 5.0,
+        "relevance": 5.0
+      },
+      "topic": "REST APIs",
+      "question": "Can you explain the concept of idempotency in REST APIs, why it matters, and which standard HTTP methods are inherently idempotent?",
+      "level": "weak",
+      "expected_rank": 0,
+      "answer": "Idempotency is when an API is secure and handles errors properly. It matters so the server doesn't crash when too many people use it. The methods that are idempotent are GET and POST, because they send and receive data safely."
+    },
+    {
+      "score": 86.5,
+      "call_scores": [
+        84.0,
+        89.0
+      ],
+      "spread": 5.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 21.0,
+        "completeness": 17.0,
+        "clarity": 23.5,
+        "relevance": 25.0
+      },
+      "topic": "REST APIs",
+      "question": "Can you explain the concept of idempotency in REST APIs, why it matters, and which standard HTTP methods are inherently idempotent?",
+      "level": "medium",
+      "expected_rank": 1,
+      "answer": "Idempotency means if you call an API endpoint multiple times with the same data, you get the same result and nothing breaks. It matters because networks drop connections, so clients often retry requests. If an endpoint isn't idempotent, you might end up creating duplicate data, like charging a credit card twice. The methods that are idempotent are GET, PUT, and DELETE. GET just reads data, PUT updates or replaces it completely, and DELETE removes it. POST is not idempotent because every time you send a POST request, it makes a new resource."
+    },
+    {
+      "score": 98.5,
+      "call_scores": [
+        99.0,
+        98.0
+      ],
+      "spread": 1.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 25.0,
+        "completeness": 24.0,
+        "clarity": 24.5,
+        "relevance": 25.0
+      },
+      "topic": "REST APIs",
+      "question": "Can you explain the concept of idempotency in REST APIs, why it matters, and which standard HTTP methods are inherently idempotent?",
+      "level": "strong",
+      "expected_rank": 2,
+      "answer": "Idempotency means that making multiple identical requests has the same effect on the server as making a single request. This is crucial for distributed systems because network failures cause timeouts and retries; if a payment or database write isn't idempotent, a retry could accidentally duplicate transactions. Safe methods like GET, HEAD, and OPTIONS are inherently idempotent because they only retrieve data without modifying state. Additionally, PUT and DELETE are designed to be idempotent\u2014replacing a resource or deleting it multiple times leaves the system in the exact same final state. POST, however, is not idempotent by default, as each request creates a new resource."
+    },
+    {
+      "score": 64.0,
+      "call_scores": [
+        64.0,
+        64.0
+      ],
+      "spread": 0.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 23.5,
+        "completeness": 7.0,
+        "clarity": 15.0,
+        "relevance": 18.5
+      },
+      "topic": "Docker",
+      "question": "Explain how Docker's multi-stage builds work and why they are beneficial for production container images.",
+      "level": "weak",
+      "expected_rank": 0,
+      "answer": "Multi-stage builds are when you build a Docker image in different parts. It helps make the image smaller for production by separating things out, but I usually just use one big Dockerfile and delete files at the end."
+    },
+    {
+      "score": 87.5,
+      "call_scores": [
+        88.0,
+        87.0
+      ],
+      "spread": 1.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 25.0,
+        "completeness": 15.0,
+        "clarity": 22.5,
+        "relevance": 25.0
+      },
+      "topic": "Docker",
+      "question": "Explain how Docker's multi-stage builds work and why they are beneficial for production container images.",
+      "level": "medium",
+      "expected_rank": 1,
+      "answer": "Multi-stage builds let you put multiple FROM statements in one Dockerfile. You use the first stage to build your application, like compiling code or installing dependencies, and then in the next stage you copy just the final output over. This is good for production because it keeps the image size smaller since you don't need to include the build tools and compiler in the final container that runs in production."
+    },
+    {
+      "score": 98.0,
+      "call_scores": [
+        99.0,
+        97.0
+      ],
+      "spread": 2.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 25.0,
+        "completeness": 24.0,
+        "clarity": 24.0,
+        "relevance": 25.0
+      },
+      "topic": "Docker",
+      "question": "Explain how Docker's multi-stage builds work and why they are beneficial for production container images.",
+      "level": "strong",
+      "expected_rank": 2,
+      "answer": "Multi-stage builds allow you to use multiple FROM instructions in a single Dockerfile, where each FROM starts a new base image with a fresh set of instructions. The key benefit is that you can copy artifacts and compiled binaries from earlier build stages into the final production stage, leaving behind all the heavy compilation tools, SDKs, and source code. This drastically reduces the final image size, improves security by minimizing the attack surface and potential vulnerabilities, and speeds up deployment times across your infrastructure without needing complex shell scripts or external orchestration."
+    },
+    {
+      "score": 65.5,
+      "call_scores": [
+        66.0,
+        65.0
+      ],
+      "spread": 1.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 22.5,
+        "completeness": 6.5,
+        "clarity": 20.0,
+        "relevance": 16.5
+      },
+      "topic": "Git",
+      "question": "Can you explain the difference between git merge and git rebase, and when you should prefer one over the other?",
+      "level": "weak",
+      "expected_rank": 0,
+      "answer": "Merge and rebase both join branches together. Rebase makes the git history look cleaner and straight, while merge keeps all the branches visible. I usually just use merge because rebase sometimes gives me scary conflict errors that are hard to fix."
+    },
+    {
+      "score": 94.0,
+      "call_scores": [
+        95.0,
+        93.0
+      ],
+      "spread": 2.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 25.0,
+        "completeness": 19.5,
+        "clarity": 24.5,
+        "relevance": 25.0
+      },
+      "topic": "Git",
+      "question": "Can you explain the difference between git merge and git rebase, and when you should prefer one over the other?",
+      "level": "medium",
+      "expected_rank": 1,
+      "answer": "Git merge and git rebase are both used to combine work from different branches. Merge combines them by creating a merge commit that shows the history of both branches together. Rebase takes your commits and puts them on top of the main branch so the history looks like a straight line. You should use merge when working with a team on a shared branch so you don't mess up other people's history, and you can use rebase when you are working by yourself to keep your own commit history clean before you push."
+    },
+    {
+      "score": 98.5,
+      "call_scores": [
+        100.0,
+        97.0
+      ],
+      "spread": 3.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 25.0,
+        "completeness": 24.0,
+        "clarity": 24.5,
+        "relevance": 25.0
+      },
+      "topic": "Git",
+      "question": "Can you explain the difference between git merge and git rebase, and when you should prefer one over the other?",
+      "level": "strong",
+      "expected_rank": 2,
+      "answer": "Both merge and rebase integrate changes from one branch into another, but they do it differently. A merge takes the tips of both branches and creates a new merge commit, preserving the exact historical timeline, which is great for shared feature branches and maintaining transparency. Rebase, on the other hand, takes your local commits and replays them on top of the target branch's latest commit, creating a clean, linear history without extra merge commits. I prefer rebase for local, unshared feature branches to keep the project history tidy, but I strictly avoid rebasing public or shared branches because it rewrites history and causes severe disruption for collaborators."
+    },
+    {
+      "score": 50.5,
+      "call_scores": [
+        55.0,
+        46.0
+      ],
+      "spread": 9.0,
+      "consistency": "moderate",
+      "criterion_scores": {
+        "technical_accuracy": 9.0,
+        "completeness": 5.0,
+        "clarity": 17.5,
+        "relevance": 19.0
+      },
+      "topic": "Object-Oriented Programming",
+      "question": "Can you explain the Liskov Substitution Principle and give a concrete example of how violating it can cause issues in an object-oriented system?",
+      "level": "weak",
+      "expected_rank": 0,
+      "answer": "LSP means subclasses can substitute parent classes. If you have an animal class and a dog class, the dog can replace the animal. Violating it just means your inheritance tree is wrong and your code throws errors when you use the wrong object type."
+    },
+    {
+      "score": 95.5,
+      "call_scores": [
+        97.0,
+        94.0
+      ],
+      "spread": 3.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 25.0,
+        "completeness": 22.0,
+        "clarity": 24.0,
+        "relevance": 24.5
+      },
+      "topic": "Object-Oriented Programming",
+      "question": "Can you explain the Liskov Substitution Principle and give a concrete example of how violating it can cause issues in an object-oriented system?",
+      "level": "medium",
+      "expected_rank": 1,
+      "answer": "The Liskov Substitution Principle means that child classes should be usable anywhere their parent class is expected without breaking things. For example, if you have a Bird class and a Penguin subclass, but Penguins can't fly, overriding the fly method to throw an exception violates LSP. Code expecting a Bird and calling fly would crash when given a Penguin. To fix it, you shouldn't inherit Penguin directly from Bird, or you should structure your interfaces better so subclasses don't break parent behavior."
+    },
+    {
+      "score": 96.0,
+      "call_scores": [
+        97.0,
+        95.0
+      ],
+      "spread": 2.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 25.0,
+        "completeness": 22.0,
+        "clarity": 24.0,
+        "relevance": 25.0
+      },
+      "topic": "Object-Oriented Programming",
+      "question": "Can you explain the Liskov Substitution Principle and give a concrete example of how violating it can cause issues in an object-oriented system?",
+      "level": "strong",
+      "expected_rank": 2,
+      "answer": "The Liskov Substitution Principle states that objects of a superclass should be replaceable with objects of its subclasses without altering the correctness of the program. A classic violation is the Square-Rectangle problem. If you have a Rectangle class with setWidth and setHeight methods, and you inherit a Square class that overrides both to keep sides equal, it breaks expectations. If a function expects a Rectangle and sets width and height independently, passing a Square will violate class invariants. This causes silent bugs because the subclass changes the fundamental behavior and contractual guarantees established by the base class."
+    }
+  ],
+  "paraphrase": [
+    {
+      "score": 98.5,
+      "call_scores": [
+        98.0,
+        99.0
+      ],
+      "spread": 1.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 25.0,
+        "completeness": 24.0,
+        "clarity": 24.5,
+        "relevance": 25.0
+      },
+      "topic": "Python",
+      "group": "Python",
+      "variant_index": 1,
+      "is_original": false,
+      "answer": "Memory management in Python relies primarily on reference counting. An object's reference count goes up whenever it gets assigned a new name or added to a container, and goes down when it is deleted using del or falls out of scope. As soon as this count drops to zero, the memory gets deallocated right away. Because reference counting by itself is unable to manage circular references\u2014situations where two objects point to each other\u2014Python employs a periodic generational garbage collector as a remedy. This collector targets container objects, applying a cycle detection algorithm that monitors items across three generations in order to locate and clear out isolated reference cycles."
+    },
+    {
+      "score": 99.5,
+      "call_scores": [
+        100.0,
+        99.0
+      ],
+      "spread": 1.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 25.0,
+        "completeness": 25.0,
+        "clarity": 24.5,
+        "relevance": 25.0
+      },
+      "topic": "Python",
+      "group": "Python",
+      "variant_index": 2,
+      "is_original": false,
+      "answer": "For memory management, Python's core mechanism is reference counting. An object sees its reference count incremented each time it receives a new variable assignment or is put into a container, and decremented when it is removed via del or leaves its scope. Deallocation happens immediately once the count reaches zero. Since reference counting cannot resolve circular references on its own\u2014which occur when a pair of objects mutually reference one another\u2014Python integrates a periodic generational garbage collector to address the issue. By focusing on container objects, this system utilizes a cycle detection algorithm across three generations to identify and sweep away isolated reference loops."
+    },
+    {
+      "score": 100.0,
+      "call_scores": [
+        100.0,
+        100.0
+      ],
+      "spread": 0.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 25.0,
+        "completeness": 25.0,
+        "clarity": 25.0,
+        "relevance": 25.0
+      },
+      "topic": "SQL",
+      "group": "SQL",
+      "variant_index": 1,
+      "is_original": false,
+      "answer": "While an INNER JOIN exclusively outputs rows possessing matching values across both tables while discarding any unmatched records, a LEFT JOIN preserves every record from the left table alongside matching right-table entries, inserting NULLs for missing relationships. This behavior can be subverted by placing a filter on a right-table column inside the WHERE clause\u2014for instance, writing WHERE right_table.status = 'active'. Since NULL values cause boolean checks to fail, this condition accidentally eliminates all the unmatched rows that resulted from the join, thereby transforming the LEFT JOIN into an INNER JOIN. To prevent this, such conditions must instead be placed directly in the ON clause or explicitly account for NULLs."
+    },
+    {
+      "score": 100.0,
+      "call_scores": [
+        100.0,
+        100.0
+      ],
+      "spread": 0.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 25.0,
+        "completeness": 25.0,
+        "clarity": 25.0,
+        "relevance": 25.0
+      },
+      "topic": "SQL",
+      "group": "SQL",
+      "variant_index": 2,
+      "is_original": false,
+      "answer": "An INNER JOIN discards any unmatched records on either side, outputting only rows containing matching values in both tables, whereas a LEFT JOIN outputs all records from the left table and any corresponding right-table records, using NULLs where matches are absent. A common pitfall occurs when a condition referencing the right table's columns is placed in the WHERE clause, such as WHERE right_table.status = 'active'. Because boolean evaluations fail on NULL values, this filters out every unmatched row that was assigned a NULL, silently turning the LEFT JOIN into an INNER JOIN. Preventing this requires moving the condition to the ON clause or explicitly accounting for the NULL values."
+    },
+    {
+      "score": 90.5,
+      "call_scores": [
+        91.0,
+        90.0
+      ],
+      "spread": 1.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 25.0,
+        "completeness": 21.5,
+        "clarity": 19.0,
+        "relevance": 25.0
+      },
+      "topic": "REST APIs",
+      "group": "REST APIs",
+      "variant_index": 1,
+      "is_original": false,
+      "answer": "Network failures often trigger timeouts and retries in distributed systems, making idempotency vital to prevent accidental duplicate transactions during operations like database writes or payments; fundamentally, idempotency guarantees that sending the exact same request multiple times yields the exact same server-side outcome as a solitary request. While POST lacks inherent idempotency because every submission generates a fresh resource, methods such as PUT and DELETE are intentionally built to be idempotent since repeating a deletion or a resource replacement leaves the system in an identical final state, and safe operations like GET, HEAD, and OPTIONS are also naturally idempotent as they exclusively fetch data without altering any state."
+    },
+    {
+      "score": 95.0,
+      "call_scores": [
+        93.0,
+        97.0
+      ],
+      "spread": 4.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 25.0,
+        "completeness": 23.5,
+        "clarity": 21.5,
+        "relevance": 25.0
+      },
+      "topic": "REST APIs",
+      "group": "REST APIs",
+      "variant_index": 2,
+      "is_original": false,
+      "answer": "For distributed systems, idempotency is critical because network glitches lead to timeouts and subsequent retries; without idempotent database writes or payments, these retries risk duplicating transactions, whereas idempotency ensures that executing identical requests repeatedly produces the exact identical server effect. In terms of standard methods, GET, HEAD, and OPTIONS are naturally idempotent since they purely fetch data without state modification, PUT and DELETE are engineered to be idempotent because executing them repeatedly results in the exact same final system state through resource replacement or deletion, and POST stands apart as non-idempotent by default since each separate call provisions a new resource."
+    },
+    {
+      "score": 98.5,
+      "call_scores": [
+        100.0,
+        97.0
+      ],
+      "spread": 3.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 25.0,
+        "completeness": 24.5,
+        "clarity": 24.0,
+        "relevance": 25.0
+      },
+      "topic": "Python",
+      "group": "Python",
+      "variant_index": 0,
+      "is_original": true,
+      "answer": "Python primarily uses reference counting for memory management. Every time an object is assigned a new name or placed in a container, its reference count increases. When it goes out of scope or is deleted with del, the count decreases. Once the count hits zero, the memory is deallocated immediately. However, reference counting alone cannot handle circular references, where two objects reference each other. To solve this, Python uses a generational garbage collector that runs periodically. It focuses on container objects and uses a cycle detection algorithm that tracks objects across three generations to find and clean up isolated reference cycles.",
+      "reused_from": "e1_strong"
+    },
+    {
+      "score": 100.0,
+      "call_scores": [
+        100.0,
+        100.0
+      ],
+      "spread": 0.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 25.0,
+        "completeness": 25.0,
+        "clarity": 25.0,
+        "relevance": 25.0
+      },
+      "topic": "SQL",
+      "group": "SQL",
+      "variant_index": 0,
+      "is_original": true,
+      "answer": "An `INNER JOIN` returns only the rows that have matching values in both tables, dropping unmatched records from either side. A `LEFT JOIN` returns all records from the left table, and the matched records from the right table, filling in `NULL`s where there's no match. The trap happens when you put a condition on the right table's columns in the `WHERE` clause\u2014like `WHERE right_table.status = 'active'`. Because `NULL` values fail boolean evaluations, this filters out all the unmatched rows that got `NULL`s, inadvertently converting your `LEFT JOIN` into an `INNER JOIN`. To avoid this, the condition needs to go into the `ON` clause or handle the `NULL` explicitly.",
+      "reused_from": "e1_strong"
+    },
+    {
+      "score": 98.5,
+      "call_scores": [
+        99.0,
+        98.0
+      ],
+      "spread": 1.0,
+      "consistency": "high",
+      "criterion_scores": {
+        "technical_accuracy": 25.0,
+        "completeness": 24.0,
+        "clarity": 24.5,
+        "relevance": 25.0
+      },
+      "topic": "REST APIs",
+      "group": "REST APIs",
+      "variant_index": 0,
+      "is_original": true,
+      "answer": "Idempotency means that making multiple identical requests has the same effect on the server as making a single request. This is crucial for distributed systems because network failures cause timeouts and retries; if a payment or database write isn't idempotent, a retry could accidentally duplicate transactions. Safe methods like GET, HEAD, and OPTIONS are inherently idempotent because they only retrieve data without modifying state. Additionally, PUT and DELETE are designed to be idempotent\u2014replacing a resource or deleting it multiple times leaves the system in the exact same final state. POST, however, is not idempotent by default, as each request creates a new resource.",
+      "reused_from": "e1_strong"
+    }
+  ],
+  "verbosity": [
+    {
+      "topic": "Python",
+      "original_score": 98.5,
+      "padded_score": 96.0,
+      "delta": -2.5,
+      "original_words": 101,
+      "padded_words": 158
+    },
+    {
+      "topic": "REST APIs",
+      "original_score": 98.5,
+      "padded_score": 98.0,
+      "delta": -0.5,
+      "original_words": 103,
+      "padded_words": 160
+    }
+  ]
+}

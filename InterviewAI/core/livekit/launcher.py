@@ -1,8 +1,6 @@
 """Manages LiveKit processes — auto-downloads server binary if missing."""
 
-import json
 import os
-import sys
 import time
 import subprocess
 import tempfile
@@ -149,21 +147,6 @@ def start_livekit_server() -> bool:
     return False
 
 
-def launch(resume_text="", jd_text="", questions=None, cv_data=None, jd_data=None):
-    os.environ["RESUME_TEXT"] = (resume_text or "")[:3000]
-    os.environ["JD_TEXT"] = (jd_text or "")[:3000]
-    if questions:
-        os.environ["INTERVIEW_QUESTIONS"] = json.dumps(questions)
-    if cv_data:
-        os.environ["CV_DATA"] = json.dumps(cv_data)
-    if jd_data:
-        os.environ["JD_DATA"] = json.dumps(jd_data)
-
-    if not start_livekit_server():
-        return None
-    return "ws://localhost:7880"
-
-
 def cleanup():
     for proc in _processes:
         if proc.poll() is None:
@@ -176,17 +159,3 @@ def cleanup():
 
 
 atexit.register(cleanup)
-
-
-if __name__ == "__main__":
-    url = launch()
-    if url:
-        print(f"\nInterviewAI LiveKit client: {url}")
-        try:
-            while True:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            print("\nShutting down...")
-    else:
-        print("\nFailed to start. Check logs above.")
-        sys.exit(1)

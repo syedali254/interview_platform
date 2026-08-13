@@ -10,9 +10,12 @@ kept as a self-consistency signal: a wide spread means the judge was unstable
 on that answer, so it is flagged for human review rather than reported as a
 confident score.
 
-The trained-classifier second track (S-BERT + XGBoost + SHAP) is not part of
-this pipeline. See core/evaluator/track_b.py — it is kept unwired as optional
-future work.
+The judge is the system's only answer scorer. A second, trained-classifier
+track (S-BERT + XGBoost + SHAP) was implemented and then rejected: its
+training labels were themselves LLM-generated, which made the intended
+comparison circular, and the trained model scored a correct paraphrase of the
+reference answer at 39/100. The evidence and the argument are recorded in
+docs/track-b-rejection.md.
 """
 
 from datetime import datetime
