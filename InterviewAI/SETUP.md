@@ -59,7 +59,7 @@ the same time and question limits, and produce the same report.
 cd InterviewAI
 python -m venv venv
 venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements.txt -r requirements-dev.txt
 cd frontend
 npm install
 npm run build
@@ -81,6 +81,7 @@ python server.py
 | Header shows "text only" | No voice provider worked. Questions still display and the interview still scores normally. Check both `ELEVENLABS_API_KEY` and `DEEPGRAM_API_KEY`. |
 | Agent not speaking at all | Check the 3 keys in `.env`, then read `agent_debug.log` |
 | No attention/posture in report | Run `cd frontend && npm run vision-assets` |
+| `ModuleNotFoundError: pytest` (or docx, pptx, scipy) | The optional tools did not install. Run `venv\Scripts\python.exe -m pip install -r requirements-dev.txt`. The interview platform is unaffected. |
 | Camera blocked | Allow in browser (click lock icon in address bar) |
 | Port 8000 in use | Restart computer |
 

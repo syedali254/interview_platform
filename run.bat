@@ -1,5 +1,8 @@
 @echo off
-setlocal EnableExtensions
+rem Delayed expansion is required: the branch check below reads a variable that
+rem is set inside the same parenthesised block, which plain expansion resolves
+rem at parse time and would therefore always see the previous value.
+setlocal EnableExtensions EnableDelayedExpansion
 title InterviewAI - Setup and Run
 color 0A
 
@@ -25,7 +28,7 @@ rem ---------------------------------------------------------------
 echo [1/7] Checking project code...
 if exist ".git" (
     for /f "delims=" %%b in ('git branch --show-current 2^>nul') do set "BRANCH=%%b"
-    if not "%BRANCH%"=="sherali-dev2" (
+    if not "!BRANCH!"=="sherali-dev2" (
         echo       Switching to branch sherali-dev2...
         git checkout sherali-dev2 >nul 2>&1
     )
@@ -127,6 +130,19 @@ if errorlevel 1 (
     exit /b 1
 )
 echo       Python packages OK.
+
+rem  Tooling for the tests and for rebuilding the report and the deck. The
+rem  application does not import any of it, so a failure here is reported and
+rem  stepped over rather than stopping the run.
+echo       Installing the test and document tools...
+venv\Scripts\python.exe -m pip install -r requirements-dev.txt --quiet --disable-pip-version-check
+if errorlevel 1 (
+    echo       NOTE: the optional test and document tools did not install.
+    echo             The interview platform still works; only "pytest" and the
+    echo             report and deck builders are unavailable.
+) else (
+    echo       Test and document tools OK.
+)
 
 rem ---------------------------------------------------------------
 rem  [6/7] Web app

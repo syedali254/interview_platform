@@ -34,6 +34,8 @@ Friend-Project/
 │   ├── experiments/         Evaluation harness, results and figures
 │   ├── tests/               72-test unit suite
 │   ├── docs/                Evidence for design decisions
+│   ├── requirements.txt     Runtime dependencies
+│   ├── requirements-dev.txt Test and document-build tooling
 │   ├── SETUP.md             Setup and troubleshooting guide
 │   └── PROJECT_DOCS.docx    Technical handover document
 │
