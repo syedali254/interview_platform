@@ -5,8 +5,8 @@ Chapter 6 lives in content_ch6.py because it renders from measured data.
 
 from docx_kit import bullet, code, h1, h2, h3, numbered, para, table, GREY
 from values import (
-    fmt as _fmt, p_value as _p_value, probe_cases as _probe,
-    level_mean as _level_mean, strong_threshold as _strong_threshold,
+    probe_cases as _probe, level_mean as _level_mean,
+    strong_threshold as _strong_threshold,
 )
 
 
