@@ -131,12 +131,14 @@ def chapter_6(doc, fig, stats, extra):
          f"the scale sits above 50, and the medium and strong distributions overlap: the highest "
          f"medium answer scored {_fmt(e1['by_level']['medium']['max'], '{:.1f}')} while the lowest "
          f"strong answer scored {_fmt(e1['by_level']['strong']['min'], '{:.1f}')}.")
+    strong_edge = (e1.get("calibration", {}).get("thresholds_in_use", {})
+                   .get("medium_strong", 70))
     para(doc,
-         "This has a direct and damaging consequence for the deployed system. The verdict layer "
-         "labels any answer at or above 70 as strong. On this evidence, deliberately partial "
-         "answers clear that threshold comfortably, so medium and strong answers receive the same "
-         "verdict. The scoring model ranks candidates well and the verdict layer then discards "
-         "most of that resolution.")
+         f"This has a direct and damaging consequence for the deployed system. The verdict layer "
+         f"labels any answer at or above {strong_edge:.0f} as strong. On this evidence, "
+         f"deliberately partial answers clear that threshold comfortably, so medium and strong "
+         f"answers receive the same verdict. The scoring model ranks candidates well and the "
+         f"verdict layer then discards most of that resolution.")
 
     # ── 6.3 Calibration ──────────────────────────────────────────────────
     h2(doc, "6.3  Threshold calibration")
@@ -392,15 +394,18 @@ def chapter_6(doc, fig, stats, extra):
          "Taken together the experiments support a more qualified claim than the design "
          "anticipated, and that qualification is the most useful thing the evaluation produced.")
     para(doc,
-         "The judge ranks answers extremely well. A Spearman's rho of 0.92 and a Cohen's d near "
-         "3.0 between strong and weak answers show the relative ordering can be trusted. But it "
+         f"The judge ranks answers extremely well. A Spearman's rho of "
+         f"{e1.get('spearman_rho', 0):.2f} and a Cohen's d of "
+         f"{e1.get('separation', {}).get('strong_vs_weak_cohens_d', 0):.2f} between strong and "
+         "weak answers show the relative ordering can be trusted. But it "
          "calibrates poorly: scores compress into the upper half of the scale, medium and strong "
          "answers overlap, and the system's published thresholds sit far below where answers "
          "actually land. The instrument is comparative rather than absolute, and the artefact "
          "currently presents it as though it were absolute.")
     para(doc,
-         "The rubric is also less decomposed than intended. A mean inter-criterion correlation of "
-         "0.85 indicates a substantial halo effect that an explicit instruction did not prevent, "
+         f"The rubric is also less decomposed than intended. A mean inter-criterion correlation of "
+         f"{e4.get('mean_inter_criterion_r', 0):.2f} indicates a substantial halo effect that an "
+         "explicit instruction did not prevent, "
          "weakening — without eliminating — the explainability claim attached to the "
          "per-criterion breakdown.")
     para(doc,
@@ -410,8 +415,9 @@ def chapter_6(doc, fig, stats, extra):
          "encountered did produce elevated disagreement. But this project has not demonstrated the "
          "mechanism catching real failures at scale and does not claim to have done so.")
     para(doc,
-         "Four threats to validity apply, and Section 7.3 details them: a sample of eighteen "
-         "graded answers, an intended-quality rather than human ground truth, machine-written "
+         f"Four threats to validity apply, and Section 7.3 details them: a sample of "
+         f"{meta['n_graded_answers']} graded answers, an intended-quality rather than human "
+         "ground truth, machine-written "
          "answers cleaner than transcribed speech — which plausibly explains both the E1 ceiling "
          "effect and the unusually high E2 consistency — and paraphrase groups drawn entirely "
          "from strong answers.")

@@ -15,6 +15,24 @@ def _fmt(value, spec="{:.3f}", missing="not measured"):
         return str(value)
 
 
+def _probe(extra):
+    """Track B probe cases, keyed by their opening phrase."""
+    cases = ((extra or {}).get("track_b", {})
+             .get("behavioural_probe", {}).get("cases") or [])
+    return {c["case"].split(",")[0]: c for c in cases}
+
+
+def _level_mean(stats, level):
+    return ((stats or {}).get("e1_discriminant_validity", {})
+            .get("by_level", {}).get(level, {}).get("mean", 0))
+
+
+def _strong_threshold(stats):
+    return ((stats or {}).get("e1_discriminant_validity", {})
+            .get("calibration", {}).get("thresholds_in_use", {})
+            .get("medium_strong", 70))
+
+
 def _p_value(p):
     if p is None:
         return "not measured"
@@ -83,14 +101,21 @@ def chapter_7(doc, fig, stats, extra=None):
          "two-rater validation set the timeline could not accommodate (Section 3.4). Without a "
          "human gold standard the comparison reduces to two automated scorers disagreeing with no "
          "arbiter.")
+    tb = (extra or {}).get("track_b", {})
+    top_feature = max((tb.get("feature_importance") or {"semantic_similarity": 0}).items(),
+                      key=lambda kv: kv[1])
+    pr = _probe(extra)
     para(doc,
-         "The third problem is empirical and settled the matter. Inspection before removal showed "
-         "the model dominated by one feature — semantic similarity at 0.543, more than the other "
-         "five combined — traceable to a data-handling error in which the strong answer had been "
-         "used as its own reference. A behavioural probe made the consequence concrete: an answer "
-         "identical to the reference scored 64.7, a correct paraphrase of it scored 39.2, below "
-         "the threshold at which the system reports a skill gap, and a deliberately vague answer "
-         "scored 29.5. Appendix E gives the full measurements.")
+         f"The third problem is empirical and settled the matter. Inspection before removal showed "
+         f"the model dominated by one feature — semantic similarity at {top_feature[1]:.3f}, more "
+         f"than the other five combined — traceable to a data-handling error in which the strong "
+         f"answer had been used as its own reference. A behavioural probe made the consequence "
+         f"concrete: an answer identical to the reference scored "
+         f"{pr.get('Answer identical to the reference', {}).get('score', 0):.1f}, a correct "
+         f"paraphrase of it scored {pr.get('Strong paraphrase', {}).get('score', 0):.1f}, below "
+         f"the threshold at which the system reports a skill gap, and a deliberately vague answer "
+         f"scored {pr.get('Deliberately vague', {}).get('score', 0):.1f}. Appendix E gives the "
+         f"full measurements.")
     para(doc,
          "A scorer that classifies a correct answer as a skill gap because the candidate used "
          "their own words is not a usable instrument, and its failure mode would have "
@@ -127,7 +152,8 @@ def chapter_7(doc, fig, stats, extra=None):
          "Two of the following were discovered by the evaluation itself rather than anticipated, "
          "and they are the most consequential defects in the artefact as submitted.")
     bullet(doc, "The judge is systematically lenient. Deliberately partial answers scored a mean "
-                "of 92.8, comfortably above the 70-point threshold at which the system reports a "
+                f"of {_level_mean(stats, 'medium'):.1f}, comfortably above the "
+                f"{_strong_threshold(stats):.0f}-point threshold at which the system reports a "
                 "strong answer, so medium and strong answers receive identical verdicts. Rank "
                 "ordering is excellent, but the absolute score cannot be read against a fixed "
                 "standard. Section 6.3 derives the empirically implied boundaries and explains "
@@ -230,7 +256,7 @@ def chapter_7(doc, fig, stats, extra=None):
 # Chapter 8 — Conclusion
 # ═════════════════════════════════════════════════════════════════════════
 
-def chapter_8(doc, fig, stats):
+def chapter_8(doc, fig, stats, extra=None):
     h1(doc, "8.  Conclusion and Future Work")
 
     h2(doc, "8.1  Conclusions")
@@ -243,8 +269,10 @@ def chapter_8(doc, fig, stats):
     para(doc,
          "The central empirical finding was not the one the design anticipated. Measuring the "
          "judge against answers of known quality showed that it ranks them almost perfectly "
-         "(Spearman's rho of 0.92) while calibrating them badly: deliberately partial answers "
-         "averaged 92.8 on a scale where the system treats 70 as the threshold for a strong "
+         f"(Spearman's rho of {(stats or {}).get('e1_discriminant_validity', {}).get('spearman_rho', 0):.2f}) "
+         f"while calibrating them badly: deliberately partial answers averaged "
+         f"{_level_mean(stats, 'medium'):.1f} on a scale where the system treats "
+         f"{_strong_threshold(stats):.0f} as the threshold for a strong "
          "answer. Ordering is trustworthy; the absolute number is not. A system that publishes "
          "absolute thresholds without validating them against the model's actual output "
          "distribution is making a claim its evidence does not support, and this artefact was "
@@ -266,7 +294,9 @@ def chapter_8(doc, fig, stats):
          "comparison between a trained classifier and a language-model judge could not have been "
          "informative, because the classifier's training labels were generated by a language "
          "model. Building it anyway proved instructive: the trained model scored a correct "
-         "paraphrase of its own reference answer at 39 out of 100. The episode is a reminder that "
+         f"paraphrase of its own reference answer at "
+         f"{_probe(extra).get('Strong paraphrase', {}).get('score', 0):.0f} out of 100. "
+         "The episode is a reminder that "
          "in evaluation research the design of the comparison determines what a result can mean, "
          "and that a comparison which cannot fail informatively is not worth running.")
     para(doc,
@@ -556,6 +586,7 @@ def appendices(doc, fig, extra):
     para(doc,
          "Three answers scored against one fixed reference answer on machine learning.")
     probe = tb.get("behavioural_probe", {})
+    pcases = _probe(extra)
     table(doc,
           ["Case", "Semantic similarity", "Model score", "System verdict"],
           [[c["case"], f"{c['semantic_similarity']:.3f}",
@@ -565,8 +596,11 @@ def appendices(doc, fig, extra):
     para(doc,
          "Two failures are visible. A perfect answer never approaches the 70-point strong "
          "threshold, and a correct paraphrase falls below the 40-point gap threshold. The model "
-         "separates a strong paraphrase from a deliberately weak answer by 9.7 points while "
-         "separating a verbatim match from a 90.7%-similar paraphrase by 25.5 points: "
+         f"separates a strong paraphrase from a deliberately weak answer by "
+         f"{probe.get('separation_strong_paraphrase_vs_weak', 0):.1f} points while separating a "
+         f"verbatim match from a "
+         f"{(pcases.get('Strong paraphrase', {}).get('semantic_similarity', 0) * 100):.1f}%-similar "
+         f"paraphrase by {probe.get('separation_verbatim_vs_paraphrase', 0):.1f} points: "
          "discriminative power sits almost entirely above similarity 0.9, a region real candidate "
          "answers never reach.")
 

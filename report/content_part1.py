@@ -9,11 +9,19 @@ from docx_kit import (
 STUDENT_NUMBER = "[STUDENT NUMBER]"
 
 
+def _probe_scores(extra):
+    """Track B probe scores, keyed by case, from the tracked evidence fixture."""
+    cases = ((extra or {}).get("track_b", {})
+             .get("behavioural_probe", {}).get("cases") or [])
+    return {c["case"].split(",")[0]: c for c in cases}
+
+
 # ═════════════════════════════════════════════════════════════════════════
 # Front matter
 # ═════════════════════════════════════════════════════════════════════════
 
-def front_matter(doc, fig):
+def front_matter(doc, fig, stats=None, extra=None):
+    probe = _probe_scores(extra)
     para(doc, space_after=60)
     para(doc, "BIRMINGHAM CITY UNIVERSITY", bold=True, align="center", size=Pt(13))
     para(doc, "Faculty of Computing, Engineering and the Built Environment",
@@ -73,8 +81,8 @@ def front_matter(doc, fig):
          "A trained-classifier evaluation track proposed at the outset was built, measured and "
          "then rejected. Its labels were themselves model-generated, making the intended "
          "comparison circular, and the trained model scored a correct paraphrase of its own "
-         "reference answer at 39 out of 100 — below the threshold at which the system reports a "
-         "skill gap. That rejection, and the evidence behind it, is reported as a finding rather "
+         f"reference answer at {probe.get('Strong paraphrase', {}).get('score', 0):.0f} out of "
+         "100 — below the threshold at which the system reports a skill gap. That rejection, and the evidence behind it, is reported as a finding rather "
          "than concealed as a descoping. The dissertation concludes that transparency in "
          "automated assessment is better served by making a single scorer accountable for its "
          "own reliability than by adding a second scorer that cannot be independently validated.")

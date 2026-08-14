@@ -155,7 +155,7 @@ def main():
     add_page_numbers(doc)
 
     print("  Front matter...")
-    p1.front_matter(doc, fig)
+    p1.front_matter(doc, fig, stats, extra)
     print("  Chapter 1  Introduction")
     p1.chapter_1(doc, fig)
     print("  Chapter 2  Literature Review")
@@ -171,7 +171,7 @@ def main():
     print("  Chapter 7  Critical Reflection")
     p3.chapter_7(doc, fig, stats, extra)
     print("  Chapter 8  Conclusion and Future Work")
-    p3.chapter_8(doc, fig, stats)
+    p3.chapter_8(doc, fig, stats, extra)
     print("  References")
     p3.references(doc)
     print("  Appendices")
