@@ -13,7 +13,7 @@ import time
 from datetime import datetime
 
 from core.agents.interviewer_prompt import build_system_prompt
-from core.llm import call_llm
+from core.gemini_client import call_llm
 
 # Marker the interviewer emits to signal it is finished. Stripped before the
 # closing line is shown to the candidate.

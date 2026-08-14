@@ -223,11 +223,11 @@ quality-band labels, rather than between two scoring tracks.
 | `core/evaluator/models/answer_scorer_xgb.joblib` | 138 KB | Untracked by git; never committed |
 
 Nothing in the running system imported either module. `train_model.py` was the
-sole importer of `track_b.py`. `server.py`, `core/pipeline/session_eval.py`,
-`core/report/generator.py` and `core/evaluator/fusion.py` never referenced them,
+sole importer of `track_b.py`. `server.py`, `core/pipeline/post_interview.py`,
+`core/report/report_builder.py` and `core/evaluator/score_fusion.py` never referenced them,
 so removal is behaviour-preserving.
 
-**Retained:** `core/evaluator/integrity.py` (M9, Isolation Forest) together with
+**Retained:** `core/evaluator/behavioural_integrity.py` (M9, Isolation Forest) together with
 `scikit-learn` and `joblib`. M9 defines its own model path and has no dependency
 on Track B.
 

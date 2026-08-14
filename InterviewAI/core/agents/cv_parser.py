@@ -1,7 +1,7 @@
 """Module 1 — CV Parsing Agent. Extracts structured data from CV text/PDF."""
 
 import fitz  # PyMuPDF
-from core.llm import call_llm_json
+from core.gemini_client import call_llm_json
 
 PROMPT_TEMPLATE = """You are a professional CV parser. Extract structured data from this CV.
 

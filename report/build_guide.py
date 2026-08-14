@@ -51,31 +51,31 @@ FILES = [
 
     ("InterviewAI/core/config.py", "Thresholds and environment configuration in one place: "
                                    "score bands, question limits, the minimum answer length."),
-    ("InterviewAI/core/llm.py", "Gemini client. Handles JSON repair when the model returns "
+    ("InterviewAI/core/gemini_client.py", "Gemini client. Handles JSON repair when the model returns "
                                 "malformed output, and counts API usage."),
-    ("InterviewAI/core/agents/cv_agent.py", "M1 — extracts a structured profile from a CV."),
-    ("InterviewAI/core/agents/jd_agent.py", "M2 — extracts requirements from a job description."),
-    ("InterviewAI/core/agents/question_agent.py", "M4 — generates the question set and orders "
+    ("InterviewAI/core/agents/cv_parser.py", "M1 — extracts a structured profile from a CV."),
+    ("InterviewAI/core/agents/jd_parser.py", "M2 — extracts requirements from a job description."),
+    ("InterviewAI/core/agents/question_generator.py", "M4 — generates the question set and orders "
                                                   "it by the priority the graph assigned."),
     ("InterviewAI/core/agents/interviewer_prompt.py", "The interviewer's instructions, shared "
                                                       "by both voice and text modes."),
     ("InterviewAI/core/graph/skill_graph.py", "M3 — builds the ESCO skill graph and runs the "
                                               "four-stage matching cascade and gap analysis."),
-    ("InterviewAI/core/graph/state.py", "M6a — tracks each skill's verdict across the session."),
-    ("InterviewAI/core/graph/traversal.py", "Decides which skills needed further probing."),
-    ("InterviewAI/core/livekit/run_agent.py", "M5 — the voice interviewer: speech recognition, "
+    ("InterviewAI/core/graph/skill_state.py", "M6a — tracks each skill's verdict across the session."),
+    ("InterviewAI/core/graph/follow_up_rules.py", "Decides which skills needed further probing."),
+    ("InterviewAI/core/livekit/voice_agent.py", "M5 — the voice interviewer: speech recognition, "
                                               "model inference and synthesis over WebRTC."),
-    ("InterviewAI/core/livekit/launcher.py", "Downloads and manages the LiveKit server process."),
+    ("InterviewAI/core/livekit/media_server.py", "Downloads and manages the LiveKit server process."),
     ("InterviewAI/core/livekit/livekit.yaml", "LiveKit server configuration."),
     ("InterviewAI/core/pipeline/text_interview.py", "The typed interview engine, producing an "
                                                     "identical transcript to the voice agent."),
-    ("InterviewAI/core/pipeline/session_eval.py", "Post-interview pipeline: pairs the "
+    ("InterviewAI/core/pipeline/post_interview.py", "Post-interview pipeline: pairs the "
                                                   "transcript, classifies, scores, fuses."),
-    ("InterviewAI/core/evaluator/evaluator.py", "M6 — the LLM-as-Judge scorer with permuted "
+    ("InterviewAI/core/evaluator/answer_judge.py", "M6 — the LLM-as-Judge scorer with permuted "
                                                 "rubric orderings and self-consistency."),
-    ("InterviewAI/core/evaluator/integrity.py", "M9 — Isolation Forest behavioural integrity."),
-    ("InterviewAI/core/evaluator/fusion.py", "M11 — weighted fusion into a recommendation."),
-    ("InterviewAI/core/report/generator.py", "M12 — assembles the candidate report."),
+    ("InterviewAI/core/evaluator/behavioural_integrity.py", "M9 — Isolation Forest behavioural integrity."),
+    ("InterviewAI/core/evaluator/score_fusion.py", "M11 — weighted fusion into a recommendation."),
+    ("InterviewAI/core/report/report_builder.py", "M12 — assembles the candidate report."),
 
     ("InterviewAI/frontend/src/main.jsx", "React entry point; mounts the application."),
     ("InterviewAI/frontend/src/App.jsx", "Six-step navigation; the interview and the report "
@@ -136,10 +136,10 @@ FILES = [
 ]
 
 MODULES = [
-    ("M1", "CV parsing", "core/agents/cv_agent.py", "Gemini, PyMuPDF",
+    ("M1", "CV parsing", "core/agents/cv_parser.py", "Gemini, PyMuPDF",
      "Extracts text from the uploaded PDF, then asks the model for a structured "
      "profile: skills, experience, education, projects."),
-    ("M2", "Job description analysis", "core/agents/jd_agent.py", "Gemini",
+    ("M2", "Job description analysis", "core/agents/jd_parser.py", "Gemini",
      "Extracts required and nice-to-have skills, seniority, domain and expected "
      "experience from pasted text."),
     ("M3", "Skill graph and gap analysis", "core/graph/skill_graph.py",
@@ -147,11 +147,11 @@ MODULES = [
      "Builds a graph from 1,201 ESCO skills plus technology and soft-skill "
      "extensions, resolves both sides onto it through a four-stage matching "
      "cascade, and compares them to find gaps."),
-    ("M4", "Question generation", "core/agents/question_agent.py",
+    ("M4", "Question generation", "core/agents/question_generator.py",
      "Gemini + graph traversal",
      "Generates opening, technical, behavioural and closing questions, then "
      "re-sorts the technical ones so the highest-priority gaps are asked first."),
-    ("M5", "Voice interview", "core/livekit/run_agent.py",
+    ("M5", "Voice interview", "core/livekit/voice_agent.py",
      "LiveKit, Deepgram, ElevenLabs",
      "Conducts a spoken interview over WebRTC. Buffers each utterance before "
      "synthesis, publishes the question to the screen before speaking it, and "
@@ -159,11 +159,11 @@ MODULES = [
     ("M5t", "Text interview", "core/pipeline/text_interview.py", "FastAPI, Gemini",
      "The typed equivalent, sharing the interviewer prompt, question bank and "
      "budgets. Produces a transcript of identical shape."),
-    ("M6", "Answer evaluation", "core/evaluator/evaluator.py", "Gemini as judge",
+    ("M6", "Answer evaluation", "core/evaluator/answer_judge.py", "Gemini as judge",
      "Scores each answer twice against a generated reference under a "
      "four-criterion rubric, with the criteria in two different orders. Reports "
      "the mean and keeps the disagreement as a reliability signal."),
-    ("M6a", "Skill state tracking", "core/graph/state.py", "Finite state model",
+    ("M6a", "Skill state tracking", "core/graph/skill_state.py", "Finite state model",
      "Moves each skill from pending to verified-strong, verified-weak or "
      "confirmed-gap as answers arrive."),
     ("M7", "Visual attention", "frontend/src/lib/vision.js", "MediaPipe FaceLandmarker",
@@ -171,17 +171,17 @@ MODULES = [
      "candidate's own neutral pose rather than an assumed ideal."),
     ("M8", "Posture analysis", "frontend/src/lib/vision.js", "MediaPipe PoseLandmarker",
      "Shoulder tilt, slouch and lean from pose landmarks."),
-    ("M9", "Behavioural integrity", "core/evaluator/integrity.py",
+    ("M9", "Behavioural integrity", "core/evaluator/behavioural_integrity.py",
      "Isolation Forest (scikit-learn)",
      "Fits a baseline of normal interview behaviour and flags sessions that "
      "depart from it, always naming the specific behaviours responsible."),
     ("M10", "Vocal delivery", "frontend/src/lib/voice.js", "Web Audio API",
      "Pitch, energy, voiced ratio and pause length, combined into projection, "
      "fluency, expression and composure."),
-    ("M11", "Weighted fusion", "core/evaluator/fusion.py", "Deterministic weighting",
+    ("M11", "Weighted fusion", "core/evaluator/score_fusion.py", "Deterministic weighting",
      "Combines answer quality (50%), skill coverage (20%), integrity (15%) and "
      "engagement (15%) into one recommendation, exposing every contribution."),
-    ("M12", "Report assembly", "core/report/generator.py", "Structured templates",
+    ("M12", "Report assembly", "core/report/report_builder.py", "Structured templates",
      "Assembles the overall score, per-skill breakdown, per-answer rubric detail, "
      "integrity findings and the judge's reliability statistics."),
 ]

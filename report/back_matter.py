@@ -91,20 +91,20 @@ def appendices(doc, fig, extra):
     table(doc,
           ["Module", "Core technology", "Implementation", "Role"],
           [
-              ["M1", "Gemini (JSON-constrained)", "core/agents/cv_agent.py", "Structured profile from CV text or PDF"],
-              ["M2", "Gemini (JSON-constrained)", "core/agents/jd_agent.py", "Role requirements from a job description"],
+              ["M1", "Gemini (JSON-constrained)", "core/agents/cv_parser.py", "Structured profile from CV text or PDF"],
+              ["M2", "Gemini (JSON-constrained)", "core/agents/jd_parser.py", "Role requirements from a job description"],
               ["M3", "NetworkX + ESCO v1.1.1", "core/graph/skill_graph.py", "Taxonomy, matching cascade, gap analysis"],
-              ["M4", "Gemini + graph traversal", "core/agents/question_agent.py", "Question generation and priority ordering"],
-              ["M5", "LiveKit, Deepgram, ElevenLabs", "core/livekit/run_agent.py", "Voice interview agent (WebRTC)"],
+              ["M4", "Gemini + graph traversal", "core/agents/question_generator.py", "Question generation and priority ordering"],
+              ["M5", "LiveKit, Deepgram, ElevenLabs", "core/livekit/voice_agent.py", "Voice interview agent (WebRTC)"],
               ["M5t", "FastAPI request/response", "core/pipeline/text_interview.py", "Text interview engine"],
-              ["M6", "LLM-as-Judge, permuted rubric", "core/evaluator/evaluator.py", "Answer scoring and self-consistency"],
-              ["M6a", "Finite state model", "core/graph/state.py", "Per-skill status across the session"],
+              ["M6", "LLM-as-Judge, permuted rubric", "core/evaluator/answer_judge.py", "Answer scoring and self-consistency"],
+              ["M6a", "Finite state model", "core/graph/skill_state.py", "Per-skill status across the session"],
               ["M7/M8", "MediaPipe Face/Pose Landmarker", "frontend/src/lib/vision.js", "Attention and posture"],
-              ["M9", "Isolation Forest (scikit-learn)", "core/evaluator/integrity.py", "Behavioural integrity"],
+              ["M9", "Isolation Forest (scikit-learn)", "core/evaluator/behavioural_integrity.py", "Behavioural integrity"],
               ["M10", "Web Audio API prosody", "frontend/src/lib/voice.js", "Vocal delivery"],
-              ["M11", "Deterministic weighting", "core/evaluator/fusion.py", "Weighted fusion and recommendation"],
-              ["M12", "Structured templates", "core/report/generator.py", "Report assembly and reliability statistics"],
-              ["—", "ThreadPool orchestration", "core/pipeline/session_eval.py", "Ties M6, M9, M11 and M12 together"],
+              ["M11", "Deterministic weighting", "core/evaluator/score_fusion.py", "Weighted fusion and recommendation"],
+              ["M12", "Structured templates", "core/report/report_builder.py", "Report assembly and reliability statistics"],
+              ["—", "ThreadPool orchestration", "core/pipeline/post_interview.py", "Ties M6, M9, M11 and M12 together"],
               ["—", "Shared prompt", "core/agents/interviewer_prompt.py", "Interviewer instructions for both modes"],
           ],
           widths=[1.6, 4.6, 5.2, 5.1], font_size=8.5)
@@ -112,7 +112,7 @@ def appendices(doc, fig, extra):
     h1(doc, "Appendix B — Rubric and Judge Prompt")
     para(doc,
          "The rubric criteria and the scoring rules given to the judge. Reproduced from "
-         "core/evaluator/evaluator.py.")
+         "core/evaluator/answer_judge.py.")
     code(doc,
          "Scoring rules the judge must follow:\n"
          "- Score each of the four criteria independently. A weakness in one\n"
@@ -294,5 +294,5 @@ def appendices(doc, fig, extra):
          "environment, installs Python and npm dependencies, builds the frontend, creates the "
          ".env file from its template and opens it for the API keys, then starts the server. "
          "The LiveKit media server binary is downloaded on first use by "
-         "core/livekit/launcher.py, so no manual installation step is required. The system is "
+         "core/livekit/media_server.py, so no manual installation step is required. The system is "
          "then reachable at http://localhost:8000.")

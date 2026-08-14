@@ -1,6 +1,6 @@
 """Module 2 — Job Description Agent. Extracts requirements from a JD."""
 
-from core.llm import call_llm_json
+from core.gemini_client import call_llm_json
 
 PROMPT_TEMPLATE = """You are a job description analyst. Extract structured requirements.
 

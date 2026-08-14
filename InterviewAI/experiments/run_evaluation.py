@@ -52,13 +52,13 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from core.evaluator.evaluator import (
+from core.evaluator.answer_judge import (
     CRITERIA,
     CRITERIA_ORDERS,
     generate_reference_answer,
     judge_answer,
 )
-from core.llm import call_llm_json, call_stats, reset_call_stats
+from core.gemini_client import call_llm_json, call_stats, reset_call_stats
 
 RESULTS_DIR = Path(__file__).parent / "results"
 FIGURES_DIR = Path(__file__).parent / "figures"

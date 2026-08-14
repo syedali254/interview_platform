@@ -14,22 +14,22 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from core.agents.question_agent import build_interview_flow
-from core.evaluator.fusion import (
+from core.agents.question_generator import build_interview_flow
+from core.evaluator.score_fusion import (
     ENGAGEMENT_WEIGHTS,
     WEIGHTS,
     compute_engagement,
     compute_fusion_score,
 )
-from core.evaluator.integrity import (
+from core.evaluator.behavioural_integrity import (
     NORMAL_THRESHOLD,
     assess_integrity,
     extract_behavioral_features,
 )
 from core.graph.skill_graph import SkillGraph, build_graph, normalise, display_name
-from core.graph.state import InterviewState
-from core.pipeline.session_eval import derive_behaviour, pair_exchanges
-from core.report.generator import build_report, judge_reliability
+from core.graph.skill_state import InterviewState
+from core.pipeline.post_interview import derive_behaviour, pair_exchanges
+from core.report.report_builder import build_report, judge_reliability
 
 
 # ═══════════════════════════════════════════════════════════════════════

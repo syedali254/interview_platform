@@ -21,13 +21,13 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 from core.config import MIN_ANSWER_WORDS
-from core.evaluator.evaluator import evaluate_answer
-from core.evaluator.fusion import compute_fusion_score
-from core.evaluator.integrity import assess_integrity
-from core.graph.state import InterviewState
-from core.graph.traversal import decide_follow_up
-from core.llm import call_llm_json
-from core.report.generator import build_report
+from core.evaluator.answer_judge import evaluate_answer
+from core.evaluator.score_fusion import compute_fusion_score
+from core.evaluator.behavioural_integrity import assess_integrity
+from core.graph.skill_state import InterviewState
+from core.graph.follow_up_rules import decide_follow_up
+from core.gemini_client import call_llm_json
+from core.report.report_builder import build_report
 
 # How many answers to evaluate concurrently. Each evaluation is three LLM
 # calls (one reference answer, two rubric orderings), so this is a

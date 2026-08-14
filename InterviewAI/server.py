@@ -48,13 +48,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from core.config import GEMINI_API_KEY
-from core.agents.cv_agent import parse_cv_text, parse_cv_pdf
-from core.agents.jd_agent import parse_job_description
-from core.agents.question_agent import generate_interview_questions, build_interview_flow
+from core.agents.cv_parser import parse_cv_text, parse_cv_pdf
+from core.agents.jd_parser import parse_job_description
+from core.agents.question_generator import generate_interview_questions, build_interview_flow
 from core.graph.skill_graph import build_graph
-from core.evaluator.evaluator import evaluate_answer
-from core.evaluator.integrity import assess_integrity
-from core.evaluator.fusion import compute_fusion_score
+from core.evaluator.answer_judge import evaluate_answer
+from core.evaluator.behavioural_integrity import assess_integrity
+from core.evaluator.score_fusion import compute_fusion_score
 
 app = FastAPI(title="InterviewAI API", version="2.0")
 
@@ -123,7 +123,7 @@ def _spawn_agent(room_name: str):
     global _agent_proc
     _stop_agent_process()
 
-    agent_script = Path(__file__).parent / "core" / "livekit" / "run_agent.py"
+    agent_script = Path(__file__).parent / "core" / "livekit" / "voice_agent.py"
     agent_log = Path(__file__).parent / "agent_debug.log"
 
     env = os.environ.copy()
@@ -295,7 +295,7 @@ async def api_prewarm(config: InterviewConfig = InterviewConfig()):
     agent is already connected to the room and waiting for them.
     """
     try:
-        from core.livekit.launcher import start_livekit_server
+        from core.livekit.media_server import start_livekit_server
         ok = await run_in_threadpool(start_livekit_server)
         if not ok:
             return {"success": False, "ready": False, "agent_ready": False}
@@ -328,7 +328,7 @@ async def api_launch_interview(config: InterviewConfig = InterviewConfig()):
         # the device-setup screen.
         _prepare_interview_env(config.max_questions, config.time_budget_mins)
 
-        from core.livekit.launcher import start_livekit_server
+        from core.livekit.media_server import start_livekit_server
         if not await run_in_threadpool(start_livekit_server):
             raise HTTPException(500, "Failed to start LiveKit server")
 
@@ -400,7 +400,7 @@ async def api_text_end():
 # ── Stop Interview ──
 @app.post("/api/stop-interview")
 async def api_stop_interview():
-    from core.livekit.launcher import cleanup
+    from core.livekit.media_server import cleanup
     cleanup()
     _stop_agent_process()
     _session["livekit_launched"] = False
@@ -453,7 +453,7 @@ async def api_evaluate_session(body: SessionEvalInput):
         raise HTTPException(400, "No interview transcript available to evaluate")
 
     try:
-        from core.pipeline.session_eval import evaluate_session
+        from core.pipeline.post_interview import evaluate_session
         report = await run_in_threadpool(
             evaluate_session,
             conversation=conversation,

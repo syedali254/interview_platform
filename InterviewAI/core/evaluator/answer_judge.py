@@ -25,7 +25,7 @@ from core.config import (
     SCORE_STRONG_THRESHOLD,
     SCORE_WEAK_THRESHOLD,
 )
-from core.llm import call_llm, call_llm_json
+from core.gemini_client import call_llm, call_llm_json
 
 # Spread between the two rubric orderings, in points.
 CONSISTENCY_HIGH = 8

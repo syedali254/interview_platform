@@ -4,7 +4,7 @@ Used after the interview to identify skills whose evidence was too thin to
 support a confident verdict — the ones that warranted another question.
 """
 
-from core.graph.state import InterviewState
+from core.graph.skill_state import InterviewState
 
 
 def decide_follow_up(

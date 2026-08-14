@@ -1,6 +1,6 @@
 """The interviewer's instructions, shared by both interview modes.
 
-Voice (core/livekit/run_agent.py) and text (core/pipeline/text_interview.py)
+Voice (core/livekit/voice_agent.py) and text (core/pipeline/text_interview.py)
 run on completely different transports, but they must interview the same way:
 same persona, same adaptive behaviour, same rules for redirecting and closing.
 Keeping one prompt here is what makes that true — if the two modes had their

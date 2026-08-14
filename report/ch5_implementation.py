@@ -12,7 +12,7 @@ def chapter_5(doc, fig):
          "JavaScript, excluding dependencies and generated assets. The backend is organised by "
          "module responsibility rather than by technical layer, so that the correspondence "
          "between the design in Chapter 4 and the code is direct: a reader looking for Module 6 "
-         "finds it in core/evaluator/evaluator.py.")
+         "finds it in core/evaluator/answer_judge.py.")
     figure(doc, fig("fig09_deployment"),
            "Figure 9  Deployment and process view. Video and audio are analysed on the "
            "candidate's device; only derived numeric features cross the network.")

@@ -4,7 +4,7 @@ Generates the interview question set from the skill-graph topics, then orders
 it so the highest-priority skill gaps are probed first.
 """
 
-from core.llm import call_llm_json
+from core.gemini_client import call_llm_json
 
 
 def generate_interview_questions(topics: list, cv_data: dict, jd_data: dict) -> dict:
