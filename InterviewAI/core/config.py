@@ -39,6 +39,12 @@ MAX_QUESTIONS_PER_SESSION = 15  # Adaptive: driven by topic coverage, not fixed 
 MAX_FOLLOW_UP_QUESTIONS = 2
 SKILL_VERIFICATION_QUESTIONS = 3
 
+# Below this a reply carries no assessable content ("yes", "I think so").
+# The session pipeline uses it to decide what to send for scoring and the
+# evaluator uses it to refuse anything that slips through; they must agree, so
+# the threshold lives here rather than being declared in both.
+MIN_ANSWER_WORDS = 3
+
 # ---------------------------------------------------------------------------
 # Graph state statuses for live interview
 # ---------------------------------------------------------------------------

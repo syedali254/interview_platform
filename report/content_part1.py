@@ -2,6 +2,7 @@
 
 from docx.shared import Pt
 
+from values import probe_cases as _probe_scores
 from docx_kit import (
     figure, h1, h2, numbered, page_break, para, quote, toc_entry, GREY, HEAD2,
 )
@@ -9,11 +10,6 @@ from docx_kit import (
 STUDENT_NUMBER = "[STUDENT NUMBER]"
 
 
-def _probe_scores(extra):
-    """Track B probe scores, keyed by case, from the tracked evidence fixture."""
-    cases = ((extra or {}).get("track_b", {})
-             .get("behavioural_probe", {}).get("cases") or [])
-    return {c["case"].split(",")[0]: c for c in cases}
 
 
 # ═════════════════════════════════════════════════════════════════════════

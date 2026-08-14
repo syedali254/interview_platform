@@ -20,6 +20,7 @@ proposal describes:
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
+from core.config import MIN_ANSWER_WORDS
 from core.evaluator.evaluator import evaluate_answer
 from core.evaluator.fusion import compute_fusion_score
 from core.evaluator.integrity import assess_integrity
@@ -27,10 +28,6 @@ from core.graph.state import InterviewState
 from core.graph.traversal import decide_follow_up
 from core.llm import call_llm_json
 from core.report.generator import build_report
-
-# Only replies below this are treated as non-answers ("yes", "okay") rather
-# than something to score. Everything longer is evaluated.
-MIN_ANSWER_WORDS = 3
 
 # How many answers to evaluate concurrently. Each evaluation is three LLM
 # calls (one reference answer, two rubric orderings), so this is a

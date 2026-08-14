@@ -20,12 +20,12 @@ docs/track-b-rejection.md.
 
 from datetime import datetime
 
-from core.config import SCORE_STRONG_THRESHOLD, SCORE_WEAK_THRESHOLD
+from core.config import (
+    MIN_ANSWER_WORDS,
+    SCORE_STRONG_THRESHOLD,
+    SCORE_WEAK_THRESHOLD,
+)
 from core.llm import call_llm, call_llm_json
-
-# Below this an answer carries no assessable content ("yes", "I think so").
-# Anything longer goes to the judge and is scored on its merits.
-MIN_ANSWER_WORDS = 3
 
 # Spread between the two rubric orderings, in points.
 CONSISTENCY_HIGH = 8

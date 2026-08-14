@@ -6,23 +6,11 @@ rebuilding produces a chapter consistent with the new measurements.
 """
 
 from docx_kit import figure, h1, h2, para, table
+from values import fmt as _fmt, p_value as _p_value
 
 
-def _fmt(value, spec="{:.3f}", missing="not measured"):
-    if value is None:
-        return missing
-    try:
-        return spec.format(value)
-    except (TypeError, ValueError):
-        return str(value)
 
 
-def _p_value(p):
-    if p is None:
-        return "not measured"
-    if p < 0.001:
-        return "p < 0.001"
-    return f"p = {p:.3f}"
 
 
 def chapter_6(doc, fig, stats, extra):

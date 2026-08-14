@@ -4,41 +4,18 @@ Chapter 6 lives in content_ch6.py because it renders from measured data.
 """
 
 from docx_kit import bullet, code, h1, h2, h3, numbered, para, table, GREY
+from values import (
+    fmt as _fmt, p_value as _p_value, probe_cases as _probe,
+    level_mean as _level_mean, strong_threshold as _strong_threshold,
+)
 
 
-def _fmt(value, spec="{:.3f}", missing="not measured"):
-    if value is None:
-        return missing
-    try:
-        return spec.format(value)
-    except (TypeError, ValueError):
-        return str(value)
 
 
-def _probe(extra):
-    """Track B probe cases, keyed by their opening phrase."""
-    cases = ((extra or {}).get("track_b", {})
-             .get("behavioural_probe", {}).get("cases") or [])
-    return {c["case"].split(",")[0]: c for c in cases}
 
 
-def _level_mean(stats, level):
-    return ((stats or {}).get("e1_discriminant_validity", {})
-            .get("by_level", {}).get(level, {}).get("mean", 0))
 
 
-def _strong_threshold(stats):
-    return ((stats or {}).get("e1_discriminant_validity", {})
-            .get("calibration", {}).get("thresholds_in_use", {})
-            .get("medium_strong", 70))
-
-
-def _p_value(p):
-    if p is None:
-        return "not measured"
-    if p < 0.001:
-        return "p < 0.001"
-    return f"p = {p:.3f}"
 
 
 # ═════════════════════════════════════════════════════════════════════════
