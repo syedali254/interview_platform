@@ -29,10 +29,16 @@ OUTPUT = HERE / "CMP7200_Project_Report.docx"
 sys.path.insert(0, str(HERE))
 
 from docx_kit import add_page_numbers, new_document  # noqa: E402
-import content_part1 as p1  # noqa: E402
-import content_part2 as p2  # noqa: E402
-import content_part3 as p3  # noqa: E402
-import content_ch6  # noqa: E402
+import front_matter          # noqa: E402
+import ch1_introduction       # noqa: E402
+import ch2_literature         # noqa: E402
+import ch3_methodology        # noqa: E402
+import ch4_design             # noqa: E402
+import ch5_implementation     # noqa: E402
+import ch6_evaluation         # noqa: E402
+import ch7_reflection         # noqa: E402
+import ch8_conclusion         # noqa: E402
+import back_matter            # noqa: E402
 
 
 def fig(name: str, experiments: bool = False) -> Path:
@@ -154,28 +160,21 @@ def main():
     doc = new_document()
     add_page_numbers(doc)
 
-    print("  Front matter...")
-    p1.front_matter(doc, fig, stats, extra)
-    print("  Chapter 1  Introduction")
-    p1.chapter_1(doc, fig)
-    print("  Chapter 2  Literature Review")
-    p1.chapter_2(doc, fig)
-    print("  Chapter 3  Research Methodology")
-    p2.chapter_3(doc, fig)
-    print("  Chapter 4  System Design")
-    p2.chapter_4(doc, fig)
-    print("  Chapter 5  Implementation")
-    p2.chapter_5(doc, fig)
-    print("  Chapter 6  Evaluation and Results")
-    content_ch6.chapter_6(doc, fig, stats, extra)
-    print("  Chapter 7  Critical Reflection")
-    p3.chapter_7(doc, fig, stats, extra)
-    print("  Chapter 8  Conclusion and Future Work")
-    p3.chapter_8(doc, fig, stats, extra)
-    print("  References")
-    p3.references(doc)
-    print("  Appendices")
-    p3.appendices(doc, fig, extra)
+    for label, render in (
+        ("Front matter",                  lambda: front_matter.front_matter(doc, fig, stats, extra)),
+        ("Chapter 1  Introduction",       lambda: ch1_introduction.chapter_1(doc, fig)),
+        ("Chapter 2  Literature Review",  lambda: ch2_literature.chapter_2(doc, fig)),
+        ("Chapter 3  Methodology",        lambda: ch3_methodology.chapter_3(doc, fig)),
+        ("Chapter 4  System Design",      lambda: ch4_design.chapter_4(doc, fig)),
+        ("Chapter 5  Implementation",     lambda: ch5_implementation.chapter_5(doc, fig)),
+        ("Chapter 6  Evaluation",         lambda: ch6_evaluation.chapter_6(doc, fig, stats, extra)),
+        ("Chapter 7  Reflection",         lambda: ch7_reflection.chapter_7(doc, fig, stats, extra)),
+        ("Chapter 8  Conclusion",         lambda: ch8_conclusion.chapter_8(doc, fig, stats, extra)),
+        ("References",                    lambda: back_matter.references(doc)),
+        ("Appendices",                    lambda: back_matter.appendices(doc, fig, extra)),
+    ):
+        print(f"  {label}")
+        render()
 
     target = OUTPUT
     try:

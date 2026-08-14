@@ -8,8 +8,6 @@
 # these would break the artefact silently on someone else's machine.
 #
 # To move deliberately: change a pin, run the tests, and commit both together.
-# requirements-lock.txt records the full resolved tree including transitive
-# dependencies, for the case where even a compatible resolution misbehaves.
 
 fastapi==0.141.1
 uvicorn[standard]==0.50.2

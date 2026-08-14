@@ -36,7 +36,6 @@ Friend-Project/
 │   ├── docs/                Evidence for design decisions
 │   ├── requirements.txt     Runtime dependencies, version-pinned
 │   ├── requirements-dev.txt Test and document-build tooling
-│   ├── requirements-lock.txt Full resolved tree (fallback)
 │   ├── SETUP.md             Setup and troubleshooting guide
 │   └── PROJECT_DOCS.docx    Technical handover document
 │
@@ -48,10 +47,14 @@ Friend-Project/
 ├── report/                  The dissertation (Assessment 2)
 │   ├── CMP7200_Project_Report.docx      ← the submission
 │   ├── build_report.py      Rebuilds the document end to end
-│   ├── diagrams.py          Generates all 11 architecture figures
+│   ├── front_matter.py      Title page, abstract, contents
+│   ├── ch1_introduction.py  … one module per chapter, through
+│   ├── ch8_conclusion.py       to conclusions and future work
+│   ├── back_matter.py       References and appendices
+│   ├── diagrams.py          Generates the 11 architecture figures
 │   ├── figkit.py            Figure layout engine with collision checking
 │   ├── docx_kit.py          Document primitives
-│   └── content_*.py         Chapter content
+│   └── values.py            Shared access to the measured results
 │
 └── proposal/                Assessment 1, as submitted, plus the brief
 ```
