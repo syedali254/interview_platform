@@ -7,15 +7,15 @@
 # failure here is not fatal to the application.
 
 # Test suite — tests/test_core.py
-pytest>=8.0.0
+pytest==9.1.1
 
 # Evaluation harness statistics and figures — experiments/run_evaluation.py
-scipy>=1.11.0
-matplotlib>=3.8.0
+scipy==1.17.1
+matplotlib==3.11.0
 
 # Dissertation build — report/build_report.py, report/diagrams.py
-python-docx>=1.1.0
+python-docx==1.2.0
 
 # Viva deck build — viva/build_viva.py
-python-pptx>=1.0.0
-Pillow>=10.0.0
+python-pptx==1.0.2
+Pillow==12.3.0

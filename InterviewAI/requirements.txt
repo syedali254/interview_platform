@@ -1,29 +1,42 @@
-fastapi>=0.115.0
-uvicorn[standard]>=0.30.0
-livekit>=1.1.0
-livekit-agents>=1.6.0
-livekit-api>=1.1.0
-livekit-plugins-deepgram>=1.6.0
-livekit-plugins-elevenlabs>=1.6.0
-livekit-plugins-google>=1.6.0
-livekit-plugins-silero>=1.6.0
-google-genai>=1.0.0
-python-dotenv>=1.0.0
-PyMuPDF>=1.24.0
-networkx>=3.2
-numpy>=1.26.0
-pandas>=2.1.0
-json_repair>=0.30.0
-requests>=2.31.0
-aiohttp>=3.9.0
-websockets>=12.0
-protobuf>=4.25.0
-httpx>=0.27.0
-pydantic>=2.0.0
-python-multipart>=0.0.6
+# Runtime dependencies, pinned to the versions this project was built and
+# verified against.
+#
+# Pinned rather than floored on purpose. With >= constraints a fresh checkout
+# installs whatever is newest on the day, which is not what was tested here —
+# during setup that difference already produced pandas 3.0.5 against the 3.0.3
+# in use, and livekit-agents 1.6.10 against 1.6.5. A major release of any of
+# these would break the artefact silently on someone else's machine.
+#
+# To move deliberately: change a pin, run the tests, and commit both together.
+# requirements-lock.txt records the full resolved tree including transitive
+# dependencies, for the case where even a compatible resolution misbehaves.
+
+fastapi==0.141.1
+uvicorn[standard]==0.50.2
+livekit==1.1.13
+livekit-agents==1.6.5
+livekit-api==1.1.1
+livekit-plugins-deepgram==1.6.4
+livekit-plugins-elevenlabs==1.6.4
+livekit-plugins-google==1.6.5
+livekit-plugins-silero==1.6.4
+google-genai==2.11.0
+python-dotenv==1.2.2
+PyMuPDF==1.28.0
+networkx==3.6.1
+numpy==2.4.6
+pandas==3.0.3
+json_repair==0.59.10
+requests==2.34.2
+aiohttp==3.14.1
+websockets==15.0.1
+protobuf==6.33.6
+httpx==0.28.1
+pydantic==2.13.4
+python-multipart==0.0.32
 # M9: Behavioural integrity (Isolation Forest)
-scikit-learn>=1.3.0
-joblib>=1.3.0
+scikit-learn==1.9.0
+joblib==1.5.3
 
 # M6 answer evaluation is done entirely by the Gemini LLM-as-Judge in
 # core/evaluator/evaluator.py. The trained-classifier alternative
