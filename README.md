@@ -25,6 +25,8 @@ accountable for how stable its scores are.
 Friend-Project/
 ├── run.bat                  One-click setup and launch (Windows)
 ├── README.md                This file
+├── PROJECT_GUIDE.docx       Full project guide — problem, modules, tech, files
+├── build_guide.py           Regenerates the guide from the live project
 │
 ├── InterviewAI/             The artefact
 │   ├── server.py            FastAPI application and API surface
@@ -36,8 +38,7 @@ Friend-Project/
 │   ├── docs/                Evidence for design decisions
 │   ├── requirements.txt     Runtime dependencies, version-pinned
 │   ├── requirements-dev.txt Test and document-build tooling
-│   ├── SETUP.md             Setup and troubleshooting guide
-│   └── PROJECT_DOCS.docx    Technical handover document
+│   └── SETUP.md             Setup and troubleshooting guide
 │
 ├── viva/                    The presentation (Assessment 3)
 │   ├── CMP7200_Viva_Presentation.pptx
