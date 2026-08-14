@@ -144,27 +144,40 @@ def chapter_6(doc, fig, stats, extra):
          "Because the ordering is sound and only the thresholds are wrong, the defect is "
          "correctable in principle. Table 8 contrasts the thresholds in use with the boundaries "
          "the observed distributions imply.")
+    cal = e1.get("calibration", {})
+    in_use = cal.get("thresholds_in_use", {})
+    rows = []
+    for key, name, edge in (("weak_medium", "Weak / medium", "weak_medium"),
+                            ("medium_strong", "Medium / strong", "medium_strong")):
+        b = cal.get(key) or {}
+        if b.get("separable"):
+            gap = (f"{b['clean_separator']:.1f}  (max lower {b['max_lower']:.1f}, "
+                   f"min upper {b['min_upper']:.1f})")
+        else:
+            gap = "none — the distributions overlap"
+        rows.append([name, f"{in_use.get(edge, 0):.0f}",
+                     f"{b.get('midpoint_of_means', 0):.1f}", gap])
     table(doc,
           ["Boundary", "In use", "Midpoint of adjacent means", "Widest observed gap"],
-          [
-              ["Weak / medium", "40", "72.9", "76.8  (max weak 67.0, min medium 86.5)"],
-              ["Medium / strong", "70", "95.5", "none — the distributions overlap"],
-          ],
+          rows,
           widths=[3.4, 2.2, 4.6, 6.2], font_size=9,
           caption="Table 8  Current thresholds against empirically implied boundaries.")
+    wm = cal.get("weak_medium") or {}
     para(doc,
-         "A clean separator exists between weak and medium answers at approximately 77, nearly "
-         "double the threshold currently in use. No separator exists between medium and strong, "
-         "because those distributions overlap: on this corpus the judge cannot reliably "
-         "distinguish a partially correct answer from an excellent one in absolute terms, only in "
-         "relative ones.")
+         f"A clean separator exists between weak and medium answers at approximately "
+         f"{wm.get('clean_separator', 0):.0f}, against a threshold of "
+         f"{in_use.get('weak_medium', 0):.0f} currently in use. No separator exists between "
+         f"medium and strong, because those distributions overlap: on this corpus the judge "
+         f"cannot reliably distinguish a partially correct answer from an excellent one in "
+         f"absolute terms, only in relative ones.")
     para(doc,
-         "The thresholds were deliberately not changed on the strength of this run. Eighteen "
-         "answers across six questions is far too small a sample on which to move a decision "
-         "boundary affecting every future candidate, and fitting thresholds to this corpus would "
-         "be precisely the overfitting criticised elsewhere in this dissertation. What the result "
-         "does establish is that the current values are indefensible, and that recalibration "
-         "against a larger human-anchored corpus is the highest-priority next step.")
+         f"The thresholds were deliberately not changed on the strength of this run. "
+         f"{meta['n_graded_answers']} answers across {meta['n_questions']} questions is far too "
+         f"small a sample on which to move a decision boundary affecting every future candidate, "
+         f"and fitting thresholds to this corpus would be precisely the overfitting criticised "
+         f"elsewhere in this dissertation. What the result does establish is that the current "
+         f"values are indefensible, and that recalibration against a larger human-anchored corpus "
+         f"is the highest-priority next step.")
     para(doc,
          "The deeper implication concerns what the score means. A judge that ranks well but "
          "calibrates poorly is a comparative instrument, not an absolute one: it supports the "
@@ -340,15 +353,20 @@ def chapter_6(doc, fig, stats, extra):
          "returned a 50% match, correctly identifying Kubernetes and AWS as required skills absent "
          "from the CV and promoting them to high-priority topics. The flattening step then moved "
          "the Kubernetes question ahead of questions about skills already evidenced.")
+    rows = []
+    for ex in (extra.get("worked_example", {}).get("exchanges") or []):
+        scored = ex.get("score") is not None
+        rows.append([
+            ex["exchange"],
+            ex.get("skill") or "—",
+            f"{ex['score']:.1f}" if scored else "not scored",
+            ", ".join(f"{c:.1f}" for c in ex["call_scores"]) if scored else "—",
+            f"{ex['spread']:.1f}" if scored else "—",
+            ex.get("consistency") or "—",
+        ])
     table(doc,
           ["Exchange", "Skill", "Score", "Judge passes", "Spread", "Consistency"],
-          [
-              ["Greeting / readiness", "—", "not scored", "—", "—", "—"],
-              ["API design and idempotency", "REST API", "91.5", "92.0, 91.0", "1.0", "high"],
-              ["Kubernetes troubleshooting", "Kubernetes", "50.0", "55.0, 45.0", "10.0", "moderate"],
-              ["Mentoring a junior engineer", "Mentoring", "85.0", "85.0, 85.0", "0.0", "high"],
-              ["Sign-off", "—", "not scored", "—", "—", "—"],
-          ],
+          rows,
           widths=[5.0, 3.0, 2.2, 3.0, 1.8, 2.4], font_size=9,
           caption="Table 11  Per-answer results from the worked example.")
     para(doc,

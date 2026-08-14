@@ -1,0 +1,31 @@
+{
+  "_note": "The end-to-end verification session reported in the dissertation's worked example. Recorded from a full pipeline run against a synthetic candidate with live model calls at every stage. This file is the single source for these figures; the dissertation reads from it rather than restating them inline.",
+  "recorded": "2026-08-09",
+  "candidate": {
+    "profile": "Synthetic backend engineer, four years of Python experience",
+    "role": "Senior Backend Engineer",
+    "required_skills": ["Python", "Kubernetes", "PostgreSQL", "REST APIs", "Microservices", "AWS"]
+  },
+  "skill_graph": {
+    "match_percentage": 50.0,
+    "missing_required": ["Kubernetes", "AWS"],
+    "note": "Both absent skills were promoted to high-priority interview topics, and the flattening step moved the Kubernetes question ahead of questions about skills already evidenced."
+  },
+  "exchanges": [
+    {"exchange": "Greeting / readiness", "skill": null, "kind": "logistics",
+     "score": null, "call_scores": null, "spread": null, "consistency": null},
+    {"exchange": "API design and idempotency", "skill": "REST API", "kind": "technical",
+     "score": 91.5, "call_scores": [92.0, 91.0], "spread": 1.0, "consistency": "high"},
+    {"exchange": "Kubernetes troubleshooting", "skill": "Kubernetes", "kind": "technical",
+     "score": 50.0, "call_scores": [55.0, 45.0], "spread": 10.0, "consistency": "moderate"},
+    {"exchange": "Mentoring a junior engineer", "skill": "Mentoring", "kind": "behavioural",
+     "score": 85.0, "call_scores": [85.0, 85.0], "spread": 0.0, "consistency": "high"},
+    {"exchange": "Sign-off", "skill": null, "kind": "logistics",
+     "score": null, "call_scores": null, "spread": null, "consistency": null}
+  ],
+  "observations": [
+    "Greeting and sign-off were classified as logistics and excluded from scoring, so they did not dilute the average.",
+    "The candidate's admission that they had not used Kubernetes scored 50 rather than zero, because the rubric credits accuracy separately from completeness and an honest acknowledgement of a gap contains nothing incorrect.",
+    "That same answer carried the widest judge disagreement of the session at 10 points - the only moderate-consistency score in the interview, on the only genuinely partial answer."
+  ]
+}

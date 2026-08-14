@@ -1,9 +1,7 @@
 """Chapters 3-5: Methodology, System Design, Implementation."""
 
-from docx.shared import Pt
-
 from docx_kit import (
-    bullet, code, figure, h1, h2, h3, numbered, para, quote, rich, table, GREY,
+    bullet, figure, h1, h2, h3, para, table,
 )
 
 

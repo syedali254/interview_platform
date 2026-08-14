@@ -39,6 +39,26 @@
   },
   "e1_discriminant_validity": {
     "n": 18,
+    "calibration": {
+      "thresholds_in_use": {
+        "weak_medium": 40.0,
+        "medium_strong": 70.0
+      },
+      "weak_medium": {
+        "midpoint_of_means": 72.9,
+        "max_lower": 67.0,
+        "min_upper": 86.5,
+        "separable": true,
+        "clean_separator": 76.8
+      },
+      "medium_strong": {
+        "midpoint_of_means": 95.5,
+        "max_lower": 96.5,
+        "min_upper": 96.0,
+        "separable": false,
+        "clean_separator": null
+      }
+    },
     "spearman_rho": 0.9204,
     "spearman_p": 6.29e-08,
     "quadratic_weighted_kappa": 0.56,

@@ -22,7 +22,7 @@ import textwrap
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.patches import Circle, FancyArrowPatch, FancyBboxPatch
+from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 
 # ── Visual grammar ───────────────────────────────────────────────────────
 INK = "#1b2733"
@@ -170,10 +170,6 @@ class Canvas:
             chars = max(5, int(chars * width_units / widest) - 1)
             wrapped = self._wrap_at(text, chars)
         return wrapped
-
-    def text_height(self, text: str, width_units: float, fontsize: float) -> float:
-        return self._units_for_lines(
-            self.wrap(text, width_units, fontsize).count("\n") + 1, fontsize)
 
     # ── Primitives ───────────────────────────────────────────────────────
 

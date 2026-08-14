@@ -21,8 +21,8 @@ from pathlib import Path
 
 from pptx import Presentation
 from pptx.dml.color import RGBColor
-from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
-from pptx.util import Emu, Inches, Pt
+from pptx.enum.text import PP_ALIGN
+from pptx.util import Inches, Pt
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
@@ -108,7 +108,6 @@ class Deck:
             f.name, f.size, f.bold, f.italic = font, Pt(size), bold, italic
             f.color.rgb = colour
             if space:
-                from pptx.oxml.ns import qn
                 r.font._rPr.set("spc", str(int(space * 100)))
         return box
 

@@ -3,8 +3,7 @@
 from docx.shared import Pt
 
 from docx_kit import (
-    bullet, code, figure, h1, h2, h3, numbered, page_break, para, quote,
-    rich, table, toc_entry, GREY, HEAD2,
+    figure, h1, h2, numbered, page_break, para, quote, toc_entry, GREY, HEAD2,
 )
 
 STUDENT_NUMBER = "[STUDENT NUMBER]"

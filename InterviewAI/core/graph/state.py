@@ -34,12 +34,6 @@ class SkillNodeState:
     def avg_score(self) -> float:
         return sum(self.scores) / len(self.scores) if self.scores else 0.0
 
-    def is_verified(self) -> bool:
-        return self.status in (STATUS_VERIFIED_STRONG, STATUS_VERIFIED_WEAK, STATUS_CONFIRMED_GAP)
-
-    def needs_more_questions(self) -> bool:
-        return self.questions_asked < SKILL_VERIFICATION_QUESTIONS and not self.is_verified()
-
     def record_answer(self, score: float):
         self.scores.append(score)
         self.questions_asked += 1
@@ -84,10 +78,6 @@ class InterviewState:
     @property
     def confirmed_gaps(self) -> list[str]:
         return [s for s, n in self.nodes.items() if n.status == STATUS_CONFIRMED_GAP]
-
-    @property
-    def incomplete_skills(self) -> list[str]:
-        return [s for s, n in self.nodes.items() if n.needs_more_questions()]
 
     def get_node(self, skill: str) -> SkillNodeState:
         return self.nodes.get(skill)

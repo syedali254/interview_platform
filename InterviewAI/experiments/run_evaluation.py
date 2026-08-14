@@ -397,8 +397,33 @@ def compute_statistics(raw: dict) -> dict:
 
     sw_u, sw_p = st.mannwhitneyu(strong, weak, alternative="greater") if strong.size and weak.size else (None, None)
 
+    # Where the band boundaries would sit if they were fitted to what the judge
+    # actually produces, rather than chosen a priori. Reported so the gap
+    # against the thresholds in use is measured rather than asserted; see the
+    # threshold-calibration discussion in the dissertation for why they were
+    # not adopted on a sample this size.
+    def _boundary(lower, upper):
+        if not lower.size or not upper.size:
+            return None
+        gap_lo, gap_hi = float(lower.max()), float(upper.min())
+        return {
+            "midpoint_of_means": round((float(lower.mean()) + float(upper.mean())) / 2, 1),
+            "max_lower": round(gap_lo, 1),
+            "min_upper": round(gap_hi, 1),
+            "separable": bool(gap_hi > gap_lo),
+            "clean_separator": round((gap_lo + gap_hi) / 2, 1) if gap_hi > gap_lo else None,
+        }
+
+    calibration = {
+        "thresholds_in_use": {"weak_medium": BAND_EDGES[0],
+                              "medium_strong": BAND_EDGES[1]},
+        "weak_medium": _boundary(weak, medium),
+        "medium_strong": _boundary(medium, strong),
+    }
+
     e1 = {
         "n": int(scores.size),
+        "calibration": calibration,
         "spearman_rho": round(float(rho), 4),
         "spearman_p": float(f"{rho_p:.3e}"),
         "quadratic_weighted_kappa": round(float(kappa), 4),

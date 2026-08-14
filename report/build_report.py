@@ -22,12 +22,13 @@ HERE = Path(__file__).resolve().parent
 PROJECT = HERE.parent / "InterviewAI"
 FIGURES = HERE / "figures"
 EXP_FIGURES = PROJECT / "experiments" / "figures"
-STATS_PATH = PROJECT / "experiments" / "results" / "statistics.json"
+RESULTS = PROJECT / "experiments" / "results"
+STATS_PATH = RESULTS / "statistics.json"
 OUTPUT = HERE / "CMP7200_Project_Report.docx"
 
 sys.path.insert(0, str(HERE))
 
-from docx_kit import add_page_numbers, new_document, page_break  # noqa: E402
+from docx_kit import add_page_numbers, new_document  # noqa: E402
 import content_part1 as p1  # noqa: E402
 import content_part2 as p2  # noqa: E402
 import content_part3 as p3  # noqa: E402
@@ -44,6 +45,14 @@ def fig(name: str, experiments: bool = False) -> Path:
             f"Run diagrams.py, or the evaluation harness for result figures."
         )
     return path
+
+
+def load_json(path: Path, label: str) -> dict:
+    """Load a tracked evidence fixture, warning rather than failing if absent."""
+    if not path.exists():
+        print(f"  ! {label} not found at {path} — the section using it will be thin.")
+        return {}
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def load_stats() -> dict | None:
@@ -136,7 +145,11 @@ def main():
     if tests.get("count"):
         state = "all passing" if tests.get("ok") else f"{tests.get('failed')} FAILING"
         print(f"  Tests: {tests['count']} ({state})")
-    extra = {"tests": tests}
+    extra = {
+        "tests": tests,
+        "track_b": load_json(RESULTS / "track_b_evidence.json", "Track B evidence"),
+        "worked_example": load_json(RESULTS / "worked_example.json", "worked example"),
+    }
 
     doc = new_document()
     add_page_numbers(doc)
@@ -156,7 +169,7 @@ def main():
     print("  Chapter 6  Evaluation and Results")
     content_ch6.chapter_6(doc, fig, stats, extra)
     print("  Chapter 7  Critical Reflection")
-    p3.chapter_7(doc, fig, stats)
+    p3.chapter_7(doc, fig, stats, extra)
     print("  Chapter 8  Conclusion and Future Work")
     p3.chapter_8(doc, fig, stats)
     print("  References")

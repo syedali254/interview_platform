@@ -1,0 +1,64 @@
+{
+  "_note": "Measurements taken from the trained Track B classifier immediately before it was removed from the codebase. The model artefact itself was never committed (core/evaluator/models/*.joblib is gitignored), so these figures cannot be recomputed from this repository - they are the record. Reproduction instructions are in docs/track-b-rejection.md. This file is the single source for these numbers; the dissertation and the viva deck both read from it rather than restating them.",
+  "recorded": "2026-08-09",
+  "model": {
+    "type": "XGBRegressor",
+    "n_features": 6,
+    "saved_hyperparameters": {
+      "n_estimators": 100,
+      "max_depth": 4,
+      "learning_rate": 0.1,
+      "reg_lambda": null
+    },
+    "training_script_hyperparameters": {
+      "n_estimators": 200,
+      "max_depth": 3,
+      "learning_rate": 0.08,
+      "reg_lambda": 1.0
+    },
+    "provenance": {
+      "model_written": "2026-08-01T18:40:07",
+      "training_script_modified": "2026-08-01T20:19:07",
+      "gap_minutes": 99,
+      "note": "The saved model predates the correction of the reference-answer data leak, so it is the output of the defective pipeline. No training metrics file was ever produced, so held-out performance was never recorded."
+    }
+  },
+  "feature_importance": {
+    "semantic_similarity": 0.5434,
+    "word_count_norm": 0.1947,
+    "keyword_coverage": 0.1847,
+    "sentence_count": 0.0391,
+    "specificity_score": 0.0217,
+    "fluency_score": 0.0164
+  },
+  "behavioural_probe": {
+    "reference_answer": "Machine learning is a field of artificial intelligence where models learn patterns from data to make predictions without being explicitly programmed with rules.",
+    "cases": [
+      {
+        "case": "Answer identical to the reference",
+        "semantic_similarity": 1.0,
+        "score": 64.7,
+        "system_verdict": "weak"
+      },
+      {
+        "case": "Strong paraphrase, correct and complete",
+        "semantic_similarity": 0.907,
+        "score": 39.2,
+        "system_verdict": "gap"
+      },
+      {
+        "case": "Deliberately vague, incorrect answer",
+        "semantic_similarity": 0.362,
+        "score": 29.5,
+        "system_verdict": "gap"
+      }
+    ],
+    "separation_strong_paraphrase_vs_weak": 9.7,
+    "separation_verbatim_vs_paraphrase": 25.5
+  },
+  "removed_files": [
+    {"path": "core/evaluator/track_b.py", "lines": 269},
+    {"path": "core/evaluator/train_model.py", "lines": 256},
+    {"path": "core/evaluator/models/answer_scorer_xgb.joblib", "bytes": 138048, "tracked_by_git": false}
+  ]
+}

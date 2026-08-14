@@ -9,7 +9,6 @@ front matter and appendices are set apart deliberately.
 from __future__ import annotations
 
 from docx import Document
-from docx.enum.section import WD_SECTION
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
 from docx.oxml import OxmlElement
@@ -137,24 +136,6 @@ def para(doc, text="", *, bold=False, italic=False, size=None, colour=None,
         p.paragraph_format.left_indent = Cm(indent)
     if text:
         _style_run(p.add_run(text), bold=bold, italic=italic, size=size, colour=colour)
-    return p
-
-
-def rich(doc, *segments, align="justify", space_after=8, indent=None):
-    """A paragraph built from (text, **style) segments, for inline emphasis."""
-    p = doc.add_paragraph()
-    p.alignment = {"justify": WD_ALIGN_PARAGRAPH.JUSTIFY,
-                   "left": WD_ALIGN_PARAGRAPH.LEFT}[align]
-    p.paragraph_format.line_spacing = LINE_SPACING
-    p.paragraph_format.space_after = Pt(space_after)
-    if indent:
-        p.paragraph_format.left_indent = Cm(indent)
-    for seg in segments:
-        if isinstance(seg, str):
-            _style_run(p.add_run(seg))
-        else:
-            text, style = seg
-            _style_run(p.add_run(text), **style)
     return p
 
 

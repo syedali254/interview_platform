@@ -3,12 +3,7 @@
 Chapter 6 lives in content_ch6.py because it renders from measured data.
 """
 
-from docx.shared import Pt
-
-from docx_kit import (
-    bullet, code, figure, h1, h2, h3, numbered, page_break, para, quote,
-    rich, table, GREY,
-)
+from docx_kit import bullet, code, h1, h2, h3, numbered, para, table, GREY
 
 
 def _fmt(value, spec="{:.3f}", missing="not measured"):
@@ -32,7 +27,7 @@ def _p_value(p):
 # Chapter 7 — Critical Reflection
 # ═════════════════════════════════════════════════════════════════════════
 
-def chapter_7(doc, fig, stats):
+def chapter_7(doc, fig, stats, extra=None):
     h1(doc, "7.  Critical Reflection")
 
     h2(doc, "7.1  Achievement against objectives")
@@ -549,29 +544,23 @@ def appendices(doc, fig, extra):
          "saved model was the output of the defective pipeline. No training metrics file was "
          "produced, so the model's held-out performance was never recorded.")
     para(doc, "Feature importances", bold=True, space_after=4)
+    tb = extra.get("track_b", {})
     table(doc,
           ["Feature", "Gain importance"],
-          [
-              ["semantic_similarity", "0.5434"],
-              ["word_count_norm", "0.1947"],
-              ["keyword_coverage", "0.1847"],
-              ["sentence_count", "0.0391"],
-              ["specificity_score", "0.0217"],
-              ["fluency_score", "0.0164"],
-          ],
+          [[name, f"{value:.4f}"]
+           for name, value in (tb.get("feature_importance") or {}).items()],
           widths=[7.5, 4.0], font_size=9,
           caption="One feature carries more weight than the other five combined — the signature "
                   "of a model that has learned a training artefact.")
     para(doc, "Behavioural probe", bold=True, space_after=4)
     para(doc,
          "Three answers scored against one fixed reference answer on machine learning.")
+    probe = tb.get("behavioural_probe", {})
     table(doc,
           ["Case", "Semantic similarity", "Model score", "System verdict"],
-          [
-              ["Answer identical to the reference", "1.000", "64.7 / 100", "weak"],
-              ["Strong paraphrase, correct and complete", "0.907", "39.2 / 100", "gap"],
-              ["Deliberately vague, incorrect answer", "0.362", "29.5 / 100", "gap"],
-          ],
+          [[c["case"], f"{c['semantic_similarity']:.3f}",
+            f"{c['score']:.1f} / 100", c["system_verdict"]]
+           for c in (probe.get("cases") or [])],
           widths=[6.4, 3.4, 3.0, 2.7], font_size=9)
     para(doc,
          "Two failures are visible. A perfect answer never approaches the 70-point strong "
