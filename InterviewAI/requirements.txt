@@ -41,3 +41,14 @@ joblib==1.5.3
 # (sentence-transformers + xgboost + shap) was implemented, evaluated and
 # rejected — see docs/track-b-rejection.md. Those packages are deliberately
 # not dependencies.
+
+# ── Testing and document builds ──────────────────────────────────────────
+# Not imported by the application. Installed together with the rest so a
+# fresh checkout can run the tests and rebuild the report, guide and deck
+# without a second setup step.
+pytest==9.1.1
+scipy==1.17.1
+matplotlib==3.11.0
+python-docx==1.2.0
+python-pptx==1.0.2
+Pillow==12.3.0

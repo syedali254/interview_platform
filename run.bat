@@ -155,19 +155,6 @@ if errorlevel 1 (
 )
 echo       Python packages OK.
 
-rem  Tooling for the tests and for rebuilding the report and the deck. The
-rem  application does not import any of it, so a failure here is reported and
-rem  stepped over rather than stopping the run.
-echo       Installing the test and document tools...
-venv\Scripts\python.exe -m pip install -r requirements-dev.txt --quiet --disable-pip-version-check
-if errorlevel 1 (
-    echo       NOTE: the optional test and document tools did not install.
-    echo             The interview platform still works; only "pytest" and the
-    echo             report and deck builders are unavailable.
-) else (
-    echo       Test and document tools OK.
-)
-
 rem ---------------------------------------------------------------
 rem  [6/7] Web app
 rem ---------------------------------------------------------------

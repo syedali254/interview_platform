@@ -25,8 +25,7 @@ accountable for how stable its scores are.
 Friend-Project/
 ├── run.bat                  One-click setup and launch (Windows)
 ├── README.md                This file
-├── PROJECT_GUIDE.docx       Full project guide — problem, modules, tech, files
-├── build_guide.py           Regenerates the guide from the live project
+├── PROJECT_GUIDE.docx       Project guide — problem, modules, tech, every file
 │
 ├── InterviewAI/             The artefact
 │   ├── server.py            FastAPI application and API surface
@@ -36,8 +35,7 @@ Friend-Project/
 │   ├── experiments/         Evaluation harness, results and figures
 │   ├── tests/               72-test unit suite
 │   ├── docs/                Evidence for design decisions
-│   ├── requirements.txt     Runtime dependencies, version-pinned
-│   ├── requirements-dev.txt Test and document-build tooling
+│   ├── requirements.txt     All dependencies, version-pinned
 │   └── SETUP.md             Setup and troubleshooting guide
 │
 ├── viva/                    The presentation (Assessment 3)
@@ -47,7 +45,8 @@ Friend-Project/
 │
 ├── report/                  The dissertation (Assessment 2)
 │   ├── CMP7200_Project_Report.docx      ← the submission
-│   ├── build_report.py      Rebuilds the document end to end
+│   ├── build_report.py      Rebuilds the dissertation end to end
+│   ├── build_guide.py       Rebuilds PROJECT_GUIDE.docx
 │   ├── front_matter.py      Title page, abstract, contents
 │   ├── ch1_introduction.py  … one module per chapter, through
 │   ├── ch8_conclusion.py       to conclusions and future work
@@ -105,7 +104,8 @@ so statistics and figures can be regenerated without re-spending API calls.
 
 ```bash
 cd report
-python build_report.py
+python build_report.py     # the dissertation
+python build_guide.py      # PROJECT_GUIDE.docx
 ```
 
 This renders every figure, runs the test suite to obtain the count it reports,

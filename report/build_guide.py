@@ -17,12 +17,12 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 PROJECT = ROOT / "InterviewAI"
 RESULTS = PROJECT / "experiments" / "results"
 OUTPUT = ROOT / "PROJECT_GUIDE.docx"
 
-sys.path.insert(0, str(ROOT / "report"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from docx.shared import Pt  # noqa: E402
 from docx_kit import (  # noqa: E402
@@ -37,15 +37,15 @@ FILES = [
     ("README.md", "Repository overview — what the project is, how to run it, how to "
                   "verify it, and the headline findings."),
     ("PROJECT_GUIDE.docx", "This document."),
-    ("build_guide.py", "Generates this document from the live project."),
+    ("report/build_guide.py", "Generates this document from the live project."),
     (".gitignore", "Excludes build output and secrets; the measured results are "
                    "deliberately tracked."),
     (".gitattributes", "Forces CRLF on batch files so run.bat survives cloning."),
 
     ("InterviewAI/server.py", "FastAPI application. Defines every API endpoint, holds the "
                               "session state, and spawns the voice agent subprocess."),
-    ("InterviewAI/requirements.txt", "Runtime dependencies, pinned to the verified versions."),
-    ("InterviewAI/requirements-dev.txt", "Test runner and document builders."),
+    ("InterviewAI/requirements.txt", "Every Python dependency, pinned to the versions "
+                                 "this project was verified against."),
     ("InterviewAI/SETUP.md", "Setup guide and troubleshooting table."),
     ("InterviewAI/.env.example", "Template for the three API keys."),
 
@@ -298,36 +298,28 @@ def build():
     # ── 1. Problem ───────────────────────────────────────────────────────
     h1(doc, "1.  The problem")
     para(doc,
-         "Automated interview platforms screen millions of candidates a year. They return "
-         "a score. What they rarely return is any account of how that score was reached, "
-         "or how much it should be trusted.")
+         "Automated interview platforms screen millions of candidates a year. They return a "
+         "score, and rarely any account of how it was reached or how far to trust it.")
+    for lead, b in (
+        ("The practice. ", "In 2019 the Electronic Privacy Information Center challenged "
+         "HireVue over unvalidated facial analysis. Visual analysis was withdrawn in 2021, "
+         "but verbal scoring continued and the problem survived it: a number, no "
+         "explanation."),
+        ("The regulation. ", "The EU AI Act classifies recruitment systems as high-risk and "
+         "requires transparency, human oversight and bias testing. Opacity is now a "
+         "compliance defect, not only an ethical one."),
+        ("The commercial cost. ", "Candidates rate automated interviews as markedly less "
+         "fair, worst where no explanation is given, and are then less likely to accept "
+         "offers — eroding the efficiency that motivated automating at all."),
+    ):
+        bullet(doc, b, lead=lead)
     para(doc,
-         "This is not a hypothetical complaint. In 2019 the Electronic Privacy Information "
-         "Center challenged HireVue over facial analysis used in candidate scoring, arguing "
-         "the technique was unvalidated and its operation opaque. HireVue withdrew visual "
-         "analysis in 2021 but continued scoring verbal responses. The underlying problem "
-         "survived the change: candidates still received a number and no explanation.")
-    para(doc,
-         "Regulation has since caught up. The EU AI Act classifies recruitment systems as "
-         "high-risk and requires transparency, human oversight and bias testing. Opacity is "
-         "now a compliance defect as well as an ethical one.")
-    para(doc,
-         "There is a commercial argument too, and it is the one that shaped this project. "
-         "Research on applicant reactions finds that candidates rate automated interviews as "
-         "markedly less fair than human ones, and that the effect is worst where no "
-         "explanation is given. Candidates who believe a process is unfair are less likely to "
-         "accept offers — which erodes the efficiency that motivated the automation. "
-         "Explainability is therefore not a nicety; it is a requirement.")
-    h2(doc, "1.1  The specific question")
-    para(doc,
-         "Large language models can now hold a structured interview and articulate a "
-         "judgement in readable language. But the research literature shows they are "
-         "unreliable graders: sensitive to the order in which scoring criteria are "
-         "presented, and inclined to reward length over substance.")
-    para(doc,
-         "So the question this project asks is not whether a language model can score an "
-         "interview answer — it plainly can. It is whether a system built around one can be "
-         "made accountable for how reliable its own scores are.", bold=True)
+         "Language models can now conduct an interview and justify a judgement in readable "
+         "language, but the literature shows they grade unreliably: sensitive to the order "
+         "criteria are presented in, and inclined to reward length over substance. So the "
+         "question is not whether a model can score an answer — it plainly can — but whether "
+         "a system built around one can be made accountable for how reliable its own scores "
+         "are.", bold=True)
 
     # ── 2. Scope ─────────────────────────────────────────────────────────
     h1(doc, "2.  Scope")
@@ -367,40 +359,34 @@ def build():
          "failing documented in the literature.")
     h2(doc, "3.1  Ground the interview in a published taxonomy")
     para(doc,
-         "Questions are not invented freely. They are derived from a skill graph built on "
-         "ESCO, the EU occupational standard. When the system reports that a candidate "
-         "lacks a required skill, that skill is a concept with a stable public identifier "
-         "rather than a string the system made up. This makes the assessment auditable at "
-         "the level of content, not merely of scoring.")
+         "Questions derive from a skill graph built on ESCO, the EU occupational standard, "
+         "rather than being invented freely. A reported skill gap therefore names a concept "
+         "with a stable public identifier, which makes the assessment auditable at the level "
+         "of content and not merely of scoring.")
     h2(doc, "3.2  Make the scorer measure its own reliability")
     para(doc,
-         "This is the core of the project. Every answer is scored twice against the same "
-         "rubric, with the four criteria presented in two different orders. The mean is "
-         "reported — but the more useful output is the disagreement between the two passes.")
-    para(doc,
-         "A judge returning 82 and 81 for the same answer is stable. One returning 71 and 45 "
-         "is not, and the mean of 58 conceals that completely. So the spread is kept, banded "
-         "into high, moderate and low consistency, and answers in the low band are flagged "
-         "for a human instead of being presented as confident scores.")
+         "The core of the project. Every answer is scored twice against the same rubric with "
+         "the criteria in two different orders. The mean is reported; the disagreement "
+         "between the passes is the more useful output. A judge returning 82 and 81 is "
+         "stable, one returning 71 and 45 is not, and the mean of 58 hides that entirely. "
+         "The spread is banded into high, moderate and low consistency, and low-band answers "
+         "go to a human rather than being reported as confident scores.")
     para(doc,
          "This is not a claim that the judge is unbiased. It is a claim that when the judge "
          "is unstable, the system says so.", bold=True)
-    h2(doc, "3.3  Keep the candidate's data on the candidate's machine")
+    h2(doc, "3.3  Keep the candidate data on their own machine")
     para(doc,
-         "Attention, posture and vocal delivery are computed in the browser using MediaPipe "
-         "and the Web Audio API. Only derived numbers — an attention score, a pitch "
-         "variability figure — cross the network. No video or audio is transmitted or "
-         "stored. This is a data-minimisation measure in the sense the GDPR intends, and it "
-         "also means the analysis costs nothing to run.")
+         "Attention, posture and vocal delivery are computed in the browser. Only derived "
+         "numbers cross the network; no video or audio is transmitted or stored. That is "
+         "data minimisation in the sense the GDPR intends, and it costs nothing to run.")
 
     # ── 4. Architecture ──────────────────────────────────────────────────
     h1(doc, "4.  Architecture")
     para(doc,
-         "Thirteen modules across four sequential phases. Each declares its input and "
-         "output, communicates only through them, and can be developed, deferred or "
-         "replaced without disturbing its neighbours. That property earned its keep: an "
-         "entire evaluation track was removed late in the project without touching "
-         "anything else.")
+         "Fourteen modules across four sequential phases. Each declares its input and output "
+         "and communicates only through them, so any one can be replaced without disturbing "
+         "its neighbours — which is how an entire evaluation track was removed late on "
+         "without touching anything else.")
     fig = ROOT / "report" / "figures" / "fig01_architecture.png"
     if fig.exists():
         figure(doc, fig, "The four phases and the data that flows between them.")
@@ -415,11 +401,9 @@ def build():
     # ── 5. Modules ───────────────────────────────────────────────────────
     h1(doc, "5.  The modules")
     para(doc, "What each module does, how it works, and where to find it.")
-    for tag, name, path, tech, how in MODULES:
-        h3(doc, f"{tag} — {name}")
-        para(doc, how)
-        para(doc, f"Technology: {tech}    ·    File: {path}",
-             size=Pt(9), colour=GREY, space_after=10)
+    table(doc, ["", "Module", "What it does", "Built with", "File"],
+          [[t, n, how, tech, path] for t, n, path, tech, how in MODULES],
+          widths=[0.9, 2.6, 6.6, 2.6, 3.3], font_size=8)
 
     # ── 6. Technology ────────────────────────────────────────────────────
     h1(doc, "6.  Technology choices")
@@ -452,8 +436,9 @@ def build():
                    "per-skill verdicts, per-answer rubric detail, integrity findings, and "
                    "how consistent the judge was with itself."),
     ]
-    for i, (name, body) in enumerate(steps, 1):
-        bullet(doc, body, lead=f"{i}. {name} — ")
+    table(doc, ["#", "Stage", "What happens"],
+          [[str(i), n, b] for i, (n, b) in enumerate(steps, 1)],
+          widths=[0.9, 3.0, 11.6], font_size=8.5)
 
     if worked.get("exchanges"):
         h2(doc, "7.1  A real session")
