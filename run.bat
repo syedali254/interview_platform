@@ -47,6 +47,23 @@ if not exist "%~dp0InterviewAI\server.py" (
     pause
     exit /b 1
 )
+
+rem  Windows caps a path at 260 characters unless long-path support is on.
+rem  The deepest file pip creates here sits 136 characters below this folder,
+rem  so a project folder beyond ~120 characters makes the install fail with an
+rem  error that reads like a network problem. Warn before that happens.
+call :strlen "%~dp0" PATHLEN
+if !PATHLEN! GTR 120 (
+    echo.
+    echo   WARNING: this folder's path is !PATHLEN! characters long.
+    echo   Windows limits paths to 260 characters, and installing here is
+    echo   likely to fail partway through.
+    echo.
+    echo   Move the project somewhere shorter - for example C:\Projects -
+    echo   and run this file again from there.
+    echo.
+    pause
+)
 cd /d "%~dp0InterviewAI"
 
 rem ---------------------------------------------------------------
@@ -114,8 +131,15 @@ venv\Scripts\python.exe -m pip install --upgrade pip --quiet --disable-pip-versi
 venv\Scripts\python.exe -m pip install -r requirements.txt --quiet --disable-pip-version-check
 if errorlevel 1 (
     echo.
-    echo   ERROR: pip install failed. Check your internet connection
-    echo   and run this file again.
+    echo   ERROR: the Python packages did not install.
+    echo.
+    echo   The two usual causes are:
+    echo     1. No internet, or a firewall blocking pypi.org.
+    echo     2. This folder sits too deep. If the message above mentions
+    echo        "No such file or directory" or long paths, move the project
+    echo        somewhere shorter such as C:\Projects and try again.
+    echo.
+    echo   If neither applies, delete InterviewAI\venv and run this file again.
     echo.
     pause
     exit /b 1
@@ -249,6 +273,19 @@ exit /b 0
 rem ===============================================================
 rem  Helpers
 rem ===============================================================
+
+rem --- Length of %~1 into the variable named by %~2 ---
+:strlen
+set "_S=%~1"
+set "_N=0"
+:strlen_next
+if defined _S (
+    set "_S=!_S:~1!"
+    set /a _N+=1
+    goto :strlen_next
+)
+set "%~2=!_N!"
+exit /b 0
 
 rem --- Locate a Python 3.11+ interpreter, setting PYEXE and PYOK ---
 :find_python
