@@ -292,8 +292,8 @@ def chapter_4(doc, fig):
          "Module 6 is the centre of the project's contribution, and its design follows directly "
          "from the conceptual framework in Section 2.6.")
     figure(doc, fig("fig04_evaluation_pipeline"),
-           "Figure 4  The evaluation pipeline. Each answer is scored twice under permuted rubric "
-           "orderings; the mean is reported and the disagreement is retained as evidence.")
+           "Figure 4  The evaluation pipeline, from a transcribed answer through to a verdict "
+           "and, where the two passes disagree, an escalation.")
     para(doc,
          "Each answer is first paired with a reference answer generated for the same question, "
          "giving the judge a concrete standard rather than an abstract sense of quality. The "
