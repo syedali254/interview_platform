@@ -17,9 +17,9 @@ def chapter_5(doc, fig):
            "Figure 9  Deployment and process view. Video and audio are analysed on the "
            "candidate's device; only derived numeric features cross the network.")
     para(doc,
-         "The deployment is single-process and single-session, which is appropriate for a "
+         "The deployment is single-process and single-session, appropriate for a "
          "research demonstrator and inadequate for anything else. Section 7.3 states the "
-         "consequences explicitly rather than leaving them to be discovered.")
+         "consequences explicitly.")
 
     h2(doc, "5.2  Document understanding (M1, M2)")
     para(doc,
@@ -31,17 +31,17 @@ def chapter_5(doc, fig):
     para(doc,
          "The practical difficulty with schema-constrained generation is that models intermittently "
          "return malformed JSON — a trailing comma, an unterminated string, or the whole object "
-         "wrapped in a markdown fence. Rather than failing the request, the client strips fences, "
+         "wrapped in a markdown fence. Rather than fail the request, the client strips fences, "
          "attempts a strict parse, and falls back to a repair pass before giving up. This is "
-         "unglamorous but it is the difference between a demonstrator that works and one that "
-         "fails intermittently in front of an examiner.")
+         "unglamorous, and it is the difference between a demonstrator that works and one that "
+         "fails in front of an examiner.")
     para(doc,
          "Image-based PDFs yield no extractable text; the system reports this rather than "
          "attempting optical character recognition, which was out of scope.")
 
     h2(doc, "5.3  The skill graph (M3)")
     para(doc,
-         "The graph is constructed at request time from two ESCO CSV exports: the digital skills "
+         "The graph is constructed from two ESCO CSV exports: the digital skills "
          "collection, providing 1,201 skill concepts with preferred and alternative labels, and "
          "the broader-relations file, providing the hierarchy. Category hubs are synthesised from "
          "the ESCO broader-concept field so that the interface can group skills meaningfully.")
@@ -51,18 +51,18 @@ def chapter_5(doc, fig):
          "and frontend frameworks, databases, messaging, machine learning tooling, architecture "
          "patterns, version control, APIs, testing, data engineering and productivity software. A "
          "soft-skill extension covers five categories that ESCO addresses only sparsely. Extension "
-         "labels deliberately take precedence over ESCO labels in the lookup index, because "
+         "labels take precedence over ESCO labels in the lookup index, because "
          "“Docker” is the recognisable form of the concept and an ESCO near-synonym is not.")
     para(doc,
          "An alias map of roughly seventy entries handles the abbreviations and spelling variants "
          "that appear on real CVs — k8s, postgres, nodejs, sklearn, ci/cd, amazon web services. "
-         "Aliases are indexed separately from preferred labels and can never shadow an exact "
+         "Aliases are indexed separately and can never shadow an exact "
          "preferred-label match, which prevents a curated shortcut from overriding the taxonomy.")
     h3(doc, "5.3.1  The matching failure and its correction")
     para(doc,
          "The first implementation added a substring fallback: if nothing else matched, any "
          "taxonomy label contained in the input string was accepted. This is superficially "
-         "reasonable and was actively harmful. The single-character ESCO concept “R” is a "
+         "reasonable and was harmful. The single-character ESCO concept “R” is a "
          "substring of “Team Leadership”. “Telecommunications engineering” contains "
          "“communication”. The graph rendered without error and the gap analysis reported "
          "confident, specific and wrong conclusions.")
@@ -88,19 +88,19 @@ def chapter_5(doc, fig):
          "interview begins, so that high-priority gaps are asked first. Questions whose skill the "
          "graph does not recognise sort after graph-derived ones but before nothing, so they are "
          "not silently discarded. The unit tests assert this ordering directly, using a fixture in "
-         "which the model's emission order is deliberately the reverse of the priority order.")
+         "which the model's emission order is the reverse of the priority order.")
 
     h2(doc, "5.5  The voice interview agent (M5)")
     para(doc,
          "The agent runs as a subprocess connected to a LiveKit room, orchestrating speech "
          "recognition, language model inference and speech synthesis. Three implementation "
-         "problems were substantial enough to record.")
+         "problems are worth recording.")
     h3(doc, "5.5.1  Truncated speech")
     para(doc,
          "Piping the model's token stream directly into the synthesis socket produced audio that "
          "stopped after a few words while the full text continued to appear on screen. The "
          "solution was to buffer each complete utterance before synthesising it. This costs a "
-         "little latency and buys two things: reliable audio, and control over ordering. The "
+         "little latency and buys reliable audio and control over ordering. The "
          "question is published to the interface first and spoken a fraction of a second later, "
          "so a candidate who mishears can read it.")
     h3(doc, "5.5.2  The silent provider")
@@ -109,7 +109,7 @@ def chapter_5(doc, fig):
          "The synthesis provider's quota had been exhausted, and an exhausted quota accepts the "
          "connection and returns no audio frames — indistinguishable from success unless the "
          "frames are inspected. The fix was a startup probe that pushes two characters through "
-         "the engine and confirms at least one audio frame comes back, before the interview "
+         "the engine and confirms an audio frame comes back before the interview "
          "begins. If it does not, the agent falls through to the alternative provider, and if "
          "neither works it runs in text-only mode with questions still displayed. The interview "
          "degrades rather than failing.")
@@ -223,14 +223,15 @@ def chapter_5(doc, fig):
          "candidate should not be able to talk over the interviewer. In testing this caused the "
          "framework to discard answers from candidates who began replying while the question was "
          "still being spoken — a natural conversational behaviour. Interruptions were re-enabled "
-         "with a minimum duration and word count, so a cough does not interrupt but an answer "
-         "does.")
+         "with a minimum duration and word count. Live use showed that was still too permissive: "
+         "a pause for thought ended the turn early, and the rest of the answer, arriving mid-"
+         "reply, cut the question off. Two apparent faults, one cause — timings suited to "
+         "conversation, not to interview answers. The windows were lengthened, and the agent now "
+         "resumes when an apparent interruption produces no speech.")
     para(doc,
-         "Answer-length thresholds were initially used to skip very short replies. This silently "
-         "dropped genuine non-answers such as “I have not used that” from the report, which is "
-         "exactly the evidence a recruiter needs. The threshold now excludes only replies too "
-         "short to carry any assessable content, and every substantive answer is scored on its "
-         "merits however brief.")
+         "Answer-length thresholds initially skipped very short replies. This silently dropped "
+         "genuine non-answers such as “I have not used that” — exactly the evidence a recruiter "
+         "needs. The threshold now excludes only replies too short to carry assessable content.")
     para(doc,
          "Finally, the endpoint's concurrency behaviour proved counter-intuitive: one sequential "
          "call completed in 2.3 seconds while six issued concurrently took 273.8 seconds in "
