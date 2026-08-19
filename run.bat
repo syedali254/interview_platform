@@ -26,17 +26,7 @@ rem ---------------------------------------------------------------
 rem  [1/7] Latest code
 rem ---------------------------------------------------------------
 echo [1/7] Checking project code...
-if exist ".git" (
-    for /f "delims=" %%b in ('git branch --show-current 2^>nul') do set "BRANCH=%%b"
-    if not "!BRANCH!"=="sherali-dev2" (
-        echo       Switching to branch sherali-dev2...
-        git checkout sherali-dev2 >nul 2>&1
-    )
-    git pull >nul 2>&1
-    echo       Code up to date.
-) else (
-    echo       Not a git checkout - using the files as they are.
-)
+call :update_code
 
 if not exist "%~dp0InterviewAI\server.py" (
     echo.
@@ -260,6 +250,69 @@ exit /b 0
 rem ===============================================================
 rem  Helpers
 rem ===============================================================
+
+rem --- Bring the checkout to the latest sherali-dev2, or say why not ---
+rem The previous version piped the pull to nul and then announced "Code up to
+rem date" whether or not it had worked. A failed pull therefore looked exactly
+rem like a successful one, and the run continued on stale code. Every step
+rem below is now checked, and anything that stops the update is reported.
+:update_code
+if not exist ".git" (
+    echo       Not a git checkout - using the files as they are.
+    exit /b 0
+)
+git rev-parse --is-inside-work-tree >nul 2>&1
+if errorlevel 1 (
+    echo       Not a usable git checkout - using the files as they are.
+    exit /b 0
+)
+set "BRANCH="
+for /f "delims=" %%b in ('git branch --show-current 2^>nul') do set "BRANCH=%%b"
+if not "!BRANCH!"=="sherali-dev2" (
+    echo       Switching to branch sherali-dev2...
+    git checkout sherali-dev2 >nul 2>&1
+    if errorlevel 1 (
+        call :stale_warning "could not switch to the sherali-dev2 branch"
+        exit /b 0
+    )
+)
+git fetch origin >nul 2>&1
+if errorlevel 1 (
+    call :stale_warning "could not reach GitHub - check your internet connection"
+    exit /b 0
+)
+rem Fast-forward only. A merge commit created here would be a local edit that
+rem blocks every future update, which is worse than stopping now.
+git merge --ff-only origin/sherali-dev2 >nul 2>&1
+if errorlevel 1 (
+    call :stale_warning "your copy has local changes that block the update"
+    exit /b 0
+)
+echo       Code up to date.
+exit /b 0
+
+rem --- Say plainly that the code was NOT updated, and how to force it ---
+:stale_warning
+echo.
+echo   ============================================================
+echo   WARNING: %~1.
+echo.
+echo   The project was NOT updated. You may be running an older
+echo   version. Setup will continue anyway.
+echo.
+echo   To force the latest code, open a terminal in this folder
+echo   and run these three commands. Your .env keys are not
+echo   touched by them:
+echo.
+echo       git fetch origin
+echo       git checkout sherali-dev2
+echo       git reset --hard origin/sherali-dev2
+echo.
+echo   Then double-click run.bat again.
+echo   ============================================================
+echo.
+pause
+exit /b 0
 
 rem --- Length of %~1 into the variable named by %~2 ---
 :strlen
