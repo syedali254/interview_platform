@@ -93,7 +93,19 @@ export default function InterviewScreen({ mediaStream, sessionData, setSessionDa
       // this usually returns immediately.
       await axios.post('/api/launch-interview')
       const { data } = await axios.get('/token')
-      const room = new Room({ adaptiveStream: true, dynacast: true })
+      // The audio constraints are stated rather than left to the defaults.
+      // Echo cancellation is what stops the agent's own voice, coming out of
+      // the candidate's speakers, from being captured and treated as them
+      // speaking — which cut the interviewer off mid-question.
+      const room = new Room({
+        adaptiveStream: true,
+        dynacast: true,
+        audioCaptureDefaults: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      })
       roomRef.current = room
 
       room.on(RoomEvent.DataReceived, (payload) => {

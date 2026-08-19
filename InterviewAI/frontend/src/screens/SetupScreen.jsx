@@ -118,6 +118,15 @@ export default function SetupScreen({ onReady }) {
     return () => {
       if (animRef.current) cancelAnimationFrame(animRef.current)
       try { audioCtxRef.current?.close() } catch { /* already closed */ }
+      // Release the camera and microphone before the interview screen asks
+      // for them. Left running, this preview keeps a second capture open on
+      // the same microphone; the browser then echo-cancels only one of them,
+      // and the agent's own voice leaks back in loudly enough to be mistaken
+      // for the candidate interrupting.
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop())
+        streamRef.current = null
+      }
     }
   }, [testDevices])
 
@@ -206,6 +215,10 @@ export default function SetupScreen({ onReady }) {
                 </div>
                 <p className="text-xs text-gray-400 mt-2">
                   {micOk ? 'Audio detected' : 'Waiting for audio…'}
+                </p>
+                <p className="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-200">
+                  Headphones are recommended. On speakers, your microphone can pick
+                  up the interviewer&apos;s voice and cut it off mid-question.
                 </p>
               </div>
             ) : (

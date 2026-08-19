@@ -55,6 +55,29 @@ TIME_BUDGET_MINS = int(os.environ.get("INTERVIEW_TIME_BUDGET_MINS", "30"))
 # How long the question stays on screen before the agent starts speaking it.
 DISPLAY_LEAD_SECONDS = 0.45
 
+# Turn-taking. Every value below is slower than the framework's default,
+# because an interview is not a chat. Asked to explain how they would handle
+# secrets across environments, a candidate says "so — the way I would do it
+# is..." with a two-second pause in the middle of it. The defaults treat that
+# pause as the end of the answer, reply to the half they have, and the rest of
+# the sentence then arrives while the agent is already speaking. That is heard
+# as two separate faults — the interviewer talking over you, and its voice
+# cutting out — but it is one cause.
+STT_ENDPOINTING_MS = int(os.environ.get("STT_ENDPOINTING_MS", "1100"))
+MIN_ENDPOINTING_DELAY = float(os.environ.get("MIN_ENDPOINTING_DELAY", "1.8"))
+MAX_ENDPOINTING_DELAY = float(os.environ.get("MAX_ENDPOINTING_DELAY", "8.0"))
+
+# Interruption must survive a cough, a "yeah, sure", and whatever leaks from
+# the candidate's speakers back into their microphone. Four words over 1.2
+# seconds is a person taking the floor; less than that is noise.
+MIN_INTERRUPTION_DURATION = float(os.environ.get("MIN_INTERRUPTION_DURATION", "1.2"))
+MIN_INTERRUPTION_WORDS = int(os.environ.get("MIN_INTERRUPTION_WORDS", "4"))
+
+# If something stops the agent mid-sentence and no actual transcript follows,
+# it was not an interruption. Pick the sentence back up instead of leaving the
+# question half-asked.
+FALSE_INTERRUPTION_TIMEOUT = float(os.environ.get("FALSE_INTERRUPTION_TIMEOUT", "2.0"))
+
 # Grace period after the closing statement before the room is torn down.
 CLOSING_GRACE_SECONDS = 12
 
@@ -82,6 +105,54 @@ def _load_seed_questions() -> list[str]:
         except json.JSONDecodeError:
             pass
     return []
+
+
+def _recognition_keyterms(cv_data: dict, jd_data: dict,
+                          seed_questions: list[str], limit: int = 40) -> list[str]:
+    """The technical vocabulary this particular interview will contain.
+
+    Deepgram caps how many terms it will take, so ordering matters: the
+    required skills come first because those are the ones being assessed, then
+    what the candidate claims, then anything multi-word lifted from the
+    questions themselves. Single common words are left out — biasing towards
+    "team" or "data" would hurt more than it helps.
+    """
+    seen: set[str] = set()
+    terms: list[str] = []
+
+    def add(value):
+        if not isinstance(value, str):
+            return
+        term = value.strip()
+        # Deepgram truncates the list, so a whole sentence is not a term.
+        if not (1 < len(term) <= 40) or term.count(" ") > 3:
+            return
+        # Short single words are usually common English that biasing would
+        # only distort — except acronyms and names carrying punctuation, where
+        # the short ones are precisely the ones misheard. "AWS" and "C++" stay;
+        # "team" and "data" go.
+        if " " not in term and len(term) < 5:
+            acronym = term.isupper() and term.isalpha()
+            symbolic = any(not c.isalnum() for c in term)
+            if not (acronym or symbolic):
+                return
+        key = term.lower()
+        if key in seen:
+            return
+        seen.add(key)
+        terms.append(term)
+
+    for skill in (jd_data.get("required_skills") or []):
+        add(skill)
+    for skill in (jd_data.get("preferred_skills") or jd_data.get("nice_to_have") or []):
+        add(skill)
+    for skill in (cv_data.get("skills") or []):
+        add(skill)
+    add(jd_data.get("job_title"))
+    for tool in (cv_data.get("tools") or cv_data.get("technologies") or []):
+        add(tool)
+
+    return terms[:limit]
 
 
 def _build_system_prompt(cv_data: dict, jd_data: dict, seed_questions: list[str]) -> str:
@@ -376,12 +447,23 @@ async def run_interview(room_name: str):
             temperature=0.4,
         )
 
+        # Nova-3 accepts key terms that bias recognition. The role's own
+        # vocabulary is exactly what a general model mishears — "Kubernetes"
+        # came back as "communities", "idempotency" as "identity" — and those
+        # are the words the answer is scored on. We already know them, so we
+        # may as well say so.
+        keyterm = _recognition_keyterms(cv_data, jd_data, seed_questions)
+        if keyterm:
+            print(f"[Agent] STT key terms ({len(keyterm)}): {', '.join(keyterm[:8])}"
+                  f"{'...' if len(keyterm) > 8 else ''}")
+
         stt = deepgram.STT(
             model="nova-3",
             language="en-US",
             interim_results=True,
             api_key=deepgram_key,
-            endpointing_ms=500,
+            endpointing_ms=STT_ENDPOINTING_MS,
+            keyterm=keyterm,
         )
 
         # Verified at startup rather than assumed: a provider that has run
@@ -401,11 +483,17 @@ async def run_interview(room_name: str):
             # early is still heard — with them disabled the framework logged
             # "skipping reply to user input" and silently dropped answers.
             allow_interruptions=True,
-            min_interruption_duration=0.7,
-            min_interruption_words=2,
-            min_endpointing_delay=0.8,
-            max_endpointing_delay=6.0,
+            min_interruption_duration=MIN_INTERRUPTION_DURATION,
+            min_interruption_words=MIN_INTERRUPTION_WORDS,
+            min_endpointing_delay=MIN_ENDPOINTING_DELAY,
+            max_endpointing_delay=MAX_ENDPOINTING_DELAY,
+            resume_false_interruption=True,
+            false_interruption_timeout=FALSE_INTERRUPTION_TIMEOUT,
         )
+        print(f"[Agent] Turn-taking: endpoint={STT_ENDPOINTING_MS}ms "
+              f"commit={MIN_ENDPOINTING_DELAY}-{MAX_ENDPOINTING_DELAY}s "
+              f"interrupt={MIN_INTERRUPTION_DURATION}s/{MIN_INTERRUPTION_WORDS}w "
+              f"resume_after={FALSE_INTERRUPTION_TIMEOUT}s")
 
         @session.on("conversation_item_added")
         def _on_item(ev):
