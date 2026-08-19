@@ -159,9 +159,9 @@ def chapter_7(doc, fig, stats, extra=None):
                 "claim is made that scores predict job performance; criterion validity would "
                 "require longitudinal outcome data.",
            lead="Security posture and criterion validity — ")
-    bullet(doc, "Scoring depends on an external commercial model that can be updated or retired "
-                "without notice. One model used during this project was retired mid-evaluation, "
-                "which is a concrete instance of the risk.",
+    bullet(doc, "Scoring depends on an external commercial model that can be retired without "
+                "notice. It happened twice here: the fixture model mid-evaluation, the judging "
+                "model shortly after. The artefact has outlived the model it was measured on.",
            lead="External model dependency — ")
 
     h2(doc, "7.4  Professional, legal and ethical reflection")

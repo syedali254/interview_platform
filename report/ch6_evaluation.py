@@ -35,8 +35,8 @@ def chapter_6(doc, fig, stats, extra):
     # ── 6.1 Design ───────────────────────────────────────────────────────
     h2(doc, "6.1  Experimental design")
     para(doc,
-         "Five controlled experiments evaluate the scoring pipeline, each isolating one property "
-         "by manipulating a single factor while holding the rest constant.")
+         "Five controlled experiments, each isolating one property by manipulating a single "
+         "factor while holding the rest constant.")
     table(doc,
           ["#", "Property tested", "Manipulation", "Statistic"],
           [
@@ -59,30 +59,39 @@ def chapter_6(doc, fig, stats, extra):
           widths=[1.0, 4.0, 6.2, 5.4], font_size=9,
           caption="Table 6  Experimental design summary.")
     para(doc,
-         f"The corpus comprises {meta['n_questions']} technical questions, each with answers "
-         f"written at three intended quality levels, giving {meta['n_graded_answers']} graded "
-         f"answers. Every answer is scored twice, once under each rubric ordering, so E1, E2 and "
-         f"E4 all draw on the same {meta['n_graded_answers']} × 2 judge calls. E3 and E5 reuse "
-         f"their baselines from E1 rather than rescoring identical text.")
+         f"The corpus comprises {meta['n_questions']} technical questions, each with answers at "
+         f"three intended quality levels, giving {meta['n_graded_answers']} graded answers. Every "
+         f"answer is scored twice, once under each rubric ordering, so E1, E2 and E4 all draw on "
+         f"the same {meta['n_graded_answers']} × 2 judge calls. E3 and E5 reuse their baselines "
+         f"from E1 rather than rescoring identical text.")
     if usage:
+        by_model = usage.get("by_model", {})
+        judge_model = max(by_model, key=by_model.get) if by_model else "the judging model"
+        fixture_model = min(by_model, key=by_model.get) if len(by_model) > 1 else None
         para(doc,
              f"The run consumed {usage.get('calls', 0)} API calls with "
-             f"{usage.get('errors', 0)} error, over "
-             f"{meta.get('elapsed_seconds', 0) / 60:.0f} minutes of wall-clock time. Fixtures were "
-             f"generated with a non-reasoning model and all judging performed with the model the "
-             f"deployed system uses, so the measurements describe the system as built rather than "
-             f"a proxy for it.")
+             f"{usage.get('errors', 0)} error over "
+             f"{meta.get('elapsed_seconds', 0) / 60:.0f} minutes. All judging "
+             f"was performed by {judge_model}"
+             + (f", with fixtures generated separately by {fixture_model}"
+                if fixture_model else "")
+             + f" — a different model from the one grading them, which weakens the objection that "
+               f"the judge recognises its own prose.")
+        para(doc,
+             f"Naming it matters, because it did not survive the project: {judge_model} was "
+             f"withdrawn from new API keys shortly after these measurements, and the system now "
+             f"runs a later release. The results therefore describe {judge_model} specifically, "
+             f"not language-model judges in general — the external-dependency risk of "
+             f"Section 7.3, encountered rather than anticipated.")
     para(doc,
-         "The sample is deliberately modest: judging uses a reasoning model, each answer costs "
-         "two calls, and the endpoint throttles concurrency severely. Section 6.10 states the "
-         "consequence for interpretation.")
+         "The sample is deliberately modest: each answer costs two calls and the endpoint "
+         "throttled concurrency badly. Section 6.10 gives the consequence.")
 
     # ── 6.2 E1 ───────────────────────────────────────────────────────────
     h2(doc, "6.2  Discriminant validity")
     para(doc,
-         "The first question is whether the judge can tell a good answer from a bad one. Answers "
-         "written at three intended quality levels were scored without the judge being told which "
-         "was which.")
+         "The first question is whether the judge can tell a good answer from a bad one. The "
+         "three quality levels were scored blind.")
     figure(doc, fig("e1_discriminant_validity", experiments=True),
            "Figure 12  Score distribution by intended answer quality, with the band thresholds "
            "the system uses for its verdicts marked.")

@@ -371,7 +371,7 @@ async def run_interview(room_name: str):
             _mark_candidate_joined("already present")
 
         llm_instance = google.LLM(
-            model=os.environ.get("GEMINI_MODEL", "gemini-2.0-flash"),
+            model=os.environ.get("GEMINI_MODEL", "gemini-3.6-flash"),
             api_key=gemini_api_key,
             temperature=0.4,
         )
