@@ -87,19 +87,29 @@ if not "%PYOK%"=="1" goto :python_restart
 echo       Python OK.
 
 rem ---------------------------------------------------------------
-rem  [4/7] Node.js  (installed automatically via winget if missing)
+rem  [4/7] Node.js  (installed or upgraded automatically via winget)
+rem
+rem  The version matters, not merely the presence. Vite 8 and rolldown
+rem  require ^20.19.0 || >=22.12.0, and an older Node fails much later with
+rem  "Cannot find native binding", which reads like a broken download rather
+rem  than an unsupported runtime. Checking here turns a confusing build
+rem  failure into an upgrade.
 rem ---------------------------------------------------------------
 echo [4/7] Checking Node.js...
-call node -v >nul 2>&1
-if errorlevel 1 (
+call :check_node
+if "%NODEOK%"=="1" goto :node_ready
+if "%NODEFOUND%"=="1" (
+    echo       Node.js !NODEVER! is too old for this project. Upgrading...
+) else (
     echo       Node.js not found. Installing it for you...
-    call :winget_install "OpenJS.NodeJS.LTS" "Node.js LTS"
-    if errorlevel 1 goto :node_manual
-    call :refresh_path
-    call node -v >nul 2>&1
-    if errorlevel 1 goto :node_restart
 )
-echo       Node.js OK.
+call :winget_install "OpenJS.NodeJS.LTS" "Node.js LTS"
+if errorlevel 1 goto :node_manual
+call :refresh_path
+call :check_node
+if not "%NODEOK%"=="1" goto :node_restart
+:node_ready
+echo       Node.js OK (%NODEVER%).
 
 rem ---------------------------------------------------------------
 rem  [5/7] Python environment
@@ -166,12 +176,38 @@ echo       Fetching face and posture models if needed...
 echo       Compiling the interface...
 call npm run build
 if errorlevel 1 (
+    rem  npm has a long-standing bug where an interrupted or upgraded install
+    rem  leaves the platform-specific binaries out of the tree, and the build
+    rem  dies with "Cannot find native binding" - npm/cli#4828. The published
+    rem  remedy is to delete both node_modules and the lock file and install
+    rem  again, so do that once rather than making someone read the trace.
     echo.
-    echo   ERROR: the web app failed to build.
-    echo.
-    cd /d "%~dp0InterviewAI"
-    pause
-    exit /b 1
+    echo       Build failed. Reinstalling the web packages from scratch
+    echo       and trying once more - this takes a few minutes...
+    if exist "node_modules" rmdir /s /q "node_modules"
+    if exist "package-lock.json" del /q "package-lock.json"
+    call npm install --no-audit --no-fund
+    if errorlevel 1 (
+        echo.
+        echo   ERROR: npm install failed. Check your internet and rerun.
+        echo.
+        cd /d "%~dp0InterviewAI"
+        pause
+        exit /b 1
+    )
+    call npm run build
+    if errorlevel 1 (
+        echo.
+        echo   ERROR: the web app failed to build, twice.
+        echo.
+        echo   Check the messages above. If they mention a Node version,
+        echo   install the current LTS from https://nodejs.org, then run
+        echo   this file again.
+        echo.
+        cd /d "%~dp0InterviewAI"
+        pause
+        exit /b 1
+    )
 )
 cd /d "%~dp0InterviewAI"
 if not exist "frontend\dist\index.html" (
@@ -325,6 +361,20 @@ if defined _S (
     goto :strlen_next
 )
 set "%~2=!_N!"
+exit /b 0
+
+rem --- Is Node present AND new enough? Sets NODEFOUND, NODEVER, NODEOK ---
+rem The range is Vite's own: ^20.19.0 || >=22.12.0. Node itself does the
+rem comparison, because batch cannot compare dotted versions without a mess.
+:check_node
+set "NODEOK="
+set "NODEFOUND="
+set "NODEVER="
+for /f "delims=" %%v in ('node -v 2^>nul') do set "NODEVER=%%v"
+if not defined NODEVER exit /b 0
+set "NODEFOUND=1"
+node -e "const [a,b]=process.versions.node.split('.').map(Number); process.exit(((a===20&&b>=19)||(a===22&&b>=12)||a>=23)?0:1)" >nul 2>&1
+if not errorlevel 1 set "NODEOK=1"
 exit /b 0
 
 rem --- Locate a Python 3.11+ interpreter, setting PYEXE and PYOK ---
