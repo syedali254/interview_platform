@@ -176,17 +176,19 @@ echo       Fetching face and posture models if needed...
 echo       Compiling the interface...
 call npm run build
 if errorlevel 1 (
-    rem  npm has a long-standing bug where an interrupted or upgraded install
-    rem  leaves the platform-specific binaries out of the tree, and the build
-    rem  dies with "Cannot find native binding" - npm/cli#4828. The published
-    rem  remedy is to delete both node_modules and the lock file and install
-    rem  again, so do that once rather than making someone read the trace.
+    rem  npm leaves the platform-specific binaries out of the tree after an
+    rem  interrupted or upgraded install, and the build dies with "Cannot find
+    rem  native binding" - npm/cli#4828. npm's own advice is to delete the lock
+    rem  file too, but that is wrong here: the lock is committed, correct, and
+    rem  pins the versions this project was tested against. Deleting it makes
+    rem  npm re-resolve to newer packages and can replace one broken tree with
+    rem  a differently broken one. npm ci wipes node_modules itself and
+    rem  installs exactly what the lock pins, which is what we actually want.
     echo.
-    echo       Build failed. Reinstalling the web packages from scratch
+    echo       Build failed. Reinstalling the web packages from the lock file
     echo       and trying once more - this takes a few minutes...
     if exist "node_modules" rmdir /s /q "node_modules"
-    if exist "package-lock.json" del /q "package-lock.json"
-    call npm install --no-audit --no-fund
+    call npm ci --no-audit --no-fund
     if errorlevel 1 (
         echo.
         echo   ERROR: npm install failed. Check your internet and rerun.
