@@ -104,7 +104,14 @@ if "%NODEFOUND%"=="1" (
     echo       Node.js not found. Installing it for you...
 )
 call :winget_install "OpenJS.NodeJS.LTS" "Node.js LTS"
-if errorlevel 1 goto :node_manual
+if errorlevel 1 (
+    rem  Plenty of Windows installs have no winget - it ships with App
+    rem  Installer, which Store-less and older builds lack. Falling straight
+    rem  through to "install it yourself" made a one-click script stop being
+    rem  one click, so fetch the official MSI instead.
+    call :install_node_msi
+    if errorlevel 1 goto :node_manual
+)
 call :refresh_path
 call :check_node
 if not "%NODEOK%"=="1" goto :node_restart
@@ -365,6 +372,40 @@ if defined _S (
 set "%~2=!_N!"
 exit /b 0
 
+rem --- Install Node LTS from the official MSI, for machines without winget ---
+rem The version is resolved from nodejs.org rather than pinned here, so this
+rem does not rot into pointing at an ancient release. msiexec needs elevation,
+rem which raises the usual Windows prompt - the alternative is telling someone
+rem to go and do it by hand, which is what this whole file exists to avoid.
+:install_node_msi
+echo       Downloading Node.js LTS from nodejs.org (about 30 MB)...
+set "NODEMSI=%TEMP%\interviewai-node-lts.msi"
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$ErrorActionPreference='Stop';" ^
+  "try {" ^
+  "  [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;" ^
+  "  $i=Invoke-RestMethod 'https://nodejs.org/dist/index.json';" ^
+  "  $v=($i | Where-Object { $_.lts } | Select-Object -First 1).version;" ^
+  "  $u=\"https://nodejs.org/dist/$v/node-$v-x64.msi\";" ^
+  "  Write-Host ('      Version ' + $v);" ^
+  "  Invoke-WebRequest -Uri $u -OutFile '%NODEMSI%' -UseBasicParsing;" ^
+  "  exit 0" ^
+  "} catch { Write-Host ('      Download failed: ' + $_.Exception.Message); exit 1 }"
+if errorlevel 1 exit /b 1
+if not exist "%NODEMSI%" exit /b 1
+echo       Installing Node.js - approve the Windows prompt if one appears...
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "try { $p=Start-Process msiexec.exe -ArgumentList '/i','%NODEMSI%','/qn','/norestart' -Verb RunAs -Wait -PassThru;" ^
+  "      exit $p.ExitCode } catch { exit 1 }"
+if errorlevel 1 (
+    echo       The installer did not complete.
+    del /q "%NODEMSI%" >nul 2>&1
+    exit /b 1
+)
+del /q "%NODEMSI%" >nul 2>&1
+echo       Node.js installed.
+exit /b 0
+
 rem --- Is Node present AND new enough? Sets NODEFOUND, NODEVER, NODEOK ---
 rem The range is Vite's own: ^20.19.0 || >=22.12.0. Node itself does the
 rem comparison, because batch cannot compare dotted versions without a mess.
@@ -469,9 +510,20 @@ exit /b 1
 
 :node_manual
 echo.
+echo   ============================================================
 echo   Could not install Node.js automatically.
-echo   Please install the LTS version yourself, then run this file again:
-echo       https://nodejs.org
+echo.
+echo   Install it by hand - it takes two minutes:
+echo.
+echo     1. Open this page:   https://nodejs.org/en/download
+echo     2. Download the Windows Installer (.msi), 64-bit, LTS
+echo     3. Run it and click Next until it finishes. Leave
+echo        "Add to PATH" ticked - it is on by default.
+echo     4. Close this window, then double-click run.bat again.
+echo.
+echo   This project needs Node 20.19 or newer. If yours is older,
+echo   the installer above replaces it; nothing needs uninstalling.
+echo   ============================================================
 echo.
 pause
 exit /b 1
