@@ -29,8 +29,19 @@ RULE = "C3CCD6"
 
 # ── Document setup ───────────────────────────────────────────────────────
 
+AUTHOR = "Abdul Wahab"
+
+
 def new_document() -> Document:
     doc = Document()
+
+    # Word shows this under File > Properties. Left alone, python-docx stamps
+    # its own name there, so every document produced by this project would
+    # credit the library rather than the author.
+    props = doc.core_properties
+    props.author = AUTHOR
+    props.last_modified_by = AUTHOR
+
     for section in doc.sections:
         section.top_margin = Cm(2.5)
         section.bottom_margin = Cm(2.5)

@@ -4,6 +4,10 @@ rem is set inside the same parenthesised block, which plain expansion resolves
 rem at parse time and would therefore always see the previous value.
 setlocal EnableExtensions EnableDelayedExpansion
 title InterviewAI - Setup and Run
+
+rem The branch this project is published on. Named once here rather than
+rem repeated through the update routine, so it is changed in one place.
+set "BRANCH_NAME=abdulwahab-dev"
 color 0A
 
 echo ============================================================
@@ -296,7 +300,7 @@ rem ===============================================================
 rem  Helpers
 rem ===============================================================
 
-rem --- Bring the checkout to the latest sherali-dev2, or say why not ---
+rem --- Bring the checkout to the latest %BRANCH_NAME%, or say why not ---
 rem The previous version piped the pull to nul and then announced "Code up to
 rem date" whether or not it had worked. A failed pull therefore looked exactly
 rem like a successful one, and the run continued on stale code. Every step
@@ -313,11 +317,11 @@ if errorlevel 1 (
 )
 set "BRANCH="
 for /f "delims=" %%b in ('git branch --show-current 2^>nul') do set "BRANCH=%%b"
-if not "!BRANCH!"=="sherali-dev2" (
-    echo       Switching to branch sherali-dev2...
-    git checkout sherali-dev2 >nul 2>&1
+if not "!BRANCH!"=="!BRANCH_NAME!" (
+    echo       Switching to branch !BRANCH_NAME!...
+    git checkout !BRANCH_NAME! >nul 2>&1
     if errorlevel 1 (
-        call :stale_warning "could not switch to the sherali-dev2 branch"
+        call :stale_warning "could not switch to the !BRANCH_NAME! branch"
         exit /b 0
     )
 )
@@ -328,7 +332,7 @@ if errorlevel 1 (
 )
 rem Fast-forward only. A merge commit created here would be a local edit that
 rem blocks every future update, which is worse than stopping now.
-git merge --ff-only origin/sherali-dev2 >nul 2>&1
+git merge --ff-only origin/!BRANCH_NAME! >nul 2>&1
 if errorlevel 1 (
     call :stale_warning "your copy has local changes that block the update"
     exit /b 0
@@ -350,8 +354,8 @@ echo   and run these three commands. Your .env keys are not
 echo   touched by them:
 echo.
 echo       git fetch origin
-echo       git checkout sherali-dev2
-echo       git reset --hard origin/sherali-dev2
+echo       git checkout !BRANCH_NAME!
+echo       git reset --hard origin/!BRANCH_NAME!
 echo.
 echo   Then double-click run.bat again.
 echo   ============================================================

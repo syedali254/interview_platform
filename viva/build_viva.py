@@ -51,6 +51,9 @@ def _stats():
     return json.loads(STATS.read_text(encoding="utf-8")) if STATS.exists() else {}
 
 
+AUTHOR = "Abdul Wahab"
+
+
 class Deck:
     def __init__(self):
         self.prs = Presentation()
@@ -189,6 +192,12 @@ class Deck:
                   colour=MUTED, align=PP_ALIGN.CENTER, line=1.15)
 
     def save(self):
+        # Without this, PowerPoint credits the python-pptx author under
+        # File > Properties rather than the person who wrote the deck.
+        props = self.prs.core_properties
+        props.author = AUTHOR
+        props.last_modified_by = AUTHOR
+        props.title = "An Explainable Multi-Agent AI Interview Platform"
         self.prs.save(OUTPUT)
         return OUTPUT
 

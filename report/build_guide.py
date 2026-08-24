@@ -116,66 +116,143 @@ FILES = [
 ]
 
 MODULES = [
-    ("M1", "Read the CV", "cv_parser.py",
-     "Pulls the skills, jobs and education out of an uploaded CV."),
-    ("M2", "Read the job advert", "jd_parser.py",
-     "Pulls out which skills the job needs, and which are just nice to have."),
-    ("M3", "Match skills, find gaps", "skill_graph.py",
-     "Lines both lists up against the official EU skills list and works out "
-     "what the candidate is missing."),
-    ("M4", "Write the questions", "question_generator.py",
-     "Writes the interview, then reorders it so the missing skills get asked "
-     "first, before time runs out."),
+    ("M1", "Read the CV", "cv_parser.py", "Google Gemini + PyMuPDF",
+     "Opens the uploaded PDF, reads the text, and turns it into a tidy list: "
+     "name, contact details, skills, past jobs, education and projects. If the "
+     "AI replies with broken data it repairs it instead of giving up."),
+    ("M2", "Read the job advert", "jd_parser.py", "Google Gemini",
+     "Does the same for the job advert: the job title, which skills are "
+     "required, which are only nice to have, the seniority level and the "
+     "industry."),
+    ("M3", "Match skills, find gaps", "skill_graph.py", "NetworkX + ESCO list",
+     "Lines both lists up against the official EU list of 1,201 skills, using "
+     "four increasingly forgiving matching steps. Then works out which "
+     "required skills the candidate has not shown — those are the gaps."),
+    ("M4", "Write the questions", "question_generator.py", "Google Gemini",
+     "Writes the whole interview: opening questions, technical questions for "
+     "each skill, behavioural questions, and closing questions. Then reorders "
+     "it so the missing skills get asked first, before time runs out."),
     ("M5", "Run the interview (voice)", "voice_agent.py",
-     "Speaks the questions, listens to the answers, adapts as it goes."),
-    ("M5", "Run the interview (typed)", "text_interview.py",
+     "LiveKit + Deepgram + ElevenLabs",
+     "The talking interviewer. It shows each question on screen, then speaks "
+     "it aloud. It listens to the answer, decides whether to dig deeper, and "
+     "moves on. It knows when to stop, and saves the full transcript."),
+    ("M5", "Run the interview (typed)", "text_interview.py", "FastAPI",
      "The same interview, typed instead of spoken. Same questions, same "
-     "marking — only the way the answer arrives is different."),
-    ("M6", "Mark the answers", "answer_judge.py",
-     "Marks every answer out of 100 against four criteria — twice, in a "
-     "different order each time, to check it agrees with itself."),
-    ("M6a", "Track each skill", "skill_state.py",
-     "Keeps a running verdict on each skill: proven, weak, or a real gap."),
-    ("M7", "Watch attention", "vision.js",
-     "Works out if the candidate is looking at the screen, using the camera."),
-    ("M8", "Watch posture", "vision.js",
-     "Looks at how they are sitting: slouching, leaning, shoulders uneven."),
+     "marking. It produces a transcript in exactly the same shape, so nothing "
+     "after the interview can tell which way it was done."),
+    ("M6", "Mark the answers", "answer_judge.py", "Google Gemini as judge",
+     "Marks every answer out of 100 on four things: accuracy, completeness, "
+     "clarity and relevance. It marks each answer TWICE, showing the four "
+     "criteria in a different order each time, then checks whether the two "
+     "marks agree. A big disagreement means the mark cannot be trusted."),
+    ("M6a", "Track each skill", "skill_state.py", "Plain Python",
+     "Keeps a running note on every skill: not asked yet, asked, answered "
+     "well, answered badly, or still unknown. This is what decides whether a "
+     "follow-up question is needed."),
+    ("M7", "Watch attention (face)", "vision.js", "MediaPipe Face Landmarker",
+     "Uses the webcam to find 478 points on the face, then works out where "
+     "the head is pointing and whether the eyes are on the screen. From that "
+     "it produces an attention score and counts how long they looked away. "
+     "This runs inside the browser — the video never leaves the computer."),
+    ("M8", "Watch posture (body)", "vision.js", "MediaPipe Pose Landmarker",
+     "Uses the same camera picture to find 33 points on the upper body, then "
+     "checks whether the shoulders are level and the person is upright rather "
+     "than slouched or leaning off-screen. Also entirely in the browser."),
     ("M9", "Check for cheating", "behavioural_integrity.py",
-     "Flags odd behaviour — tab switching, answers that arrive too fast, long "
-     "silences — and always says which behaviour caused the flag."),
-    ("M10", "Listen to the voice", "voice.js",
-     "Measures volume, pitch and pauses to judge how confidently they spoke."),
-    ("M11", "Add it all up", "score_fusion.py",
-     "Combines everything into one score and a hire recommendation."),
-    ("M12", "Write the report", "report_builder.py",
-     "Puts it all together into the report the recruiter reads."),
+     "Isolation Forest (scikit-learn)",
+     "Looks at how the session behaved rather than what was said: tab "
+     "switches, answers arriving suspiciously fast or slow, answers that are "
+     "all oddly the same length. It learns what normal looks like on first "
+     "run, and always names the behaviour that caused a flag."),
+    ("M10", "Listen to the voice", "voice.js", "Web Audio API",
+     "Measures the sound of the voice, not the words: how steady the pitch "
+     "is, how loud, how much of the time is actual speech rather than pauses "
+     "and 'um'. From that it estimates how confidently they spoke. Browser "
+     "only — no audio is uploaded."),
+    ("M11", "Add it all up", "score_fusion.py", "Plain Python",
+     "Combines the answer marks, how many required skills were covered, the "
+     "behaviour check and the voice score into one number and a hire "
+     "recommendation — showing how much each part contributed."),
+    ("M12", "Write the report", "report_builder.py", "Plain Python",
+     "Builds the report the recruiter reads: each answer and its mark, how "
+     "consistent the marking was, the behaviour verdict, the recommendation, "
+     "and the reasoning behind all of it."),
+]
+
+# The three AI models the system actually calls. Named exactly, because
+# "we used AI" is not an answer anyone can check.
+MODELS = [
+    ("Gemini 3.6 Flash", "google-genai 2.11.0",
+     "Reading the CV and job advert, writing the questions, and marking every "
+     "answer. Every language task in the project uses this one model.",
+     "Google's servers"),
+    ("Deepgram Nova-3", "livekit-plugins-deepgram 1.6.4",
+     "Turning the candidate's speech into text during the voice interview. It "
+     "is given the job's technical words in advance so it does not mishear "
+     "them.", "Deepgram's servers"),
+    ("ElevenLabs Turbo v2.5", "livekit-plugins-elevenlabs 1.6.4",
+     "The interviewer's speaking voice. If this key is missing or out of "
+     "credit, the system automatically falls back to Deepgram Aura-2.",
+     "ElevenLabs' servers"),
+    ("MediaPipe Face Landmarker", "@mediapipe/tasks-vision 1.0.1",
+     "Finds 478 points on the face to work out attention and gaze.",
+     "Inside the browser"),
+    ("MediaPipe Pose Landmarker Lite", "@mediapipe/tasks-vision 1.0.1",
+     "Finds 33 points on the upper body to work out posture.",
+     "Inside the browser"),
+    ("Isolation Forest", "scikit-learn 1.9.0",
+     "Spots unusual session behaviour. Not a downloaded model — the system "
+     "trains it itself on first run and saves it.", "On your own machine"),
 ]
 
 TECH = [
-    ("Google Gemini", "Reading CVs, writing questions, marking answers",
+    ("Google Gemini 3.6 Flash", "Reading CVs, writing questions, marking answers",
      "Understands language well and can explain its own marking",
      "Costs money, can be slow, and Google can retire the model"),
-    ("ESCO (EU skills list)", "The official list of skills to match against",
+    ("ESCO v1.1.1 (EU skills list)", "The official list of skills to match against",
      "A real published standard, so a 'missing skill' means something",
      "Old — it does not know newer technology, so we added our own list"),
-    ("NetworkX", "Holding the skill map",
+    ("NetworkX 3.6", "Holding the skill map",
      "Simple and fast enough",
      "Kept in memory only, so it would not work for many users at once"),
-    ("LiveKit", "Carrying the audio for the spoken interview",
+    ("difflib (built into Python)", "Matching skill names that are spelled differently",
+     "No extra library needed, and catches 'k8s' meaning Kubernetes",
+     "Too loose a setting invents matches, so it only runs on names of six "
+     "letters or more and must be 88% similar"),
+    ("PyMuPDF 1.28", "Getting the text out of a CV in PDF form",
+     "Fast and accurate on normal PDFs",
+     "A scanned or photographed CV has no text to extract"),
+    ("LiveKit 1.1 (+ agents 1.6)", "Carrying the audio for the spoken interview",
      "Professional-grade; handles people talking over each other",
      "Big install, and takes about 12 seconds to start up"),
-    ("MediaPipe", "Face and body tracking",
+    ("Deepgram Nova-3", "Turning speech into text",
+     "Accurate, and can be told the job's technical words in advance",
+     "Needs internet and an API key"),
+    ("ElevenLabs Turbo v2.5", "The interviewer's voice",
+     "Natural sounding and fast — a full question in about one second",
+     "Free tier runs out quickly; falls back to Deepgram Aura-2 automatically"),
+    ("MediaPipe Tasks Vision 1.0", "Face and body tracking",
      "Runs inside the browser, so no video is ever uploaded",
      "Needs a reasonably modern browser"),
-    ("Web Audio", "Measuring the voice",
+    ("Web Audio API", "Measuring the voice",
      "Free, offline, and you can see exactly how the score was made",
      "It measures how they sound, not how they feel"),
-    ("Isolation Forest", "Spotting unusual behaviour",
+    ("scikit-learn 1.9 (Isolation Forest)", "Spotting unusual behaviour",
      "Does not need examples of cheating, which nobody could collect fairly",
      "Trained on made-up 'normal' data, so we cannot say how often it is wrong"),
-    ("FastAPI + React", "The web server and the web page",
-     "Quick to build, and one program serves both",
+    ("FastAPI 0.141 + Uvicorn", "The web server",
+     "Quick to build, and one program serves both the API and the web page",
      "Handles one interview at a time"),
+    ("React 19 + Vite 8 + Tailwind 4", "The web page the candidate sees",
+     "Fast to develop and quick to load",
+     "Vite 8 needs Node.js 20.19 or newer, so an old Node will not build it"),
+    ("pytest 9.1", "The 72 automatic tests",
+     "Catches breakages without spending any API credit",
+     "Tests the parts, not the live interview end to end"),
+    ("python-docx / python-pptx", "Building this guide, the dissertation and the slides",
+     "The documents are generated from the real data, so they cannot drift",
+     "Formatting has to be written in code rather than clicked in Word"),
 ]
 
 
@@ -240,6 +317,8 @@ def build():
               "and shows its working.",
          align="center", size=Pt(13), colour=GREY)
     para(doc, space_after=70)
+    para(doc, "Abdul Wahab", align="center", bold=True, size=Pt(13))
+    para(doc, space_after=18)
     para(doc, "CMP7200 — Individual Master's Project", align="center", size=Pt(11))
     para(doc, "Birmingham City University · 2025–26", align="center",
          size=Pt(10), colour=GREY)
@@ -344,19 +423,84 @@ def build():
     ):
         bullet(doc, b, lead=lead)
 
-    h2(doc, "4.1  The thirteen parts")
-    table(doc, ["", "What it does", "In plain English", "File"],
-          [[t, n, how, f] for t, n, f, how in MODULES],
-          widths=[1.0, 3.4, 7.4, 3.7], font_size=8)
+    h2(doc, "4.1  The thirteen parts, one by one")
+    table(doc, ["", "What it does", "How it works", "Built with", "File"],
+          [[t, n, how, tech, f] for t, n, f, tech, how in MODULES],
+          widths=[0.7, 2.5, 6.6, 2.6, 2.7], font_size=8)
+
+    h2(doc, "4.2  The camera and microphone parts, explained")
+    para(doc,
+         "Four of the thirteen parts (M7, M8, M10 and part of M9) do not read words at "
+         "all. They watch how the interview went. These are the parts people ask about "
+         "most, so here is what each one actually measures.")
+    for lead, b in (
+        ("Face and attention (M7). ",
+         "The camera picture is scanned for 478 points on the face — the corners of the "
+         "eyes, the edge of the jaw, the tip of the nose. From how those points sit "
+         "relative to each other, the system works out which way the head is turned and "
+         "whether the eyes are pointed at the screen. It produces two things: an "
+         "attention score, and how much of the interview was spent looking away."),
+        ("Posture (M8). ",
+         "The same picture is scanned again for 33 points on the upper body — shoulders, "
+         "elbows, hips. It checks whether the shoulders are level and whether the person "
+         "is sitting upright, slouched, or leaning out of frame."),
+        ("Tone of voice (M10). ",
+         "This listens to the sound, not the words. It measures how steady the pitch is "
+         "(a wobbling pitch suggests nerves), how loud the speech is, and what fraction "
+         "of the time is real speech rather than pauses. Those combine into a confidence "
+         "estimate."),
+        ("Behaviour (M9). ",
+         "This one is not a camera at all. It watches the shape of the session: how many "
+         "times the candidate switched browser tab, whether answers arrived far faster or "
+         "slower than normal, whether every answer is suspiciously the same length."),
+    ):
+        bullet(doc, b, lead=lead)
+    para(doc,
+         "Two things are worth being clear about. All of this happens inside the "
+         "candidate's own browser — the video and audio are never uploaded, never "
+         "recorded, and never stored; only the resulting numbers are sent. And none of it "
+         "is used to judge the person: it does not read emotions, and it makes no claim "
+         "about honesty or personality.", bold=True)
+    para(doc,
+         "It also counts for much less than the answers. This is the exact recipe for the "
+         "final score — the camera and voice together are worth 15 out of 100:")
+    table(doc, ["What is measured", "Which part", "Share of the final score"],
+          [["What the candidate actually said", "M6", "50%"],
+           ["How many required skills were covered", "M3", "20%"],
+           ["Whether the session looked normal", "M9", "15%"],
+           ["Attention, posture and tone of voice", "M7, M8, M10", "15%"]],
+          widths=[6.6, 3.4, 5.5], font_size=9)
 
     # ── 5. Technology ────────────────────────────────────────────────────
     h1(doc, "5.  What it is built with")
+    h2(doc, "5.1  The AI models, named exactly")
+    para(doc,
+         "Six trained models are involved. Three are language and speech models reached "
+         "over the internet; two are vision models that run inside the browser; one is "
+         "trained by the system itself. Nothing else in the project is a model — the rest "
+         "is ordinary code.")
+    table(doc, ["Model", "Which library calls it", "What it is used for", "Where it runs"],
+          [[m, lib, use, where] for m, lib, use, where in MODELS],
+          widths=[3.4, 3.4, 6.5, 2.2], font_size=8)
+    para(doc,
+         "Only the first three cost money or need an internet connection. The two "
+         "MediaPipe models are downloaded once when the app is first built and then run "
+         "offline on the candidate's own machine, which is what makes the privacy promise "
+         "in section 3.3 possible.")
+
+    h2(doc, "5.2  Everything else it is built with")
     para(doc,
          "Every choice has a downside as well as an upside. Both are listed, because "
          "pretending otherwise helps nobody.")
     table(doc, ["Tool", "Used for", "Why", "Downside"],
           [[t, u, w, c] for t, u, w, c in TECH],
-          widths=[2.8, 3.4, 4.8, 4.5], font_size=8)
+          widths=[3.2, 3.3, 4.8, 4.2], font_size=8)
+    para(doc,
+         "Every Python package is pinned to an exact version in "
+         "InterviewAI\\requirements.txt, and every JavaScript one in "
+         "InterviewAI\\frontend\\package.json. Both are installed automatically by "
+         "run.bat, so the versions above are what actually gets installed — not a "
+         "recommendation.", size=Pt(9), colour=GREY)
 
     # ── 6. What happens, start to finish ─────────────────────────────────
     h1(doc, "6.  What happens, start to finish")
