@@ -18,7 +18,6 @@ export default function InterviewScreen({ mediaStream, sessionData, setSessionDa
   const [interim, setInterim] = useState('')
   const [chatLog, setChatLog] = useState([])
   const [warning, setWarning] = useState('')
-  const [emotion, setEmotion] = useState('neutral')
   const [tabSwitchCount, setTabSwitchCount] = useState(0)
   const [tabWarningVisible, setTabWarningVisible] = useState(false)
   const [micOn, setMicOn] = useState(true)
@@ -38,7 +37,6 @@ export default function InterviewScreen({ mediaStream, sessionData, setSessionDa
   const roomRef = useRef(null)
   const chatEndRef = useRef(null)
   const timerRef = useRef(null)
-  const emotionRef = useRef(null)
   const speakingTimerRef = useRef(null)
   const visionRef = useRef(null)
   const voiceRef = useRef(null)
@@ -69,7 +67,6 @@ export default function InterviewScreen({ mediaStream, sessionData, setSessionDa
   const teardown = () => {
     if (roomRef.current) { roomRef.current.disconnect(); roomRef.current = null }
     if (timerRef.current) clearInterval(timerRef.current)
-    if (emotionRef.current) clearInterval(emotionRef.current)
     if (speakingTimerRef.current) clearTimeout(speakingTimerRef.current)
     visionRef.current?.stop()
     voiceRef.current?.stop()
@@ -139,7 +136,6 @@ export default function InterviewScreen({ mediaStream, sessionData, setSessionDa
       setSessionData(prev => ({ ...prev, startTime: Date.now(), phase: 'greeting' }))
       timerRef.current = setInterval(() => setElapsed(p => p + 1), 1000)
 
-      startEmotionDetection()
       startVisionAnalysis()
       startVoiceAnalysis()
       startTabTracking()
@@ -282,51 +278,7 @@ export default function InterviewScreen({ mediaStream, sessionData, setSessionDa
     }
   }
 
-  const modelsLoadedRef = useRef(false)
-  const noFaceCountRef = useRef(0)
 
-  const startEmotionDetection = async () => {
-    const faceapi = window.faceapi
-    if (!faceapi) { setTimeout(startEmotionDetection, 3000); return }
-    const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models'
-    try {
-      await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL)
-      await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
-      modelsLoadedRef.current = true
-    } catch {
-      console.info('[emotion] face-api unavailable — continuing without emotion')
-      return
-    }
-
-    emotionRef.current = setInterval(async () => {
-      if (!modelsLoadedRef.current) return
-      try {
-        const video = videoRef.current
-        if (!video || video.readyState < 2 || video.videoWidth === 0) return
-        const detections = await faceapi
-          .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 }))
-          .withFaceExpressions()
-
-        if (detections.length === 0) {
-          noFaceCountRef.current++
-          if (noFaceCountRef.current >= 10) setEmotion('no face')
-          return
-        }
-        noFaceCountRef.current = 0
-        const expr = detections[0].expressions
-        const dominant = Object.entries(expr).sort((a, b) => b[1] - a[1])[0]
-        setEmotion(dominant[0])
-        setSessionData(prev => ({
-          ...prev,
-          emotions: [...prev.emotions, {
-            time: Math.floor((Date.now() - (prev.startTime || Date.now())) / 1000),
-            emotion: dominant[0],
-            confidence: Math.round(dominant[1] * 100),
-          }],
-        }))
-      } catch { /* single frame failures are not interesting */ }
-    }, 2000)
-  }
 
   const startTabTracking = () => {
     const onVisibilityChange = () => {
@@ -433,9 +385,6 @@ export default function InterviewScreen({ mediaStream, sessionData, setSessionDa
             {/* Name badge */}
             <div className="absolute bottom-3 left-3 flex items-center gap-2">
               <span className="text-xs bg-black/60 backdrop-blur px-2.5 py-1 rounded-md font-medium">You</span>
-              <span className="text-xs bg-black/60 backdrop-blur px-2.5 py-1 rounded-md text-amber-300 capitalize">
-                {emotion}
-              </span>
               {!micOn && (
                 <span className="bg-red-600 p-1.5 rounded-md"><MicOff className="w-3 h-3" /></span>
               )}

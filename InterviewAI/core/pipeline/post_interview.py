@@ -280,7 +280,6 @@ def evaluate_session(
         skill_match_pct=skill_match_pct,
         integrity_score=integrity["integrity_score"],
         engagement_score=telemetry.get("engagement_score", 75),
-        emotion_data=telemetry.get("emotion_data"),
         vision_summary=telemetry.get("vision"),
         voice_summary=telemetry.get("voice"),
         distraction_count=telemetry.get("distraction_count", 0),

@@ -562,14 +562,12 @@ async def api_fusion_report(data: dict):
         skill_match_pct = data.get("skill_match_pct", 0)
         integrity_score = data.get("integrity_score", 100)
         engagement_score = data.get("engagement_score", 75)
-        emotion_data = data.get("emotion_data", None)
 
         result = compute_fusion_score(
             answer_scores=answer_scores,
             skill_match_pct=skill_match_pct,
             integrity_score=integrity_score,
             engagement_score=engagement_score,
-            emotion_data=emotion_data,
         )
         return {"success": True, "data": result}
     except Exception as e:

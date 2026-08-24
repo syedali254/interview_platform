@@ -339,7 +339,6 @@ class AgentHooks:
         self.start_time = start_time
         self.transcript: list[dict] = []
         self.distraction_events: list[dict] = []
-        self.emotion_timeline: list[dict] = []
         self.attention_events: list[dict] = []
         self.voice_samples: list[dict] = []
         self.turn_count = 0
@@ -521,7 +520,7 @@ async def run_interview(room_name: str):
 
         @room.on("data_received")
         def _on_data(packet):
-            """Collect client-side telemetry: distraction, emotion, attention, voice."""
+            """Collect client-side telemetry: distraction, attention, voice."""
             try:
                 payload = json.loads(packet.data.decode())
             except Exception:
@@ -535,8 +534,6 @@ async def run_interview(room_name: str):
                 hooks.distraction_events.append(payload)
                 print(f"[Agent] Distraction: {payload.get('detail', 'unknown')} "
                       f"at Q{hooks.q_count}")
-            elif msg_type == "emotion":
-                hooks.emotion_timeline.append(payload)
             elif msg_type == "attention":
                 hooks.attention_events.append(payload)
             elif msg_type == "voice":
@@ -630,7 +627,6 @@ def _save_transcript(room_name: str, hooks: AgentHooks, cv_data: dict, jd_data: 
         "elapsed_mins": round(hooks.elapsed_seconds() / 60, 1),
         "conversation": hooks.transcript,
         "distraction_events": hooks.distraction_events,
-        "emotion_timeline": hooks.emotion_timeline,
         "attention_events": hooks.attention_events,
         "voice_samples": hooks.voice_samples,
         "config": {

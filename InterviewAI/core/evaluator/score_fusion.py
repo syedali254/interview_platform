@@ -87,7 +87,6 @@ def compute_fusion_score(
     skill_match_pct: float,
     integrity_score: float = 100.0,
     engagement_score: float = 75.0,
-    emotion_data: Optional[dict] = None,
     vision_summary: Optional[dict] = None,
     voice_summary: Optional[dict] = None,
     distraction_count: int = 0,
@@ -100,7 +99,6 @@ def compute_fusion_score(
         integrity_score:   M9 integrity score (0-100)
         engagement_score:  fallback engagement when the presence modules
                            produced nothing (0-100)
-        emotion_data:      facial emotion summary
         vision_summary:    M7/M8 attention and posture summary
         voice_summary:     M10 vocal delivery summary
         distraction_count: number of recorded distraction events
@@ -212,17 +210,6 @@ def compute_fusion_score(
         if (voice_summary.get("vocal_confidence") or 0) >= 75:
             strengths.append("Confident vocal delivery")
 
-    # Emotion summary
-    emotion_summary = None
-    if emotion_data:
-        dominant = emotion_data.get("dominant_emotion", "neutral")
-        avg_conf = emotion_data.get("avg_confidence", 0)
-        emotion_summary = {
-            "dominant_emotion": dominant,
-            "confidence": round(avg_conf, 2),
-            "interpretation": _interpret_emotion(dominant),
-        }
-
     return {
         "fusion_score": round(fusion_score, 1),
         "recommendation": recommendation,
@@ -231,7 +218,6 @@ def compute_fusion_score(
         "components": components,
         "strengths": strengths,
         "concerns": concerns,
-        "emotion_summary": emotion_summary,
         "vision_summary": vision_summary,
         "voice_summary": voice_summary,
         "weights_used": WEIGHTS,
@@ -240,15 +226,3 @@ def compute_fusion_score(
     }
 
 
-def _interpret_emotion(emotion: str) -> str:
-    """Provide brief interpretation of dominant emotion."""
-    interpretations = {
-        "happy": "Candidate appeared confident and positive",
-        "neutral": "Candidate maintained composure throughout",
-        "sad": "Candidate may have felt uncertain or stressed",
-        "angry": "Candidate showed signs of frustration",
-        "fearful": "Candidate appeared anxious or nervous",
-        "surprised": "Candidate showed unexpected reactions",
-        "disgusted": "Candidate showed negative reactions to questions",
-    }
-    return interpretations.get(emotion, "Emotion patterns inconclusive")

@@ -31,7 +31,6 @@ export default function App() {
   const [interviewMode, setInterviewMode] = useState('voice')
   const [interviewData, setInterviewData] = useState({
     transcript: [],
-    emotions: [],
     distractions: [],
     vision: [],        // M7/M8 attention + posture samples
     voice: [],         // M10 prosody samples

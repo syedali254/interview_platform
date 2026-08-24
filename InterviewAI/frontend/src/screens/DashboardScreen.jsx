@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {
-  Clock, MessageCircle, AlertTriangle, Smile, RotateCw, TrendingUp, Activity,
+  Clock, MessageCircle, AlertTriangle, RotateCw, TrendingUp, Activity,
   Loader2, ShieldCheck, Scale, Award, ChevronDown, RefreshCw, Eye, AudioLines,
   Download,
 } from 'lucide-react'
@@ -54,24 +54,6 @@ export default function DashboardScreen({ sessionData }) {
   const secs = duration % 60
   const candidateMsgs = sessionData.transcript.filter(t => t.role === 'candidate')
 
-  /* ── Emotion summary ─────────────────────────────────────────────── */
-  const emotionColors = {
-    happy: '#10b981', sad: '#6366f1', angry: '#ef4444', surprised: '#f59e0b',
-    fearful: '#8b5cf6', disgusted: '#64748b', neutral: '#94a3b8',
-  }
-  const emotionCounts = {}
-  for (const e of sessionData.emotions) {
-    emotionCounts[e.emotion] = (emotionCounts[e.emotion] || 0) + 1
-  }
-  const totalEmotions = sessionData.emotions.length || 1
-  const sortedEmotions = Object.entries(emotionCounts).sort((a, b) => b[1] - a[1])
-  const dominantEmotion = sortedEmotions.length ? sortedEmotions[0][0] : 'N/A'
-  const dominantPct = sortedEmotions.length
-    ? Math.round((sortedEmotions[0][1] / totalEmotions) * 100) : 0
-  const avgConfidence = sessionData.emotions.length
-    ? Math.round(sessionData.emotions.reduce((s, e) => s + (e.confidence || 0), 0) / sessionData.emotions.length)
-    : 0
-
   /* ── Telemetry handed to M9 / M11 ────────────────────────────────── */
   const visionSummary = useMemo(() => summariseVision(sessionData.vision || []), [sessionData.vision])
   const voiceSummary = useMemo(() => summariseVoice(sessionData.voice || []), [sessionData.voice])
@@ -87,14 +69,10 @@ export default function DashboardScreen({ sessionData }) {
       total_duration: duration || 300,
       duration_mins: Math.round((duration / 60) * 10) / 10,
       engagement_score: fallbackEngagement,
-      emotion_data: sessionData.emotions.length
-        ? { dominant_emotion: dominantEmotion, avg_confidence: avgConfidence / 100 }
-        : null,
       vision: visionSummary,
       voice: voiceSummary,
     }
-  }, [sessionData.distractions, sessionData.emotions.length, duration,
-      dominantEmotion, avgConfidence, visionSummary, voiceSummary])
+    }, [sessionData.distractions, duration, visionSummary, voiceSummary])
 
   const runEvaluation = async () => {
     setEvalState('running')
@@ -162,44 +140,12 @@ export default function DashboardScreen({ sessionData }) {
         {report && <Assessment report={report} expandAll={expandAll} />}
 
         {/* ── Session metrics ────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
           <MetricCard icon={<MessageCircle className="w-5 h-5" />} value={qaPairs.length} label="Exchanges" color="indigo" />
           <MetricCard icon={<MessageCircle className="w-5 h-5" />} value={candidateMsgs.length} label="Answers" color="emerald" />
           <MetricCard icon={<Clock className="w-5 h-5" />} value={`${mins}m ${secs}s`} label="Duration" color="amber" />
           <MetricCard icon={<AlertTriangle className="w-5 h-5" />} value={sessionData.distractions.length} label="Distractions" color="red" />
-          <MetricCard icon={<Smile className="w-5 h-5" />} value={dominantEmotion} label={`Dominant (${dominantPct}%)`} color="violet" />
-          <MetricCard icon={<Activity className="w-5 h-5" />} value={`${avgConfidence}%`} label="Avg Confidence" color="indigo" />
         </div>
-
-        <Card title="Emotion Timeline" icon={<TrendingUp className="w-4 h-4 text-violet-500" />}>
-          {sessionData.emotions.length > 0
-            ? <EmotionTimeline emotions={sessionData.emotions} colors={emotionColors} duration={duration} />
-            : <Empty>No emotion data captured</Empty>}
-        </Card>
-
-        <Card title="Emotion Distribution" icon={<Smile className="w-4 h-4 text-amber-500" />}>
-          {sortedEmotions.length > 0 ? (
-            <div className="space-y-3.5">
-              {sortedEmotions.map(([emotion, count]) => {
-                const pct = Math.round((count / totalEmotions) * 100)
-                return (
-                  <div key={emotion} className="flex items-center gap-4">
-                    <span className="text-sm text-gray-600 w-48 capitalize">{emotion}</span>
-                    <div className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                        transition={{ duration: 0.7, ease: 'easeOut' }}
-                        className="h-full rounded-full"
-                        style={{ background: emotionColors[emotion] || '#94a3b8' }}
-                      />
-                    </div>
-                    <span className="text-sm font-semibold text-gray-800 w-14 text-right tabular-nums">{pct}%</span>
-                  </div>
-                )
-              })}
-            </div>
-          ) : <Empty>No emotion data captured</Empty>}
-        </Card>
 
         <Card title="Interview Transcript" icon={<MessageCircle className="w-4 h-4 text-indigo-500" />}>
           <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
@@ -753,85 +699,6 @@ function MetricCard({ icon, value, label, color }) {
   )
 }
 
-function EmotionTimeline({ emotions, colors, duration }) {
-  const canvasRef = useRef(null)
-  const emotionMap = { happy: 6, surprised: 5, neutral: 4, sad: 3, fearful: 2, disgusted: 1, angry: 0 }
-
-  useEffect(() => {
-    const draw = () => {
-      const canvas = canvasRef.current
-      if (!canvas || emotions.length === 0) return
-      const ctx = canvas.getContext('2d')
-      const dpr = window.devicePixelRatio || 2
-      const w = canvas.offsetWidth
-      const h = 160
-      canvas.width = w * dpr
-      canvas.height = h * dpr
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      canvas.style.height = `${h}px`
-
-      const pad = { top: 20, bottom: 30, left: 70, right: 20 }
-      const plotW = w - pad.left - pad.right
-      const plotH = h - pad.top - pad.bottom
-      const maxTime = Math.max(duration, emotions[emotions.length - 1]?.time || 60, 60)
-
-      ctx.clearRect(0, 0, w, h)
-
-      ctx.fillStyle = '#9ca3af'
-      ctx.font = '9px Inter, sans-serif'
-      ctx.textAlign = 'right'
-      Object.keys(emotionMap).forEach(label => {
-        const y = pad.top + plotH - (emotionMap[label] / 6) * plotH
-        ctx.fillText(label, pad.left - 8, y + 3)
-        ctx.beginPath()
-        ctx.moveTo(pad.left, y)
-        ctx.lineTo(pad.left + plotW, y)
-        ctx.strokeStyle = '#f3f4f6'
-        ctx.lineWidth = 1
-        ctx.stroke()
-      })
-
-      ctx.textAlign = 'center'
-      const ticks = Math.max(1, Math.min(6, Math.ceil(maxTime / 30)))
-      for (let i = 0; i <= ticks; i++) {
-        const t = Math.round((i / ticks) * maxTime)
-        const x = pad.left + (t / maxTime) * plotW
-        ctx.fillStyle = '#9ca3af'
-        ctx.fillText(`${Math.floor(t / 60)}:${(t % 60).toString().padStart(2, '0')}`, x, h - 8)
-      }
-
-      if (emotions.length > 1) {
-        ctx.beginPath()
-        emotions.forEach((e, i) => {
-          const x = pad.left + (e.time / maxTime) * plotW
-          const y = pad.top + plotH - ((emotionMap[e.emotion] ?? 4) / 6) * plotH
-          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
-        })
-        ctx.strokeStyle = '#8b5cf6'
-        ctx.lineWidth = 1.5
-        ctx.stroke()
-      }
-
-      emotions.forEach(e => {
-        const x = pad.left + (e.time / maxTime) * plotW
-        const y = pad.top + plotH - ((emotionMap[e.emotion] ?? 4) / 6) * plotH
-        ctx.beginPath()
-        ctx.arc(x, y, 4, 0, Math.PI * 2)
-        ctx.fillStyle = colors[e.emotion] || '#94a3b8'
-        ctx.fill()
-        ctx.strokeStyle = '#fff'
-        ctx.lineWidth = 1.5
-        ctx.stroke()
-      })
-    }
-
-    draw()
-    window.addEventListener('resize', draw)
-    return () => window.removeEventListener('resize', draw)
-  }, [emotions, colors, duration])
-
-  return <canvas ref={canvasRef} className="w-full rounded-lg bg-white border border-gray-100" style={{ height: '160px' }} />
-}
 
 /* ══ Helpers ════════════════════════════════════════════════════════ */
 
