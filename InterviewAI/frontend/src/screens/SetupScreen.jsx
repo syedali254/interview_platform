@@ -70,6 +70,9 @@ export default function SetupScreen({ onReady }) {
   const streamRef = useRef(null)
   const animRef = useRef(null)
   const audioCtxRef = useRef(null)
+  // Set when the stream is passed to the interview, so the cleanup below
+  // knows not to stop tracks that are about to be used.
+  const handedOffRef = useRef(false)
 
   const testDevices = useCallback(async () => {
     setTesting(true)
@@ -80,7 +83,20 @@ export default function SetupScreen({ onReady }) {
     try {
       if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
 
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      // This is the only getUserMedia call in the application. The stream it
+      // returns is handed to the interview screen, which publishes these exact
+      // tracks to LiveKit — so the audio constraints have to be stated here.
+      // Setting them on the Room does nothing for an externally supplied track.
+      // Echo cancellation is what stops the interviewer's voice, coming out of
+      // the candidate's speakers, being captured and read as them interrupting.
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      })
       streamRef.current = stream
       if (videoRef.current) videoRef.current.srcObject = stream
 
@@ -118,12 +134,12 @@ export default function SetupScreen({ onReady }) {
     return () => {
       if (animRef.current) cancelAnimationFrame(animRef.current)
       try { audioCtxRef.current?.close() } catch { /* already closed */ }
-      // Release the camera and microphone before the interview screen asks
-      // for them. Left running, this preview keeps a second capture open on
-      // the same microphone; the browser then echo-cancels only one of them,
-      // and the agent's own voice leaks back in loudly enough to be mistaken
-      // for the candidate interrupting.
-      if (streamRef.current) {
+      // Only release the devices if the candidate left without starting. This
+      // same stream object is handed to the interview screen, which publishes
+      // its tracks to LiveKit and feeds them to the vision and voice
+      // analysers. Stopping the tracks on the way through leaves a dead
+      // stream: no picture, and a microphone track that transmits silence.
+      if (!handedOffRef.current && streamRef.current) {
         streamRef.current.getTracks().forEach(t => t.stop())
         streamRef.current = null
       }
@@ -331,6 +347,9 @@ export default function SetupScreen({ onReady }) {
           <button
             onClick={() => {
               if (animRef.current) cancelAnimationFrame(animRef.current)
+              // Marked before handing over, so the unmount cleanup leaves
+              // these tracks alive — the interview screen publishes them.
+              handedOffRef.current = true
               onReady(streamRef.current, mode)
             }}
             disabled={!canProceed}
