@@ -100,6 +100,38 @@ def ensure_diagrams():
         figures.main()
 
 
+def ensure_result_figures():
+    """Redraw the five experiment charts if they are missing.
+
+    Both the charts and the architecture diagrams are build output and are not
+    kept in version control, but these come from the evaluation harness rather
+    than from figures.py. Re-running the harness properly would cost API calls;
+    --figures-only re-reads the tracked raw_scores.json and redraws from it, so
+    a fresh clone can rebuild the dissertation for nothing.
+    """
+    expected = ["e1_discriminant_validity", "e2_positional_bias",
+                "e3_paraphrase_invariance", "e4_criterion_correlation",
+                "e5_verbosity"]
+    have = {p.stem for p in EXP_FIGURES.glob("*.png")} if EXP_FIGURES.exists() else set()
+    missing = [e for e in expected if e not in have]
+    if not missing:
+        return
+    if not (PROJECT / "experiments" / "results" / "raw_scores.json").exists():
+        print(f"  ! {len(missing)} result figure(s) missing and no cached scores "
+              f"to redraw them from. Run the evaluation harness.")
+        return
+    print(f"  Redrawing {len(missing)} result figure(s) from cached scores...")
+    python = PROJECT / "venv" / "Scripts" / "python.exe"
+    if not python.exists():
+        python = Path(sys.executable)
+    proc = subprocess.run(
+        [str(python), "-m", "experiments.run_evaluation", "--figures-only"],
+        cwd=str(PROJECT), capture_output=True, text=True, timeout=600,
+    )
+    if proc.returncode != 0:
+        print(f"  ! Redraw failed:\n{proc.stdout[-600:]}{proc.stderr[-600:]}")
+
+
 def word_count(doc) -> int:
     """Body word count in document order.
 
@@ -138,6 +170,7 @@ def main():
     print("=" * 62)
 
     ensure_diagrams()
+    ensure_result_figures()
 
     stats = load_stats()
     if stats:
