@@ -84,14 +84,12 @@ def chapter_4(doc, fig):
          "priority. The question generator receives this list and produces a structured set with "
          "opening, technical, behavioural and closing sections.")
     para(doc,
-         "The traversal step matters more than it first appears. A language model asked to "
-         "generate questions returns them in whatever order it composed them, which correlates "
-         "with nothing. Every interview has a time budget, and any question that falls off the "
-         "end of that budget is a question never asked. The system therefore re-sorts the "
-         "technical questions by the priority the graph assigned to their skill before the "
-         "interview begins, so the budget is spent on genuine gaps first. This is the concrete "
-         "content of Objective 2: question targeting is driven by the graph, not by the order the "
-         "model happened to emit.")
+         "The traversal step matters more than it appears. A model returns questions in whatever "
+         "order it composed them, which correlates with nothing, and every interview has a time "
+         "budget: a question that falls off the end is never asked. The system therefore re-sorts "
+         "technical questions by the priority the graph assigned to their skill, so the budget is "
+         "spent on genuine gaps first. This is the concrete content of Objective 2 — targeting "
+         "driven by the graph, not by emission order.")
 
     h2(doc, "4.6  Interview transport design")
     para(doc,
@@ -152,13 +150,12 @@ def chapter_4(doc, fig):
                   "completeness is deliberate: a short answer containing nothing incorrect should "
                   "score highly on the former and may legitimately score lower on the latter.")
     para(doc,
-         "Averaging the two passes cancels the component of the score attributable to "
-         "presentation order. The more useful output, however, is the disagreement between them. "
-         "A judge that returns 82 and 81 for the same answer is stable; one that returns 71 and "
-         "45 is not, and the mean of 58 conceals that instability entirely. The spread is "
-         "therefore retained, banded into high, moderate and low consistency, and answers in the "
-         "low band are flagged for human review rather than reported as confident scores. This is "
-         "the mechanism by which the system is accountable for its own reliability.")
+         "Averaging the two passes cancels the component attributable to presentation order. The "
+         "more useful output is their disagreement. A judge returning 82 and 81 is stable; one "
+         "returning 71 and 45 is not, and the mean of 58 conceals that entirely. The spread is "
+         "therefore retained, banded high, moderate or low, and low-band answers are flagged for "
+         "human review rather than reported as confident scores. This is the mechanism by which "
+         "the system is accountable for its own reliability.")
 
     h2(doc, "4.8  Fusion and reporting design")
     para(doc,

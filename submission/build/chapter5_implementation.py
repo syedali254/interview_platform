@@ -29,12 +29,12 @@ def chapter_5(doc, fig):
          "the same pattern, extracting the role title, required and nice-to-have skills, "
          "responsibilities, seniority level, domain and expected experience.")
     para(doc,
-         "The practical difficulty with schema-constrained generation is that models intermittently "
-         "return malformed JSON — a trailing comma, an unterminated string, or the whole object "
-         "wrapped in a markdown fence. Rather than fail the request, the client strips fences, "
-         "attempts a strict parse, and falls back to a repair pass before giving up. This is "
-         "unglamorous, and it is the difference between a demonstrator that works and one that "
-         "fails in front of an examiner.")
+         "The practical difficulty with schema-constrained generation is that models "
+         "intermittently return malformed JSON — a trailing comma, an unterminated string, or the "
+         "whole object wrapped in a markdown fence. Rather than fail, the client strips fences, "
+         "attempts a strict parse, and falls back to a repair pass. This is unglamorous, and it is "
+         "the difference between a demonstrator that works and one that fails in front of an "
+         "examiner.")
     para(doc,
          "Image-based PDFs yield no extractable text; the system reports this rather than "
          "attempting optical character recognition, which was out of scope.")
@@ -47,12 +47,10 @@ def chapter_5(doc, fig):
          "the ESCO broader-concept field so that the interface can group skills meaningfully.")
     para(doc,
          "Two supplementary taxonomies extend ESCO where it is thin. A technology extension covers "
-         "fifteen categories of modern stack — cloud platforms, containerisation, CI/CD, backend "
-         "and frontend frameworks, databases, messaging, machine learning tooling, architecture "
-         "patterns, version control, APIs, testing, data engineering and productivity software. A "
-         "soft-skill extension covers five categories that ESCO addresses only sparsely. Extension "
-         "labels take precedence over ESCO labels in the lookup index, because "
-         "“Docker” is the recognisable form of the concept and an ESCO near-synonym is not.")
+         "fifteen categories of modern stack, from cloud platforms and containerisation to testing "
+         "and data engineering; a soft-skill extension covers five categories ESCO addresses only "
+         "sparsely. Extension labels take precedence in the lookup index, because “Docker” is the "
+         "recognisable form of the concept and an ESCO near-synonym is not.")
     para(doc,
          "An alias map of roughly seventy entries handles the abbreviations and spelling variants "
          "that appear on real CVs — k8s, postgres, nodejs, sklearn, ci/cd, amazon web services. "
@@ -84,11 +82,11 @@ def chapter_5(doc, fig):
          "two per medium-priority topic, three behavioural questions in STAR format, and two "
          "closing questions.")
     para(doc,
-         "The flattening step then re-sorts the technical questions by graph priority before the "
-         "interview begins, so that high-priority gaps are asked first. Questions whose skill the "
-         "graph does not recognise sort after graph-derived ones but before nothing, so they are "
-         "not silently discarded. The unit tests assert this ordering directly, using a fixture in "
-         "which the model's emission order is the reverse of the priority order.")
+         "The flattening step re-sorts technical questions by graph priority before the interview "
+         "begins, so high-priority gaps are asked first. Questions whose skill the graph does not "
+         "recognise sort after graph-derived ones but are not discarded. The unit tests assert this "
+         "ordering using a fixture in which the model's emission order is the reverse of the "
+         "priority order.")
 
     h2(doc, "5.5  The voice interview agent (M5)")
     para(doc,
@@ -98,21 +96,19 @@ def chapter_5(doc, fig):
     h3(doc, "5.5.1  Truncated speech")
     para(doc,
          "Piping the model's token stream directly into the synthesis socket produced audio that "
-         "stopped after a few words while the full text continued to appear on screen. The "
-         "solution was to buffer each complete utterance before synthesising it. This costs a "
-         "little latency and buys reliable audio and control over ordering. The "
-         "question is published to the interface first and spoken a fraction of a second later, "
-         "so a candidate who mishears can read it.")
+         "stopped after a few words while the full text continued to appear on screen. Buffering "
+         "each complete utterance before synthesising it costs a little latency and buys reliable "
+         "audio and control over ordering: the question is published to the interface first and "
+         "spoken a fraction of a second later, so a candidate who mishears can read it.")
     h3(doc, "5.5.2  The silent provider")
     para(doc,
-         "More subtle was a failure in which the agent spoke the greeting and then went quiet. "
-         "The synthesis provider's quota had been exhausted, and an exhausted quota accepts the "
-         "connection and returns no audio frames — indistinguishable from success unless the "
-         "frames are inspected. The fix was a startup probe that pushes two characters through "
-         "the engine and confirms an audio frame comes back before the interview "
-         "begins. If it does not, the agent falls through to the alternative provider, and if "
-         "neither works it runs in text-only mode with questions still displayed. The interview "
-         "degrades rather than failing.")
+         "More subtle was a failure where the agent spoke the greeting then went quiet. The "
+         "synthesis quota had been exhausted, and an exhausted quota accepts the connection and "
+         "returns no audio — indistinguishable from success unless the frames are inspected. A "
+         "startup probe now pushes two characters through the engine and confirms audio comes back "
+         "before the interview begins; failing that it falls through to the alternative provider, "
+         "and failing both it runs text-only with questions still displayed. The interview degrades "
+         "rather than fails.")
     h3(doc, "5.5.3  Process lifecycle on Windows")
     para(doc,
          "Terminating the agent subprocess did not stop it: the Python executable inside a virtual "
@@ -127,12 +123,11 @@ def chapter_5(doc, fig):
          "window of recent history into each prompt, and emits an end marker the server strips "
          "before display.")
     para(doc,
-         "Two details matter. The transcript is structurally identical to the voice agent's, so "
-         "the assessment pipeline requires no branch on mode; and the minimum question count is "
-         "clamped never to exceed the maximum, without which a demonstration run configured for "
-         "three questions would never reach its own limit. Text mode also enables an integrity "
-         "signal unavailable in voice: a paste event in the answer box is recorded and surfaced "
-         "on the report.")
+         "Two details matter. The transcript is structurally identical to the voice agent's, so the "
+         "assessment pipeline needs no branch on mode; and the minimum question count is clamped "
+         "never to exceed the maximum, without which a run configured for three questions would "
+         "never reach its own limit. Text mode also enables a signal unavailable in voice: a paste "
+         "event in the answer box is recorded and surfaced on the report.")
 
     h2(doc, "5.7  Answer evaluation (M6)")
     para(doc,
@@ -140,10 +135,10 @@ def chapter_5(doc, fig):
          "exchange, scores the substantive ones, and aggregates.")
     para(doc,
          "Pairing is less trivial than it appears. An interviewer may ask a question across two "
-         "utterances; a candidate may answer across three. Consecutive turns from the same "
-         "speaker are therefore merged, so a question split by a pause still produces one "
-         "exchange. Trailing unanswered questions are dropped. Six unit tests cover these cases, "
-         "including a candidate speaking before the interviewer.")
+         "utterances; a candidate may answer across three. Consecutive turns from the same speaker "
+         "are merged, so a question split by a pause still produces one exchange, and trailing "
+         "unanswered questions are dropped. Six unit tests cover these cases, including a candidate "
+         "speaking before the interviewer.")
     para(doc,
          "Classification labels each exchange as technical, behavioural or logistics in one model "
          "call for the whole session. Logistics exchanges are excluded from scoring, because "
@@ -151,13 +146,12 @@ def chapter_5(doc, fig):
          "down the average. A keyword fallback runs if classification fails, so evaluation never "
          "depends on it succeeding.")
     para(doc,
-         "Scoring then proceeds as designed in Section 4.7: a reference answer is generated, the "
-         "answer is judged twice under permuted rubric orderings, the mean is taken and the "
-         "spread retained. One detail is worth noting. The judge is asked to return both the four "
-         "criterion marks and their total, and the implementation trusts the criterion marks over "
-         "the model's own arithmetic — if the stated total differs from the sum by more than two "
-         "points, the sum is used. Language models are unreliable at addition in a way they are "
-         "not unreliable at judgement.")
+         "Scoring proceeds as designed in Section 4.7: a reference answer is generated, the answer "
+         "judged twice under permuted rubric orderings, the mean taken and the spread retained. "
+         "One detail matters. The judge returns four criterion marks and a total, and the "
+         "implementation trusts the marks over the model's arithmetic — where the stated total "
+         "differs from the sum by more than two points, the sum wins. Models are unreliable at "
+         "addition in a way they are not at judgement.")
 
     h2(doc, "5.8  Presence modules (M7, M8, M10)")
     para(doc,
@@ -183,14 +177,13 @@ def chapter_5(doc, fig):
          "them with an Isolation Forest fitted to a synthetic baseline of four hundred normal "
          "sessions.")
     para(doc,
-         "Two details determined whether the module was usable. The first is the definition of "
-         "response time: the system measures from the question beginning to the answer "
-         "completing, typically twenty to sixty seconds. An initial baseline assumed it meant "
-         "thinking time, five to fifteen seconds, and flagged every ordinary session as "
-         "anomalous. The second is calibration — the raw decision function is not a number a "
-         "person can interpret, so the baseline's first and ninety-ninth percentiles are mapped "
-         "onto fifty and one hundred at training time, and the bundle is versioned so that an "
-         "uncalibrated one is refitted rather than silently reused.")
+         "Two details determined whether the module was usable. The first is what response time "
+         "means: measured from question start to answer completion it is twenty to sixty seconds, "
+         "but an initial baseline assumed thinking time of five to fifteen and flagged every "
+         "ordinary session as anomalous. The second is calibration — the raw decision function is "
+         "not interpretable, so the baseline's first and ninety-ninth percentiles map onto fifty "
+         "and one hundred, and the bundle is versioned so an uncalibrated one is refitted rather "
+         "than silently reused.")
     para(doc,
          "Finally, the module never returns an adverse verdict without naming a reason. Where the "
          "aggregate pattern is anomalous but no single indicator crossed its threshold, it says "
@@ -198,11 +191,11 @@ def chapter_5(doc, fig):
 
     h2(doc, "5.10  Fusion and report assembly (M11, M12)")
     para(doc,
-         "Fusion is deliberately deterministic arithmetic rather than a learned combination. Each "
-         "component is normalised to 0–100, multiplied by its weight, and summed, with the full "
-         "breakdown returned alongside the total so the report can show its working. A unit test "
-         "asserts that the component contributions reconcile with the reported total, which "
-         "guards against the weights and the arithmetic drifting apart.")
+         "Fusion is deterministic arithmetic rather than a learned combination. Each component is "
+         "normalised to 0–100, multiplied by its weight and summed, with the full breakdown "
+         "returned alongside the total so the report can show its working. A unit test asserts the "
+         "component contributions reconcile with the reported total, guarding against the weights "
+         "and the arithmetic drifting apart.")
     para(doc,
          "Engagement is assembled from whichever presence signals were actually captured, "
          "reweighted across the available sources, and marked as measured or estimated. A browser "
@@ -219,15 +212,15 @@ def chapter_5(doc, fig):
          "Beyond those already described, three further problems are worth recording because each "
          "changed a design decision rather than merely costing time.")
     para(doc,
-         "Interruption handling in the voice agent was initially disabled, on the reasoning that a "
-         "candidate should not be able to talk over the interviewer. In testing this caused the "
-         "framework to discard answers from candidates who began replying while the question was "
-         "still being spoken — a natural conversational behaviour. Interruptions were re-enabled "
-         "with a minimum duration and word count. Live use showed that was still too permissive: "
-         "a pause for thought ended the turn early, and the rest of the answer, arriving mid-"
-         "reply, cut the question off. Two apparent faults, one cause — timings suited to "
-         "conversation, not to interview answers. The windows were lengthened, and the agent now "
-         "resumes when an apparent interruption produces no speech.")
+         "Interruption handling was initially disabled, on the reasoning that a candidate should "
+         "not talk over the interviewer. In testing this made the framework discard answers from "
+         "candidates who began replying while the question was still being spoken — natural "
+         "conversational behaviour. Interruptions were re-enabled with a minimum duration and word "
+         "count. Live use showed that was still too permissive: a pause for thought ended the turn "
+         "early, and the rest of the answer, arriving mid-reply, cut the question off. Two "
+         "apparent faults, one cause — timings suited to conversation, not to interview answers. "
+         "The windows were lengthened, and the agent now resumes when an apparent interruption "
+         "produces no speech.")
     para(doc,
          "Answer-length thresholds initially skipped very short replies. This silently dropped "
          "genuine non-answers such as “I have not used that” — exactly the evidence a recruiter "

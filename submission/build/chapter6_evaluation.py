@@ -224,14 +224,13 @@ def chapter_6(doc, fig, stats, extra):
          f"consistency band, one in moderate, none in low. No answer was escalated to human "
          f"review.")
     para(doc,
-         "That is a null result for the escalation mechanism, and it is reported as one rather "
-         "than dressed up as a success. The instrumentation is justified by the literature and is "
-         "demonstrably operative — the spread is computed, banded and acted upon for every "
-         "answer — but on this corpus it never needed to fire. Two readings are possible and these "
-         "data cannot separate them. Either the countermeasure works and the averaging is doing "
-         "its job, or machine-written answers are unusually easy to score consistently and real "
-         "transcribed speech would produce wider spreads. The worked example in Section 6.9 is "
-         "weak evidence for the second reading.")
+         "That is a null result for the escalation mechanism, reported as one rather than dressed "
+         "up as a success. The instrumentation is justified by the literature and demonstrably "
+         "operative — the spread is computed, banded and acted upon for every answer — but on this "
+         "corpus it never needed to fire. Two readings are possible and these data cannot separate "
+         "them: either the countermeasure works, or machine-written answers are unusually easy to "
+         "score consistently and real speech would produce wider spreads. The worked example in "
+         "Section 6.9 is weak evidence for the second.")
 
     # ── 6.5 E3 ───────────────────────────────────────────────────────────
     h2(doc, "6.5  Paraphrase invariance")
@@ -280,22 +279,20 @@ def chapter_6(doc, fig, stats, extra):
          f"{_fmt(e4['pairwise'][0]['r'])}; even the most independent pair, "
          f"{e4['pairwise'][-1]['pair']}, correlated at r = {_fmt(e4['pairwise'][-1]['r'])}.")
     para(doc,
-         "Some correlation is expected and legitimate. Answers that are technically accurate do "
-         "genuinely tend to be more complete, because both follow from understanding the material, "
-         "and no rubric could or should force them apart. But correlations in this range indicate "
-         "that the four scores carry substantially less than four pieces of information. The judge "
-         "appears to form an overall impression and then distribute it across the criteria — the "
-         "classic halo effect described in the human rating literature, evidently not eliminated "
-         "by instructing a model against it.")
+         "Some correlation is expected. Technically accurate answers do tend to be more complete, "
+         "since both follow from understanding the material, and no rubric should force them apart. "
+         "But correlations in this range indicate the four scores carry substantially less than "
+         "four pieces of information. The judge appears to form an overall impression and "
+         "distribute it across the criteria — the classic halo effect from the human rating "
+         "literature, evidently not eliminated by instructing a model against it.")
     para(doc,
          "This qualifies a claim made in Chapter 4. The per-criterion breakdown was defended as an "
-         "explanation mechanism telling a candidate which aspect of their answer fell short. That "
-         "defence is weaker than it appeared: if the four marks move together, the breakdown "
-         "communicates one impression four times rather than decomposing it. It retains value as a "
-         "record of what the judge was asked to weigh, and the most independent pair does show "
-         "real separation, but it is not the diagnostic instrument the design assumed. Section 8.3 "
-         "proposes scoring each criterion in a separate call, so that each is formed without "
-         "sight of the others.")
+         "explanation mechanism telling a candidate which aspect fell short. That defence is weaker "
+         "than it appeared: if the four marks move together, the breakdown communicates one "
+         "impression four times rather than decomposing it. It retains value as a record of what "
+         "the judge was asked to weigh, and the most independent pair does separate, but it is not "
+         "the diagnostic instrument the design assumed. Section 8.3 proposes scoring each criterion "
+         "in a separate call.")
 
     # ── 6.7 E5 ───────────────────────────────────────────────────────────
     if e5.get("n"):
@@ -333,12 +330,11 @@ def chapter_6(doc, fig, stats, extra):
          f"assembly. All {tests.get('count', 72)} pass. Two are direct regressions on the matching "
          f"failures described in Section 5.3.1.")
     para(doc,
-         "An end-to-end run additionally exercises the full pipeline against a synthetic candidate "
-         "and job description, using live model calls at every stage. It asserts that the graph "
-         "builds, that gap analysis is coherent, that questions are generated and ordered by "
-         "priority, that logistics exchanges are excluded from scoring, that rubric criteria "
-         "remain in range and sum to the reported score, and that fusion contributions reconcile "
-         "with the total. It passes.")
+         "An end-to-end run exercises the full pipeline against a synthetic candidate and job "
+         "description with live model calls at every stage. It asserts that the graph builds, gap "
+         "analysis is coherent, questions are generated and ordered by priority, logistics "
+         "exchanges are excluded, rubric criteria stay in range and sum to the reported score, and "
+         "fusion contributions reconcile with the total. It passes.")
 
     # ── 6.9 Worked example ───────────────────────────────────────────────
     h2(doc, "6.9  A worked example")
@@ -369,21 +365,20 @@ def chapter_6(doc, fig, stats, extra):
           widths=[5.0, 3.0, 2.2, 3.0, 1.8, 2.4], font_size=9,
           caption="Table 11  Per-answer results from the worked example.")
     para(doc,
-         "Three points are worth drawing out. The greeting and sign-off were correctly classified "
-         "as logistics and excluded, so they did not dilute the average. The candidate's admission "
-         "that they had not used Kubernetes scored 50 rather than zero, because the rubric credits "
-         "accuracy separately from completeness and an honest acknowledgement of a gap contains "
-         "nothing incorrect. And that same answer carried the widest judge disagreement of the "
-         "session at 10 points — the only moderate-consistency score in the interview, on the only "
-         "genuinely partial answer.")
+         "Three points are worth drawing out. The greeting and sign-off were correctly excluded as "
+         "logistics, so they did not dilute the average. The candidate's admission that they had "
+         "not used Kubernetes scored 50 rather than zero, because the rubric credits accuracy "
+         "separately from completeness and an honest acknowledgement contains nothing incorrect. "
+         "And that answer carried the widest judge disagreement of the session at 10 points — the "
+         "only moderate-consistency score, on the only genuinely partial answer.")
     para(doc,
          "That last observation runs against the null result in Section 6.4 and is the most "
-         "interesting thing in this section. Where the machine-written corpus produced almost "
-         "uniformly high consistency, the one partial answer in a realistic session produced "
-         "measurably more disagreement. It is a single observation and proves nothing, but it "
-         "indicates where the reliability instrumentation would earn its place: not on clearly "
-         "good or clearly bad answers, which are easy, but in the ambiguous middle where a "
-         "recruiter most needs to know how far to trust the number.")
+         "interesting thing here. Where the machine-written corpus produced almost uniformly high "
+         "consistency, the one partial answer in a realistic session produced measurably more "
+         "disagreement. A single observation proves nothing, but it indicates where the "
+         "instrumentation would earn its place: not on clearly good or bad answers, which are easy, "
+         "but in the ambiguous middle where a recruiter most needs to know how far to trust the "
+         "number.")
 
     # ── 6.10 Discussion ──────────────────────────────────────────────────
     h2(doc, "6.10  Discussion of results")
@@ -408,9 +403,9 @@ def chapter_6(doc, fig, stats, extra):
     para(doc,
          "Against expectation, positional instability was small on this corpus and the escalation "
          "mechanism never fired. This does not invalidate the design: the motivating literature is "
-         "sound, the mechanism is implemented and operative, and the one realistic partial answer "
-         "encountered did produce elevated disagreement. But this project has not demonstrated the "
-         "mechanism catching real failures at scale and does not claim to have done so.")
+         "sound, the mechanism is operative, and the one realistic partial answer did produce "
+         "elevated disagreement. But this project has not demonstrated it catching real failures "
+         "at scale, and does not claim to.")
     para(doc,
          f"Four threats to validity apply, and Section 7.3 details them: a sample of "
          f"{meta['n_graded_answers']} graded answers, an intended-quality rather than human "

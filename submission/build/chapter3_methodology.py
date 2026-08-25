@@ -8,14 +8,11 @@ def chapter_3(doc, fig):
 
     h2(doc, "3.1  Design Science Research")
     para(doc,
-         "This project builds an artefact and then studies it, which places it squarely in the "
-         "Design Science Research tradition set out by Hevner et al. (2004). DSR is concerned "
-         "with the creation and evaluation of IT artefacts that address identified organisational "
-         "problems, and it distinguishes itself from behavioural research by treating the "
-         "artefact itself as the vehicle of the contribution. That fits the present work: the "
-         "claim being made is not about how people behave in interviews but about whether a "
-         "particular construction of an assessment system can be made accountable for its own "
-         "reliability.")
+         "This project builds an artefact and then studies it, placing it in the Design Science "
+         "Research tradition of Hevner et al. (2004), which treats the artefact itself as the "
+         "vehicle of the contribution. That fits the present work: the claim is not about how "
+         "people behave in interviews, but about whether an assessment system can be constructed "
+         "to be accountable for its own reliability.")
     para(doc,
          "Hevner's framework is organised around two cycles. The relevance cycle grounds the work "
          "in a real problem environment, here the documented opacity of commercial hiring tools "
@@ -37,15 +34,13 @@ def chapter_3(doc, fig):
          "Three design cycles are worth recording, because in each the evaluation stage produced "
          "a measurement that forced a change rather than confirming a decision already taken.")
     para(doc,
-         "The first concerned skill matching: a substring fallback mapped “Team Leadership” onto "
-         "the ESCO concept “R” and “Communication” onto “telecommunications engineering”, "
-         "silently, while the gap analysis reported confident nonsense. The second concerned "
-         "interview delivery, where the voice agent fell silent mid-session because an exhausted "
-         "synthesis quota returns no audio while still accepting the connection. The third "
-         "concerned answer evaluation, where measuring a trained second scorer exposed both a "
-         "data leak in its training set and a circularity in the comparison it was meant to "
-         "support, and ended the track. Sections 5.3.1, 5.5.2 and 7.2 give the evidence and the "
-         "resulting design changes in full.")
+         "The first concerned skill matching: a substring fallback silently mapped “Team "
+         "Leadership” onto the ESCO concept “R”, while the gap analysis reported confident "
+         "nonsense. The second concerned delivery, where the voice agent fell silent mid-session "
+         "because an exhausted synthesis quota returns no audio while still accepting the "
+         "connection. The third concerned evaluation, where measuring a trained second scorer "
+         "exposed a data leak and a circularity, and ended the track. Sections 5.3.1, 5.5.2 and "
+         "7.2 give the evidence in full.")
 
     h2(doc, "3.3  Evaluation strategy")
     para(doc,
@@ -106,14 +101,12 @@ def chapter_3(doc, fig):
          "treated at length in Section 7.2. In summary, it was built, measured, found to rest on "
          "a circular comparison, and removed.")
     para(doc,
-         "A fine-tuned transformer classifier trained end to end on answer text would likely "
-         "outperform hand-crafted features, but was rejected on explainability grounds: a "
-         "fine-tuned encoder offers no account of an individual judgement a non-specialist can "
-         "read. A graph neural network over the skill graph was rejected because ESCO is already "
-         "a curated hierarchy with explicit relations — learning embeddings over a documented "
-         "structure adds opacity while removing the property that makes the graph useful in a "
-         "high-risk system, that every edge traces to a published standard. A custom speech "
-         "recognition model was rejected immediately: commercial recognition is near human parity "
+         "A fine-tuned transformer would likely outperform hand-crafted features, but offers no "
+         "account of an individual judgement a non-specialist can read. A graph neural network was "
+         "rejected because ESCO is already a curated hierarchy: learning embeddings over a "
+         "documented structure adds opacity while removing the property that makes the graph "
+         "useful in a high-risk system — that every edge traces to a published standard. A custom "
+         "speech recogniser was rejected immediately; commercial recognition is near human parity "
          "for English, and building a worse one would consume the project without touching the "
          "research question.")
 
@@ -131,14 +124,12 @@ def chapter_3(doc, fig):
          "behaviours behind it, so a candidate can contest a finding. And scoring uses only what "
          "the candidate said, with no demographic input or proxy for one.")
     para(doc,
-         "One tension deserves acknowledgement rather than resolution. Behavioural monitoring of "
-         "any kind is intrusive, and a system that measures gaze direction and posture is making "
-         "inferences about a person from signals they cannot fully control. Nervousness reads "
-         "much like evasion. The mitigation adopted — weighting these signals lightly, "
-         "calibrating them against the candidate's own neutral pose rather than an assumed ideal, "
-         "and reporting them as context rather than as findings — reduces the harm but does not "
-         "eliminate the objection. A production deployment would need explicit informed consent "
-         "and a genuine opt-out.")
+         "One tension deserves acknowledgement rather than resolution. Behavioural monitoring is "
+         "intrusive, and measuring gaze and posture infers things about a person from signals they "
+         "cannot fully control; nervousness reads much like evasion. Weighting these signals "
+         "lightly, calibrating against the candidate's own neutral pose, and reporting them as "
+         "context rather than findings reduces the harm but does not remove the objection. A "
+         "production deployment would need informed consent and a genuine opt-out.")
 
     h2(doc, "3.7  Tools and development environment")
     para(doc,

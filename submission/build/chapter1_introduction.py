@@ -8,12 +8,12 @@ def chapter_1(doc, fig):
 
     h2(doc, "1.1  Background and rationale")
     para(doc,
-         "Recruitment has been reshaped by automation over the last decade. Platforms such as "
-         "HireVue, Pymetrics and myInterview now conduct or score interviews at a scale no human "
-         "panel could match, and the commercial case is straightforward: screening cycles "
-         "shorten, cost per candidate falls, and every applicant is asked the same questions in "
-         "the same order. Consistency of that kind is genuinely difficult to achieve with human "
-         "interviewers, whose judgements vary with fatigue, order effects and rapport.")
+         "Recruitment has been reshaped by automation. Platforms such as HireVue, Pymetrics and "
+         "myInterview now conduct or score interviews at a scale no human panel could match, and "
+         "the commercial case is straightforward: screening cycles shorten, cost per candidate "
+         "falls, and every applicant is asked the same questions in the same order. Consistency of "
+         "that kind is genuinely difficult to achieve with human interviewers, whose judgements "
+         "vary with fatigue, order effects and rapport.")
     para(doc,
          "The difficulty is that consistency is not accuracy, and neither is fairness. In 2019 the "
          "Electronic Privacy Information Center complained against HireVue over its use of facial "
@@ -43,11 +43,11 @@ def chapter_1(doc, fig):
          "by presentation order — and Wang et al. (2024) found verbosity bias.")
     para(doc,
          "These are not exotic edge cases. In an interview setting they map directly onto "
-         "unfairness: a candidate who answers correctly but concisely is penalised relative to "
-         "one who answers correctly at length, and the same answer may score differently "
-         "depending on an implementation detail the candidate cannot see. A system that inherits "
-         "these biases silently is worse than a transparent one that scores less well, because "
-         "the failure is undetectable from the output.")
+         "unfairness: a candidate who answers correctly but concisely is penalised relative to one "
+         "who answers correctly at length, and the same answer may score differently depending on "
+         "an implementation detail the candidate cannot see. A system that inherits these biases "
+         "silently is worse than a transparent one that scores less well, because the failure is "
+         "undetectable from the output.")
     para(doc,
          "The problem is therefore not whether a language model can score an interview answer — it "
          "plainly can — but whether a system built around one can be made accountable for the "
@@ -103,12 +103,12 @@ def chapter_1(doc, fig):
          "subprocess. It is deliberately not a production hiring system, and Section 7.3 sets "
          "out what would have to change before it could be one.")
     para(doc,
-         "Three boundaries are worth stating at the outset. The system makes no hiring decision, "
-         "only evidence for a human to act on. No real candidate data was used at any point; "
-         "every experiment in Chapter 6 runs on generated material, for the reasons in Section "
-         "3.6. And the platform is evaluated as a measurement instrument, not as a predictor of "
-         "job performance — criterion validity against employment outcomes would need a "
-         "longitudinal study far beyond a fourteen-week project.")
+         "Three boundaries are worth stating. The system makes no hiring decision, only evidence "
+         "for a human to act on. No real candidate data was used; every experiment in Chapter 6 "
+         "runs on generated material, for the reasons in Section 3.6. And the platform is "
+         "evaluated as a measurement instrument, not a predictor of job performance — criterion "
+         "validity against employment outcomes would need a longitudinal study far beyond a "
+         "fourteen-week project.")
     figure(doc, fig("fig08_usecase"),
            "Figure 8  Use case model. The decision boundary is deliberate: the system produces "
            "evidence and adjudication requests, and the hiring decision stays with the recruiter.")

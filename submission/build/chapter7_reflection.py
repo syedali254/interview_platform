@@ -91,14 +91,13 @@ def chapter_7(doc, fig, stats, extra=None):
 
     h3(doc, "7.2.2  Substitution of the vocal analysis module")
     para(doc,
-         "Module 10 was proposed as a wav2vec2 speech-emotion classifier and implemented instead "
-         "as prosodic analysis in the browser. The substitution was deliberate. It requires no "
-         "model download, runs offline, keeps all audio on the candidate's device, and every "
-         "component of the resulting score — projection, fluency, expression, composure — can be "
-         "inspected and explained. An emotion label from a black-box classifier could not be. In "
-         "a project whose organising commitment is explainability, the substitution improves "
-         "coherence, and it is reported here as a change rather than presented as the original "
-         "plan.")
+         "Module 10 was proposed as a wav2vec2 speech-emotion classifier and implemented instead as "
+         "prosodic analysis in the browser. The substitution was deliberate: it needs no model "
+         "download, runs offline, keeps all audio on the candidate's device, and every component of "
+         "the score — projection, fluency, expression, composure — can be inspected and explained. "
+         "An emotion label from a black-box classifier could not be. In a project whose organising "
+         "commitment is explainability, the substitution improves coherence, and is reported as a "
+         "change rather than presented as the original plan.")
 
     h3(doc, "7.2.3  Synthetic rather than piloted integrity baseline")
     para(doc,
@@ -169,11 +168,11 @@ def chapter_7(doc, fig, stats, extra=None):
          "Measured against the EU AI Act's requirements for high-risk systems, the artefact meets "
          "some obligations and fails others. Transparency is well served: every score decomposes "
          "into rubric criteria, a reference answer and a rationale, with the weights published. "
-         "Human oversight is well served by design, since the system issues no hiring decision. "
+         "Human oversight is served by design, since the system issues no hiring decision. "
          "Record-keeping is adequate for a demonstrator and inadequate for deployment, with "
-         "transcripts stored unencrypted and without retention policy. Bias testing has taken a "
-         "first step — Chapter 6 tests two documented model biases — but not demographic "
-         "disparity, which needs exactly the human data the project avoided collecting.")
+         "transcripts stored unencrypted. Bias testing has taken a first step — Chapter 6 tests two "
+         "documented model biases — but not demographic disparity, which needs exactly the human "
+         "data this project avoided collecting.")
     para(doc,
          "That last point is an uncomfortable circularity worth naming. Avoiding human data "
          "removed the ethical burden of collecting it and simultaneously removed the possibility "
@@ -191,21 +190,20 @@ def chapter_7(doc, fig, stats, extra=None):
 
     h2(doc, "7.5  Personal reflection")
     para(doc,
-         "The most valuable thing I learned on this project was that measuring my own work "
-         "changed it more than planning did. Every significant design decision recorded in this "
-         "dissertation came from an observation that contradicted an assumption. I assumed "
-         "substring matching was a reasonable fallback until I saw “Team Leadership” resolve to "
-         "the programming language R. I assumed a speech provider that accepted a connection was "
-         "working until the agent went silent mid-interview. I assumed parallelising API calls "
-         "would speed up the evaluation until I measured six concurrent calls taking longer than "
-         "a hundred sequential ones would have.")
+         "The most valuable thing I learned was that measuring my own work changed it more than "
+         "planning did. Every significant design decision recorded here came from an observation "
+         "that contradicted an assumption. I assumed substring matching was a reasonable fallback "
+         "until I saw “Team Leadership” resolve to the programming language R. I assumed a speech "
+         "provider that accepted a connection was working until the agent went silent mid-interview. "
+         "I assumed parallelising API calls would speed up the evaluation until I measured six "
+         "concurrent calls taking longer than a hundred sequential ones.")
     para(doc,
          "The hardest decision was removing the trained classifier. It was several days of work "
          "and the part of the proposal that most looked like machine learning research, so "
          "deleting it late felt like a retreat. What changed my view was recognising I could not "
          "have defended it: asked why agreement between a model trained on LLM labels and the LLM "
-         "itself meant anything, I had no answer. Reporting the failure as a finding turned the "
-         "weakest part of the project into one I can defend.")
+         "itself meant anything, I had no answer. Reporting the failure turned the weakest part of "
+         "the project into one I can defend.")
     para(doc,
          "If I began again I would run the evaluation harness far earlier. I built for most of "
          "the project and measured at the end, so the classifier's defects went undetected for "
