@@ -1,6 +1,6 @@
 """Chapter 1 - Introduction."""
 
-from docx_kit import figure, h1, h2, numbered, para, quote
+from document_toolkit import figure, h1, h2, numbered, para, quote
 
 
 def chapter_1(doc, fig):

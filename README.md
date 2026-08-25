@@ -38,25 +38,25 @@ Friend-Project/
 │   ├── requirements.txt     All dependencies, version-pinned
 │   └── SETUP.md             Setup and troubleshooting guide
 │
-├── viva/                    The presentation (Assessment 3)
-│   ├── CMP7200_Viva_Presentation.pptx
-│   ├── VIVA_QA_PREP.md      Anticipated questions and prepared answers
-│   └── build_viva.py        Rebuilds the deck from the measured results
-│
-├── report/                  The dissertation (Assessment 2)
-│   ├── CMP7200_Project_Report.docx      ← the submission
-│   ├── build_report.py      Rebuilds the dissertation end to end
-│   ├── build_guide.py       Rebuilds PROJECT_GUIDE.docx
-│   ├── front_matter.py      Title page, abstract, contents
-│   ├── ch1_introduction.py  … one module per chapter, through
-│   ├── ch8_conclusion.py       to conclusions and future work
-│   ├── back_matter.py       References and appendices
-│   ├── diagrams.py          Generates the 11 architecture figures
-│   ├── figkit.py            Figure layout engine with collision checking
-│   ├── docx_kit.py          Document primitives
-│   └── values.py            Shared access to the measured results
-│
-└── proposal/                Assessment 1, as submitted, plus the brief
+└── submission/              Everything the university receives
+    ├── CMP7200_Project_Report.docx        The dissertation (Assessment 2)
+    ├── CMP7200_Viva_Presentation.pptx     The presentation (Assessment 3)
+    ├── AI_Interview_Final_Proposal.docx   The proposal (Assessment 1)
+    ├── CMP7200_Assignment_Brief.pdf       What was asked for
+    ├── VIVA_QA_PREP.md                    Anticipated questions and answers
+    └── build/                             Scripts that generate the above
+        ├── build_dissertation.py     Rebuilds the dissertation end to end
+        ├── build_presentation.py     Rebuilds the deck from measured results
+        ├── build_project_guide.py    Rebuilds PROJECT_GUIDE.docx
+        ├── front_matter.py           Title page, abstract, contents
+        ├── chapter1_introduction.py  … one file per chapter, through
+        ├── chapter8_conclusion.py       to conclusions and future work
+        ├── back_matter.py            References and appendices
+        ├── figures.py                Generates the architecture diagrams
+        ├── figure_toolkit.py         Figure layout with collision checking
+        ├── document_toolkit.py       Headings, tables and captions
+        ├── results.py                Shared access to the measured results
+        └── figures_png/              The rendered diagrams
 ```
 
 ---
@@ -103,9 +103,9 @@ so statistics and figures can be regenerated without re-spending API calls.
 ## Rebuilding the dissertation
 
 ```bash
-cd report
-python build_report.py     # the dissertation
-python build_guide.py      # PROJECT_GUIDE.docx
+cd submission/build
+python build_dissertation.py     # the dissertation
+python build_project_guide.py      # PROJECT_GUIDE.docx
 ```
 
 This renders every figure, runs the test suite to obtain the count it reports,
@@ -119,8 +119,8 @@ and rebuilding produces a document consistent with the new numbers.
 ## Rebuilding the viva deck
 
 ```bash
-cd viva
-python build_viva.py
+cd submission/build
+python build_presentation.py
 ```
 
 Twenty-two slides — eighteen for delivery, four held in reserve for questions — with

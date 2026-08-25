@@ -1,6 +1,6 @@
 """Chapter 3 - Research Methodology."""
 
-from docx_kit import bullet, figure, h1, h2, para
+from document_toolkit import bullet, figure, h1, h2, para
 
 
 def chapter_3(doc, fig):

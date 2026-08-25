@@ -2,8 +2,8 @@
 lists of figures and tables."""
 
 from docx.shared import Pt
-from docx_kit import GREY, HEAD2, h2, page_break, para, toc_entry
-from values import probe_cases as _probe_scores
+from document_toolkit import GREY, HEAD2, h2, page_break, para, toc_entry
+from results import probe_cases as _probe_scores
 
 
 STUDENT_NUMBER = "[STUDENT NUMBER]"

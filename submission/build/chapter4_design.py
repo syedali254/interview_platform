@@ -1,6 +1,6 @@
 """Chapter 4 - System Design."""
 
-from docx_kit import figure, h1, h2, para, table
+from document_toolkit import figure, h1, h2, para, table
 
 
 def chapter_4(doc, fig):

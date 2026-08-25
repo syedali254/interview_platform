@@ -25,11 +25,11 @@ from pptx.enum.text import PP_ALIGN
 from pptx.util import Inches, Pt
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parent
-FIGURES = ROOT / "report" / "figures"
+ROOT = HERE.parent.parent
+FIGURES = HERE / "figures_png"
 EXP_FIGURES = ROOT / "InterviewAI" / "experiments" / "figures"
 STATS = ROOT / "InterviewAI" / "experiments" / "results" / "statistics.json"
-OUTPUT = HERE / "CMP7200_Viva_Presentation.pptx"
+OUTPUT = HERE.parent / "CMP7200_Viva_Presentation.pptx"
 
 # ── Palette, matching the dissertation figures ───────────────────────────
 INK = RGBColor(0x1B, 0x27, 0x33)

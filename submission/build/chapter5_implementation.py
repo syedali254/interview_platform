@@ -1,6 +1,6 @@
 """Chapter 5 - Implementation."""
 
-from docx_kit import figure, h1, h2, h3, para
+from document_toolkit import figure, h1, h2, h3, para
 
 
 def chapter_5(doc, fig):

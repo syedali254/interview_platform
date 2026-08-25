@@ -20,7 +20,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 PROJECT = ROOT / "InterviewAI"
 RESULTS = PROJECT / "experiments" / "results"
 OUTPUT = ROOT / "PROJECT_GUIDE.docx"
@@ -28,7 +28,7 @@ OUTPUT = ROOT / "PROJECT_GUIDE.docx"
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from docx.shared import Pt  # noqa: E402
-from docx_kit import (  # noqa: E402
+from document_toolkit import (  # noqa: E402
     add_page_numbers, bullet, figure, h1, h2, new_document, para, table, GREY,
 )
 
@@ -89,30 +89,29 @@ FILES = [
     ("InterviewAI/data/esco/digitalSkillsCollection_en.csv", "The official EU list of 1,201 digital skills."),
     ("InterviewAI/data/esco/broaderRelationsSkillPillar.csv", "How those skills relate to each other."),
 
-    ("report/build_report.py", "Builds the dissertation."),
-    ("report/build_guide.py", "Builds this guide."),
-    ("report/front_matter.py", "Title page, abstract, contents."),
-    ("report/ch1_introduction.py", "Chapter 1."),
-    ("report/ch2_literature.py", "Chapter 2."),
-    ("report/ch3_methodology.py", "Chapter 3."),
-    ("report/ch4_design.py", "Chapter 4."),
-    ("report/ch5_implementation.py", "Chapter 5."),
-    ("report/ch6_evaluation.py", "Chapter 6. Reads the real numbers from the results file."),
-    ("report/ch7_reflection.py", "Chapter 7."),
-    ("report/ch8_conclusion.py", "Chapter 8."),
-    ("report/back_matter.py", "References and appendices."),
-    ("report/diagrams.py", "Draws the 11 diagrams used in the report."),
-    ("report/figkit.py", "Stops diagram text overlapping or running off the edge."),
-    ("report/docx_kit.py", "Makes headings, tables and captions look right."),
-    ("report/values.py", "One place that reads the results, so every chapter agrees."),
-    ("report/CMP7200_Project_Report.docx", "The dissertation."),
+    ("submission/CMP7200_Project_Report.docx", "The dissertation. The main piece of work."),
+    ("submission/CMP7200_Viva_Presentation.pptx", "The presentation for the oral exam."),
+    ("submission/AI_Interview_Final_Proposal.docx", "The original project proposal."),
+    ("submission/CMP7200_Assignment_Brief.pdf", "What the university asked for."),
+    ("submission/VIVA_QA_PREP.md", "Likely exam questions with prepared answers."),
 
-    ("viva/build_viva.py", "Builds the presentation."),
-    ("viva/CMP7200_Viva_Presentation.pptx", "The presentation."),
-    ("viva/VIVA_QA_PREP.md", "Likely viva questions with prepared answers."),
-
-    ("proposal/AI_Interview_Final_Proposal.docx", "The original project proposal."),
-    ("proposal/CMP7200_Assignment_Brief.pdf", "The assignment brief."),
+    ("submission/build/build_dissertation.py", "Builds the dissertation."),
+    ("submission/build/build_presentation.py", "Builds the presentation."),
+    ("submission/build/build_project_guide.py", "Builds this guide."),
+    ("submission/build/front_matter.py", "Title page, abstract, contents."),
+    ("submission/build/chapter1_introduction.py", "Chapter 1."),
+    ("submission/build/chapter2_literature.py", "Chapter 2."),
+    ("submission/build/chapter3_methodology.py", "Chapter 3."),
+    ("submission/build/chapter4_design.py", "Chapter 4."),
+    ("submission/build/chapter5_implementation.py", "Chapter 5."),
+    ("submission/build/chapter6_evaluation.py", "Chapter 6. Reads the real numbers from the results file."),
+    ("submission/build/chapter7_reflection.py", "Chapter 7."),
+    ("submission/build/chapter8_conclusion.py", "Chapter 8."),
+    ("submission/build/back_matter.py", "References and appendices."),
+    ("submission/build/figures.py", "Draws the diagrams used in the report."),
+    ("submission/build/figure_toolkit.py", "Stops diagram text overlapping or running off the edge."),
+    ("submission/build/document_toolkit.py", "Makes headings, tables and captions look right."),
+    ("submission/build/results.py", "One place that reads the results, so every chapter agrees."),
 ]
 
 MODULES = [
@@ -412,7 +411,7 @@ def build():
     para(doc,
          "Thirteen parts, in four stages. Each part has one job and passes its result to "
          "the next, so any one of them can be swapped out without breaking the others.")
-    fig = ROOT / "report" / "figures" / "fig01_architecture.png"
+    fig = Path(__file__).resolve().parent / "figures_png" / "fig01_architecture.png"
     if fig.exists():
         figure(doc, fig, "The four stages and what passes between them.")
     for lead, b in (

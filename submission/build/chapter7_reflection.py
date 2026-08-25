@@ -1,7 +1,7 @@
 """Chapter 7 - Critical Reflection."""
 
-from docx_kit import bullet, h1, h2, h3, para, table
-from values import (
+from document_toolkit import bullet, h1, h2, h3, para, table
+from results import (
     level_mean as _level_mean, probe_cases as _probe, strong_threshold as _strong_threshold,
 )
 

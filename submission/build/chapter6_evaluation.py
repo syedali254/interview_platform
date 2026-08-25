@@ -5,8 +5,8 @@ figure in this chapter is typed in by hand; re-running the harness and
 rebuilding produces a chapter consistent with the new measurements.
 """
 
-from docx_kit import figure, h1, h2, para, table
-from values import fmt as _fmt, p_value as _p_value
+from document_toolkit import figure, h1, h2, para, table
+from results import fmt as _fmt, p_value as _p_value
 
 
 

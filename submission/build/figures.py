@@ -5,7 +5,7 @@ and no figure drifts out of step with the system it describes.
 
     python diagrams.py
 
-Layout discipline lives in figkit.Canvas: a reserved header the content cannot
+Layout discipline lives in figure_toolkit.Canvas: a reserved header the content cannot
 intrude on, automatic text wrapping inside nodes, and a validation pass that
 reports any node leaving the canvas or overlapping a sibling.
 """
@@ -18,12 +18,12 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, FancyBboxPatch
 
-from figkit import (
+from figure_toolkit import (
     ACCENT, INK, MUTED, NEUTRAL, PAPER, PHASE1, PHASE2, PHASE3, PHASE4, RULE,
     Canvas, tint,
 )
 
-FIGURES = Path(__file__).parent / "figures"
+FIGURES = Path(__file__).parent / "figures_png"
 FIGURES.mkdir(parents=True, exist_ok=True)
 
 

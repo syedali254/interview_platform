@@ -3,8 +3,8 @@
 Excluded from the word count under the assignment brief, which counts only
 the main body from Chapter 1 to Chapter 8."""
 
-from docx_kit import GREY, code, h1, para, table
-from values import probe_cases as _probe
+from document_toolkit import GREY, code, h1, para, table
+from results import probe_cases as _probe
 
 
 REFERENCES = [

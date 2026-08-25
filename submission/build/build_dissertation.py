@@ -19,25 +19,25 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-PROJECT = HERE.parent / "InterviewAI"
-FIGURES = HERE / "figures"
+PROJECT = HERE.parent.parent / "InterviewAI"
+FIGURES = HERE / "figures_png"
 EXP_FIGURES = PROJECT / "experiments" / "figures"
 RESULTS = PROJECT / "experiments" / "results"
 STATS_PATH = RESULTS / "statistics.json"
-OUTPUT = HERE / "CMP7200_Project_Report.docx"
+OUTPUT = HERE.parent / "CMP7200_Project_Report.docx"
 
 sys.path.insert(0, str(HERE))
 
-from docx_kit import add_page_numbers, new_document  # noqa: E402
+from document_toolkit import add_page_numbers, new_document  # noqa: E402
 import front_matter          # noqa: E402
-import ch1_introduction       # noqa: E402
-import ch2_literature         # noqa: E402
-import ch3_methodology        # noqa: E402
-import ch4_design             # noqa: E402
-import ch5_implementation     # noqa: E402
-import ch6_evaluation         # noqa: E402
-import ch7_reflection         # noqa: E402
-import ch8_conclusion         # noqa: E402
+import chapter1_introduction       # noqa: E402
+import chapter2_literature         # noqa: E402
+import chapter3_methodology        # noqa: E402
+import chapter4_design             # noqa: E402
+import chapter5_implementation     # noqa: E402
+import chapter6_evaluation         # noqa: E402
+import chapter7_reflection         # noqa: E402
+import chapter8_conclusion         # noqa: E402
 import back_matter            # noqa: E402
 
 
@@ -96,8 +96,8 @@ def ensure_diagrams():
     have = {p.stem[:5] for p in FIGURES.glob("*.png")} if FIGURES.exists() else set()
     if not all(e in have for e in expected):
         print("  Rendering architecture figures...")
-        import diagrams
-        diagrams.main()
+        import figures
+        figures.main()
 
 
 def word_count(doc) -> int:
@@ -162,14 +162,14 @@ def main():
 
     for label, render in (
         ("Front matter",                  lambda: front_matter.front_matter(doc, fig, stats, extra)),
-        ("Chapter 1  Introduction",       lambda: ch1_introduction.chapter_1(doc, fig)),
-        ("Chapter 2  Literature Review",  lambda: ch2_literature.chapter_2(doc, fig)),
-        ("Chapter 3  Methodology",        lambda: ch3_methodology.chapter_3(doc, fig)),
-        ("Chapter 4  System Design",      lambda: ch4_design.chapter_4(doc, fig)),
-        ("Chapter 5  Implementation",     lambda: ch5_implementation.chapter_5(doc, fig)),
-        ("Chapter 6  Evaluation",         lambda: ch6_evaluation.chapter_6(doc, fig, stats, extra)),
-        ("Chapter 7  Reflection",         lambda: ch7_reflection.chapter_7(doc, fig, stats, extra)),
-        ("Chapter 8  Conclusion",         lambda: ch8_conclusion.chapter_8(doc, fig, stats, extra)),
+        ("Chapter 1  Introduction",       lambda: chapter1_introduction.chapter_1(doc, fig)),
+        ("Chapter 2  Literature Review",  lambda: chapter2_literature.chapter_2(doc, fig)),
+        ("Chapter 3  Methodology",        lambda: chapter3_methodology.chapter_3(doc, fig)),
+        ("Chapter 4  System Design",      lambda: chapter4_design.chapter_4(doc, fig)),
+        ("Chapter 5  Implementation",     lambda: chapter5_implementation.chapter_5(doc, fig)),
+        ("Chapter 6  Evaluation",         lambda: chapter6_evaluation.chapter_6(doc, fig, stats, extra)),
+        ("Chapter 7  Reflection",         lambda: chapter7_reflection.chapter_7(doc, fig, stats, extra)),
+        ("Chapter 8  Conclusion",         lambda: chapter8_conclusion.chapter_8(doc, fig, stats, extra)),
         ("References",                    lambda: back_matter.references(doc)),
         ("Appendices",                    lambda: back_matter.appendices(doc, fig, extra)),
     ):
