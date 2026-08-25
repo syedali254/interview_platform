@@ -204,6 +204,21 @@ class Deck:
 
 # ═════════════════════════════════════════════════════════════════════════
 
+def ensure_figures():
+    """Render the architecture diagrams if they are not on disk yet.
+
+    They are generated artefacts, so they are not kept in version control. The
+    dissertation build does the same thing; without it a fresh clone could
+    build the report but not the deck.
+    """
+    expected = [f"fig{n:02d}" for n in range(1, 12)]
+    have = {p.stem[:5] for p in FIGURES.glob("*.png")} if FIGURES.exists() else set()
+    if not all(e in have for e in expected):
+        print("  Rendering architecture figures...")
+        import figures
+        figures.main()
+
+
 def build():
     """Ten slides, weighted the way the brief marks them.
 
@@ -213,6 +228,7 @@ def build():
     describe the artefact are compressed into one architecture slide and one
     module table. Every number on a slide is read from the results file.
     """
+    ensure_figures()
     st = _stats()
     e1 = st.get("e1_discriminant_validity", {})
     e2 = st.get("e2_positional_bias", {})

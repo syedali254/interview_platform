@@ -3,8 +3,9 @@
 ## Prerequisites
 
 **Python and Node.js install themselves.** `run.bat` checks for them and, if
-they are missing, installs them via `winget` (built into Windows 10 1709+ and
-all Windows 11). If winget is unavailable it tells you exactly what to install.
+they are missing, installs them for you. It tries `winget` first, and falls back
+to downloading the official installer if this Windows has no winget. Node must
+be 20.19 or newer; an older one is detected and upgraded.
 
 After an automatic install, close the window and double-click `run.bat` once
 more so Windows picks up the new PATH.

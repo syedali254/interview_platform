@@ -1,3 +1,7 @@
+/**
+ * Step 2. Shows the skill graph: what the candidate has, what the job
+ * needs, and which required skills are missing.
+ */
 import { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { Loader2, ArrowRight, GitBranch, Target, AlertTriangle, List, Network } from 'lucide-react'

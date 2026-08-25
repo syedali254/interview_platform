@@ -1,3 +1,6 @@
+/**
+ * Step 1. Upload a CV and paste the job advert.
+ */
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Upload, FileText, Briefcase, Loader2, CheckCircle2, ArrowRight, Sparkles } from 'lucide-react'

@@ -63,26 +63,16 @@ Friend-Project/
 
 ## Running the system
 
-**Windows, one click.** Double-click `run.bat`. It checks for Python and Node.js
-and installs them via winget if absent, creates the virtual environment, installs
-dependencies, builds the frontend, creates `.env` from its template and opens it
-for your API keys, then starts the server at <http://localhost:8000>.
+**Windows, one click.** Double-click `run.bat`. It installs Python and Node.js
+if they are missing, creates the virtual environment, installs dependencies,
+builds the frontend, creates `.env` from its template, and starts the server at
+<http://localhost:8000>.
 
-Three API keys are needed. `GEMINI_API_KEY` and `DEEPGRAM_API_KEY` are required;
-`ELEVENLABS_API_KEY` is optional and falls back to Deepgram's voice. See
-`InterviewAI/SETUP.md` for where to get them and for troubleshooting.
+Two API keys are required — `GEMINI_API_KEY` and `DEEPGRAM_API_KEY`.
+`ELEVENLABS_API_KEY` is optional and falls back to Deepgram's voice.
 
-Manual setup, if the script fails:
-
-```bash
-cd InterviewAI
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-cd frontend && npm install && npm run build && cd ..
-copy .env.example .env        # then add your keys
-python server.py
-```
+**`InterviewAI/SETUP.md` has the rest**: where to get the keys, the two
+interview modes, manual setup if the script fails, and a troubleshooting table.
 
 ---
 

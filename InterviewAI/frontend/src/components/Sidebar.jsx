@@ -1,3 +1,6 @@
+/**
+ * The list of steps down the side of the screen, showing where you are.
+ */
 import { motion } from 'framer-motion'
 import { CheckCircle2, Lock } from 'lucide-react'
 

@@ -1,3 +1,8 @@
+/**
+ * Step 5, typed version. Same interview and same questions, answered in a
+ * chat box. Produces the same transcript shape as the spoken version, so
+ * everything after the interview works identically.
+ */
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {

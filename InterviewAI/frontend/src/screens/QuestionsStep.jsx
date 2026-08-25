@@ -1,3 +1,7 @@
+/**
+ * Step 3. Shows the questions the system has written, with the missing
+ * skills ordered first.
+ */
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Loader2, ArrowRight, MessageSquare, Sparkles } from 'lucide-react'

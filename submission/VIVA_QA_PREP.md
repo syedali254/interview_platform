@@ -295,13 +295,16 @@ If I had one more month, that is what I would spend it on.
 
 ## Delivery notes
 
-- **Slides 9 to 13 are the heart of it.** Critical evaluation is 40% of this assessment.
-  Do not rush them to reach the conclusion.
+- **Slides 7 to 9 are the heart of it.** Critical evaluation and reflection carry 40% of
+  the marks — the two findings slides and the reflection slide. They hold 41% of the
+  speaker notes for that reason. Do not rush them to reach the conclusion.
 - **Do not defend the defects.** Own them fast and move to what they mean. "Yes, and
   here is what it tells us" beats any hedge.
 - **Distinguish what you measured from what you infer.** Examiners reward that boundary
   being visible.
-- Backup slides 19 to 22 cover threshold calibration, the fusion model, privacy and
-  verification. Know they are there.
+- **Slide 4 is the map.** If a question wanders into implementation, the module table
+  shows every part and the technology behind it — use it to answer and come back.
+- The notes run about thirteen minutes at a normal pace, which leaves room for questions
+  in a twenty-minute slot.
 - If you do not know something, say so and say what would settle it. That reads as
   competence, not weakness.

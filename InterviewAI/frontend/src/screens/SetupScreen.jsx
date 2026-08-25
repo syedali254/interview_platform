@@ -1,3 +1,11 @@
+/**
+ * Step 4. Checks the camera and microphone work, lets the candidate choose
+ * a spoken or typed interview, and explains what is being measured.
+ *
+ * This is the only place in the app that asks for the camera and
+ * microphone. The stream it opens is handed to the interview screen,
+ * which is why it must not be stopped on the way through.
+ */
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {

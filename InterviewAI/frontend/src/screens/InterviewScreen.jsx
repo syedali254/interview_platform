@@ -1,3 +1,8 @@
+/**
+ * Step 5, spoken version. Runs the live interview: shows each question,
+ * plays the interviewer's voice, sends the candidate's voice back, and
+ * measures attention, posture and tone in the browser as it goes.
+ */
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Room, RoomEvent } from 'livekit-client'

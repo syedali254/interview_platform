@@ -1,3 +1,7 @@
+/**
+ * Draws the face and body tracking dots on top of the video, so the
+ * candidate can see what the attention and posture check is looking at.
+ */
 import { useRef, useEffect } from 'react'
 import { POSE_CONNECTIONS, FACE_OVAL, LEFT_EYE, RIGHT_EYE } from '../lib/vision'
 

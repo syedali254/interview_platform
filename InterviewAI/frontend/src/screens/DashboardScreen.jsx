@@ -1,3 +1,7 @@
+/**
+ * Step 6. The final report: every answer and its mark, how consistent the
+ * marking was, the behaviour check, and the overall recommendation.
+ */
 import { useRef, useEffect, useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {

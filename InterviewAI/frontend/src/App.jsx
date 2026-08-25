@@ -1,3 +1,7 @@
+/**
+ * The six steps of the app, and how the candidate moves between them:
+ * upload, skill graph, questions, device check, interview, report.
+ */
 import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Sidebar from './components/Sidebar'

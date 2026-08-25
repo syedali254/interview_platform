@@ -1,3 +1,6 @@
+/**
+ * Starts the web page. This is the first file the browser runs.
+ */
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
