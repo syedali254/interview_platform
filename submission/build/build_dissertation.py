@@ -132,6 +132,50 @@ def ensure_result_figures():
         print(f"  ! Redraw failed:\n{proc.stdout[-600:]}{proc.stderr[-600:]}")
 
 
+def measure_code() -> dict:
+    """Count the artefact as it actually stands.
+
+    Chapter 5 previously stated the size of the implementation from memory, and
+    both figures had drifted from the code. Measuring at build time keeps that
+    claim honest for the same reason every result in Chapter 6 is read from the
+    results file rather than typed.
+    """
+    def lines(path: Path, code_only: bool = True) -> int:
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            return 0
+        if not code_only:
+            return len(text)
+        return len([l for l in text
+                    if l.strip() and not l.strip().startswith(("#", "//", "*", "/*"))])
+
+    skip = ("venv", "__pycache__", "node_modules", "dist")
+    py = sum(lines(p, False) for p in PROJECT.rglob("*.py")
+             if not any(s in str(p) for s in skip))
+    js = sum(lines(p, False) for p in (PROJECT / "frontend" / "src").rglob("*.js*"))
+
+    modules = [
+        ("M1", "CV parsing", "core/agents/cv_parser.py"),
+        ("M2", "Job description parsing", "core/agents/jd_parser.py"),
+        ("M3", "Skill graph and matching", "core/graph/skill_graph.py"),
+        ("M4", "Question generation", "core/agents/question_generator.py"),
+        ("M5", "Voice interview agent", "core/livekit/voice_agent.py"),
+        ("M5t", "Text interview engine", "core/pipeline/text_interview.py"),
+        ("M6", "Answer judge", "core/evaluator/answer_judge.py"),
+        ("M6a", "Skill state tracker", "core/graph/skill_state.py"),
+        ("M7/M8", "Attention and posture", "frontend/src/lib/vision.js"),
+        ("M9", "Behavioural integrity", "core/evaluator/behavioural_integrity.py"),
+        ("M10", "Vocal delivery", "frontend/src/lib/voice.js"),
+        ("M11", "Weighted fusion", "core/evaluator/score_fusion.py"),
+        ("M12", "Report assembly", "core/report/report_builder.py"),
+    ]
+    rows = [(tag, name, rel.rsplit("/", 1)[-1], lines(PROJECT / rel))
+            for tag, name, rel in modules]
+    return {"python": py, "javascript": js, "modules": rows,
+            "module_total": sum(r[3] for r in rows)}
+
+
 def word_count(doc) -> int:
     """Body word count in document order.
 
@@ -188,6 +232,7 @@ def main():
         "tests": tests,
         "track_b": load_json(RESULTS / "track_b_evidence.json", "Track B evidence"),
         "worked_example": load_json(RESULTS / "worked_example.json", "worked example"),
+        "code": measure_code(),
     }
 
     doc = new_document()
@@ -199,7 +244,7 @@ def main():
         ("Chapter 2  Literature Review",  lambda: chapter2_literature.chapter_2(doc, fig)),
         ("Chapter 3  Methodology",        lambda: chapter3_methodology.chapter_3(doc, fig)),
         ("Chapter 4  System Design",      lambda: chapter4_design.chapter_4(doc, fig)),
-        ("Chapter 5  Implementation",     lambda: chapter5_implementation.chapter_5(doc, fig)),
+        ("Chapter 5  Implementation",     lambda: chapter5_implementation.chapter_5(doc, fig, extra)),
         ("Chapter 6  Evaluation",         lambda: chapter6_evaluation.chapter_6(doc, fig, stats, extra)),
         ("Chapter 7  Reflection",         lambda: chapter7_reflection.chapter_7(doc, fig, stats, extra)),
         ("Chapter 8  Conclusion",         lambda: chapter8_conclusion.chapter_8(doc, fig, stats, extra)),

@@ -1,18 +1,31 @@
 """Chapter 5 - Implementation."""
 
-from document_toolkit import figure, h1, h2, h3, para
+from document_toolkit import figure, h1, h2, h3, para, table
 
 
-def chapter_5(doc, fig):
+def chapter_5(doc, fig, extra=None):
+    code = (extra or {}).get("code", {})
     h1(doc, "5.  Implementation")
 
     h2(doc, "5.1  Technology stack and repository structure")
+    py = f"{code.get('python', 0):,}" if code else "5,466"
+    js = f"{code.get('javascript', 0):,}" if code else "4,078"
     para(doc,
-         "The implementation comprises approximately 4,500 lines of Python and 4,200 lines of "
-         "JavaScript, excluding dependencies and generated assets. The backend is organised by "
-         "module responsibility rather than by technical layer, so that the correspondence "
-         "between the design in Chapter 4 and the code is direct: a reader looking for Module 6 "
-         "finds it in core/evaluator/answer_judge.py.")
+         f"The implementation comprises {py} lines of Python and {js} lines of JavaScript, "
+         f"excluding dependencies and generated assets. Both figures are counted from the "
+         f"repository when this document is built. The backend is organised by module "
+         f"responsibility rather than by technical layer, so the correspondence between the "
+         f"design in Chapter 4 and the code is direct: a reader looking for Module 6 finds it "
+         f"in core/evaluator/answer_judge.py.")
+
+    if code.get("modules"):
+        table(doc, ["", "Module", "Implemented in", "Lines"],
+              [[t, n, f, f"{ln:,}"] for t, n, f, ln in code["modules"]]
+              + [["", "Total across the thirteen modules", "",
+                  f"{code.get('module_total', 0):,}"]],
+              caption="Table 5  Each design module and the file implementing it. Line counts "
+                      "exclude blank lines and comments, and are measured at build time.",
+              widths=[1.0, 4.6, 5.2, 1.4], font_size=9, first_col_bold=True)
     figure(doc, fig("fig09_deployment"),
            "Figure 9  Deployment and process view. Video and audio are analysed on the "
            "candidate's device; only derived numeric features cross the network.")
