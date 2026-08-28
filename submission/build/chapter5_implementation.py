@@ -87,6 +87,10 @@ def chapter_5(doc, fig, extra=None):
          "The general lesson is one the dissertation returns to in Chapter 7: the dangerous "
          "failures in this system are the silent ones. An exception is visible. A plausible wrong "
          "answer is not.")
+    figure(doc, fig("ui2_graph"),
+           "Figure 17  The skill graph as built for a real pair of documents. Three of six "
+           "required skills were evidenced on the CV; Kubernetes, AWS and Microservices are "
+           "reported as gaps against 1,358 matched taxonomy concepts.")
 
     h2(doc, "5.4  Question generation and ordering (M4)")
     para(doc,
@@ -100,6 +104,11 @@ def chapter_5(doc, fig, extra=None):
          "recognise sort after graph-derived ones but are not discarded. The unit tests assert this "
          "ordering using a fixture in which the model's emission order is the reverse of the "
          "priority order.")
+    figure(doc, fig("ui3_questions"),
+           "Figure 18  Generated questions for the same pair of documents. Each technical "
+           "question carries the skill it targets and a difficulty; the AWS and Kubernetes "
+           "questions are those the graph identified as gaps, which is Objective 2 operating "
+           "end to end.")
 
     h2(doc, "5.5  The voice interview agent (M5)")
     para(doc,

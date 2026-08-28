@@ -192,6 +192,10 @@ def front_matter(doc, fig, stats=None, extra=None):
         "Figure 14  Paraphrase invariance across semantically equivalent rewrites",
         "Figure 15  Inter-criterion correlation matrix",
         "Figure 16  Verbosity probe: original versus padded answers",
+        "Figure 17  The skill graph built for a real CV and job advert",
+        "Figure 18  Generated questions, tagged with the skill each targets",
+        "Figure 19  Step 1: CV and job advert parsed into structured data",
+        "Figure 20  Step 4: device check and the disclosure screen",
     ]
     for f in figures:
         toc_entry(doc, f, level=1)

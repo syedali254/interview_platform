@@ -22,6 +22,7 @@ HERE = Path(__file__).resolve().parent
 PROJECT = HERE.parent.parent / "InterviewAI"
 FIGURES = HERE / "figures_png"
 EXP_FIGURES = PROJECT / "experiments" / "figures"
+SCREENSHOTS = HERE / "screenshots"   # captured from the running app, not generated
 RESULTS = PROJECT / "experiments" / "results"
 STATS_PATH = RESULTS / "statistics.json"
 OUTPUT = HERE.parent / "CMP7200_Project_Report.docx"
@@ -42,15 +43,21 @@ import back_matter            # noqa: E402
 
 
 def fig(name: str, experiments: bool = False) -> Path:
-    """Resolve a figure by stem, from either figure directory."""
-    root = EXP_FIGURES if experiments else FIGURES
-    path = root / f"{name}.png"
-    if not path.exists():
-        raise FileNotFoundError(
-            f"Figure '{name}' not found at {path}. "
-            f"Run diagrams.py, or the evaluation harness for result figures."
-        )
-    return path
+    """Resolve a figure by stem.
+
+    Three sources: architecture diagrams rendered by figures.py, result charts
+    from the evaluation harness, and screenshots captured from the running
+    application. The screenshots are kept in version control because, unlike
+    the other two, they cannot be regenerated without standing the system up.
+    """
+    for root in ((EXP_FIGURES,) if experiments else (FIGURES, SCREENSHOTS)):
+        path = root / f"{name}.png"
+        if path.exists():
+            return path
+    raise FileNotFoundError(
+        f"Figure '{name}' not found. Run figures.py, the evaluation harness "
+        f"for result charts, or capture the interface for a screenshot."
+    )
 
 
 def load_json(path: Path, label: str) -> dict:

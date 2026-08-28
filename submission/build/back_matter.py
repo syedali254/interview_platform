@@ -3,7 +3,7 @@
 Excluded from the word count under the assignment brief, which counts only
 the main body from Chapter 1 to Chapter 8."""
 
-from document_toolkit import GREY, code, h1, para, table
+from document_toolkit import GREY, code, figure, h1, para, table
 from results import probe_cases as _probe
 
 
@@ -254,6 +254,14 @@ def appendices(doc, fig, extra):
          "The interface is a six-step React single-page application. Each step corresponds to a "
          "phase of the pipeline described in Chapter 4, so a user's progress through the "
          "interface is also a traversal of the architecture.")
+    figure(doc, fig("ui1_upload"),
+           "Figure 19  Step 1. A CV and a job advert are parsed into structured data before "
+           "anything else runs; the confirmation panels show what was extracted.")
+    figure(doc, fig("ui4_setup"),
+           "Figure 20  Step 4. The device check and the disclosure screen. Everything the "
+           "system will measure is named before the interview starts, and the privacy notice "
+           "states that video and audio are analysed on the candidate's own machine. The "
+           "camera preview here is a synthetic feed used to capture the screenshot.")
     table(doc,
           ["Step", "Screen", "Implementation", "Purpose"],
           [
