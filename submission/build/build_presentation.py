@@ -205,11 +205,7 @@ class Deck:
 # ═════════════════════════════════════════════════════════════════════════
 
 def ensure_figures():
-    """Draw the architecture diagrams if they are not on disk yet.
-
-    They are build output, so they are not kept in version control. Without
-    this a fresh clone could build the report but not the slides.
-    """
+    """Draw the architecture diagrams if they are not on disk yet."""
     expected = [f"fig{n:02d}" for n in range(1, 12)]
     have = {p.stem[:5] for p in FIGURES.glob("*.png")} if FIGURES.exists() else set()
     if not all(e in have for e in expected):
@@ -218,17 +214,48 @@ def ensure_figures():
         figures.main()
 
 
+def module_slide(d, title, eyebrow, rows, footer, notes, accent=BLUE):
+    """One slide of modules: what each does, and what it runs on.
+
+    Three columns, because those are the three questions asked of every part:
+    which module is it, what does it do, and what was it built with.
+    """
+    s = d.slide(title, eyebrow=eyebrow, accent=accent, notes=notes)
+    y = s._content_top + Inches(0.16)
+    d.text(s, "MODULE", MARGIN, y, Inches(1.2), Inches(0.26),
+           size=11, colour=MUTED, bold=True, space=1.2)
+    d.text(s, "WHAT IT DOES", MARGIN + Inches(1.5), y, Inches(5.0), Inches(0.26),
+           size=11, colour=MUTED, bold=True, space=1.2)
+    d.text(s, "BUILT WITH", MARGIN + Inches(8.4), y, Inches(3.4), Inches(0.26),
+           size=11, colour=MUTED, bold=True, space=1.2)
+    y += Inches(0.42)
+    d.rule(s, MARGIN, y - Inches(0.08), W - 2 * MARGIN, WASH, thickness=Inches(0.014))
+
+    for tag, name, does, tech, col in rows:
+        d.text(s, tag, MARGIN, y, Inches(1.3), Inches(0.34),
+               size=19, colour=col, bold=True)
+        d.text(s, name, MARGIN + Inches(1.5), y, Inches(6.6), Inches(0.32),
+               size=17, colour=INK, bold=True)
+        d.text(s, does, MARGIN + Inches(1.5), y + Inches(0.34), Inches(6.6),
+               Inches(0.62), size=14.5, colour=MUTED, line=1.26)
+        d.text(s, tech, MARGIN + Inches(8.4), y + Inches(0.02), Inches(3.5),
+               Inches(0.8), size=14.5, colour=col, bold=True, line=1.26)
+        y += Inches(1.06)
+
+    d.panel(s, MARGIN, Inches(6.12), W - 2 * MARGIN, Inches(0.7), WASH)
+    d.text(s, footer, MARGIN + Inches(0.42), Inches(6.31),
+           W - 2 * MARGIN - Inches(0.84), Inches(0.44),
+           size=16, colour=INK, bold=True)
+    return s
+
+
 def build():
-    """Ten slides in plain English.
+    """Ten slides: problem, solution, the modules, results, reflection.
 
-    Order follows what an examiner needs: the problem, what the system does and
-    does not do, how it works, what the parts are, what it is built with, the
-    one idea that makes it a research project, what testing found, what I would
-    change, and what it contributes.
-
-    The wording is deliberately ordinary. Every technical term that has to
-    appear is explained on the slide where it appears, because a slide read
-    aloud has no footnotes. Every number is read from the results file.
+    Four of the ten explain the modules, because that is what the artefact is.
+    Each module gets what it does and what it was built with on the same line,
+    so the technology question is answered where it is asked rather than on a
+    separate slide nobody can map back.
     """
     ensure_figures()
     st = _stats()
@@ -236,7 +263,6 @@ def build():
     e2 = st.get("e2_positional_bias", {})
     e4 = st.get("e4_criterion_independence", {})
     lv = e1.get("by_level", {})
-    meta = st.get("meta", {})
     d = Deck()
 
     # ── 1. Title ─────────────────────────────────────────────────────────
@@ -245,7 +271,7 @@ Good morning. My project is an AI system that interviews a job candidate, marks
 their answers, and explains how it reached every mark.
 
 The one sentence to hold on to: most automated interview tools give you a score
-and no explanation. Mine measures how much its own scores can be trusted, and
+and no explanation. Mine measures how far its own scores can be trusted, and
 says so when they cannot.
 """)
     d.rule(s, MARGIN, Inches(1.55), Inches(2.2), ACCENT, thickness=Inches(0.06))
@@ -263,150 +289,83 @@ says so when they cannot.
               "Master's Project    \u00b7    Birmingham City University    \u00b7    2025-26",
            MARGIN, Inches(6.05), W - 2 * MARGIN, Inches(0.4), size=13, colour=MUTED)
 
-    # ── 2. The problem ───────────────────────────────────────────────────
+    # ── 2. Problem statement ─────────────────────────────────────────────
     s = d.slide("Companies score interviews with AI. Candidates get a number "
                 "and no reason.",
                 eyebrow="The problem", accent=RUST, notes="""
 Companies now use AI to interview and score people at a scale no human team
-could manage. The appeal is obvious: it is fast, and it asks everyone the same
-questions.
+could manage. It is fast, and it asks everyone the same questions.
 
-The trouble is what comes out. A number, and nothing else. No reason, and no way
+The trouble is what comes out: a number, and nothing else. No reason, and no way
 to argue with it.
 
 This has caused real trouble. In 2019 a privacy group formally complained about
 HireVue scoring candidates from their faces. HireVue dropped that in 2021, but
-the deeper problem stayed: you still get a score with no explanation.
+the deeper problem stayed.
 
-It also costs companies money. Research shows candidates who think a process was
-unfair are less likely to accept the job if offered, which cancels out the time
-the company saved.
+It also costs companies money. Candidates who think a process was unfair are
+less likely to accept the job, which cancels out the time saved.
 
 And the law has caught up. The EU AI Act now treats hiring software as high
-risk. Notice what it actually asks for: not a perfect model, which nobody can
-build, but that problems be tested for, written down, and checked by a person.
-That is a list of requirements, and it is the one I built to.
+risk. Notice what it asks for: not a perfect model, which nobody can build, but
+that problems be tested for, written down, and checked by a person. That is a
+list of requirements, and it is the one I built to.
+
+So my question is not whether AI can mark an answer. It plainly can. It is
+whether it can be honest about how far each mark should be trusted.
 """)
-    y = s._content_top + Inches(0.18)
+    y = s._content_top + Inches(0.24)
     for lead, body, col in (
         ("It has caused real trouble.  ",
-         "In 2019 a privacy group formally complained about HireVue scoring "
-         "candidates from their faces. The feature was dropped in 2021. The "
-         "deeper problem stayed.", RUST),
+         "In 2019 a privacy group complained about HireVue scoring candidates "
+         "from their faces. The feature went in 2021. The problem stayed.", RUST),
         ("It costs companies money.  ",
          "Candidates who think a process was unfair are less likely to accept "
-         "the job \u2014 which cancels out the time the company saved.", ACCENT),
+         "the job \u2014 cancelling out the time saved.", ACCENT),
         ("The law has caught up.  ",
-         "The EU AI Act now treats hiring software as high risk. It does not "
-         "ask for a perfect model. It asks that problems be tested for, written "
-         "down, and checked by a person.", BLUE),
+         "The EU AI Act treats hiring software as high risk. It asks that "
+         "problems be tested for, written down, and checked by a person.", BLUE),
     ):
         d.rule(s, MARGIN, y + Inches(0.17), Inches(0.2), col, thickness=Inches(0.06))
         d.text(s, lead + body, MARGIN + Inches(0.42), y, W - 2 * MARGIN - Inches(0.5),
                Inches(0.95), size=18, colour=INK, line=1.32)
-        y += Inches(1.12)
+        y += Inches(1.15)
 
-    d.panel(s, MARGIN, Inches(5.5), W - 2 * MARGIN, Inches(1.2), WASH)
-    d.text(s, "So my question is not \u201ccan AI mark an interview answer?\u201d "
+    d.panel(s, MARGIN, Inches(5.55), W - 2 * MARGIN, Inches(1.2), WASH)
+    d.text(s, "The question is not \u201ccan AI mark an interview answer?\u201d "
               "It clearly can.\nIt is \u201ccan it be honest about how much to trust "
               "each mark?\u201d",
-           MARGIN + Inches(0.45), Inches(5.74), W - 2 * MARGIN - Inches(0.9),
+           MARGIN + Inches(0.45), Inches(5.8), W - 2 * MARGIN - Inches(0.9),
            Inches(0.85), size=19, colour=INK, bold=True, line=1.35)
 
-    # ── 3. Scope ─────────────────────────────────────────────────────────
-    s = d.slide("What it does, and what it deliberately does not do",
-                eyebrow="Project scope", accent=GREEN, notes="""
-Being clear about the boundaries, because the limits are as important as the
-features.
-
-What it does. It reads a CV and a job advert. It works out which required skills
-the candidate has not shown. It writes an interview and asks about those missing
-skills first. It runs that interview by voice or by typing. It marks every
-answer and says how confident it is in each mark. And it produces a report where
-every number can be traced back to something.
-
-What it does not do, on purpose. It does not hire anyone \u2014 it produces evidence,
-a person decides. It knows nothing about who the candidate is: no age, no
-gender, no name, no background. It does not predict how well someone would do
-the job; it measures how well they answered, which is a different claim, and
-proving the first would need years of follow-up data. And it is not a finished
-product \u2014 one interview at a time, no login, no database. It is a research
-prototype.
-
-If you take one thing from this slide: every one of those limits is a decision I
-can defend, not something I ran out of time for.
-""")
-    y = s._content_top + Inches(0.1)
-    d.text(s, "What it does", MARGIN, y, Inches(5.8), Inches(0.4),
-           size=19, colour=GREEN, bold=True)
-    d.text(s, "What it deliberately does not do", MARGIN + Inches(6.5), y,
-           Inches(5.8), Inches(0.4), size=19, colour=RUST, bold=True)
-    y += Inches(0.58)
-    does = [
-        "Reads a CV and a job advert",
-        "Works out which required skills are missing",
-        "Writes the interview \u2014 missing skills asked first",
-        "Runs it by voice, or by typing",
-        "Marks every answer, and says how sure it is",
-        "Produces a report where every number can be traced",
-    ]
-    not_does = [
-        ("Does not hire anyone. ", "It gives evidence. A person decides."),
-        ("Knows nothing about the person. ", "No age, gender, name or background."),
-        ("Does not predict job performance. ", "It measures the answer, not the future."),
-        ("Not a finished product. ", "One interview at a time. A research prototype."),
-    ]
-    yl = y
-    for item in does:
-        d.rule(s, MARGIN, yl + Inches(0.13), Inches(0.16), GREEN, thickness=Inches(0.055))
-        d.text(s, item, MARGIN + Inches(0.34), yl, Inches(5.5), Inches(0.5),
-               size=17, colour=INK, line=1.25)
-        yl += Inches(0.62)
-    yr = y
-    for lead, rest in not_does:
-        d.rule(s, MARGIN + Inches(6.5), yr + Inches(0.13), Inches(0.16), RUST,
-               thickness=Inches(0.055))
-        d.text(s, lead + rest, MARGIN + Inches(6.84), yr, Inches(5.2), Inches(0.8),
-               size=17, colour=INK, line=1.25)
-        yr += Inches(0.9)
-    d.panel(s, MARGIN + Inches(6.5), Inches(6.05), Inches(5.55), Inches(0.72), WASH)
-    d.text(s, "Every limit here is a decision I can defend.",
-           MARGIN + Inches(6.85), Inches(6.25), Inches(5.0), Inches(0.4),
-           size=16, colour=INK, bold=True)
-
-    # ── 4. How it works ──────────────────────────────────────────────────
+    # ── 3. Solution ──────────────────────────────────────────────────────
     s = d.slide("How it works, start to finish", eyebrow="The solution", notes="""
-Here is the whole thing in one picture, left to right, in four stages.
+Here is the whole thing, left to right, in four stages.
 
-Stage one, prepare. A CV and a job advert go in. The system reads both and maps
-the skills onto ESCO \u2014 that is the official EU list of job skills, so when it
-says a skill is missing, that skill is a real published thing and not something
-the AI invented. It then writes the interview and puts the missing skills first,
-because every interview runs out of time and a question at the end never gets
-asked.
+Prepare. A CV and a job advert go in. The system maps the skills onto ESCO, the
+official EU skills list, so when it says a skill is missing, that skill is a real
+published thing and not something the AI invented. It writes the interview and
+puts the missing skills first, because every interview runs out of time and a
+question at the end never gets asked.
 
-Stage two, the interview. The candidate picks voice or typing. Both produce
-exactly the same transcript, so nothing after this point knows or cares which
-one ran. While they answer, the browser watches attention and posture and tone
-of voice \u2014 and none of that video or audio ever leaves their computer.
+Interview. The candidate picks speaking or typing. Both produce exactly the same
+transcript, so nothing after this point knows which one ran.
 
-Stage three, marking. Greetings and goodbyes are thrown away so they cannot
-drag the average up. Every real answer is marked twice. Timing and tab switches
-get checked for anything odd.
+Mark. Greetings and goodbyes are thrown away so they cannot drag the average up.
+Every real answer is marked twice. Timing and tab switches get checked.
 
-Stage four, the report. Everything is combined into one score and a
-recommendation, with the working shown.
+Report. Everything is combined into one score and a recommendation, with the
+working shown.
 
-The design point worth making: each part has one job and a clear input and
-output, so any one of them could be replaced without disturbing the rest.
+Thirteen parts do this, and the next four slides go through them.
 """)
     d.figure(s, "fig01_architecture", top=s._content_top + Inches(0.1),
-             height=Inches(4.05))
-    y = Inches(6.02)
+             height=Inches(4.0))
+    y = Inches(5.98)
     for i, (lead, body, col) in enumerate((
-        ("1. Prepare  ", "read both documents, find the missing skills, "
-                         "write the questions", BLUE),
-        ("2. Interview  ", "by voice or by typing \u2014 both give the same "
+        ("1. Prepare  ", "read both documents, find the missing skills, write "
+                         "the questions", BLUE),
+        ("2. Interview  ", "by speaking or typing \u2014 both give the same "
                            "transcript", GREEN),
         ("3. Mark  ", "score every answer twice, check the session looked "
                       "normal", RUST),
@@ -416,215 +375,212 @@ output, so any one of them could be replaced without disturbing the rest.
         d.text(s, lead, x, y, Inches(1.7), Inches(0.3), size=14, colour=col, bold=True)
         d.text(s, body, x, y + Inches(0.3), (W - 2 * MARGIN) / 4 - Inches(0.25),
                Inches(0.8), size=12, colour=MUTED, line=1.22)
+    d.text(s, "Thirteen parts, four stages \u2014 the next four slides go through them.",
+           MARGIN, Inches(6.98), W - 2 * MARGIN, Inches(0.34), size=15,
+           colour=INK, bold=True)
 
-    # ── 5. The thirteen modules ──────────────────────────────────────────
-    s = d.slide("Thirteen parts, each with one job",
-                eyebrow="The modules", notes="""
-Thirteen parts. I will not read them all out \u2014 the point is that each has one
-job, and you can see where every piece of the system lives.
+    # ── 4. Modules: preparing the interview ──────────────────────────────
+    module_slide(d, "Preparing the interview", "Modules 1 to 4", [
+        ("M1", "Reads the CV",
+         "Pulls out skills, jobs, education and projects from an uploaded PDF "
+         "or pasted text. Repairs broken replies rather than failing.",
+         "Google Gemini\n3.6 Flash\n+ PyMuPDF", BLUE),
+        ("M2", "Reads the job advert",
+         "Same treatment for the role: required skills, nice-to-have skills, "
+         "seniority and domain.",
+         "Google Gemini\n3.6 Flash", BLUE),
+        ("M3", "Compares them and finds the gaps",
+         "Maps both lists onto ESCO, the EU skills standard, through four "
+         "increasingly forgiving matching steps, then reports what is missing.",
+         "NetworkX\n+ ESCO v1.1.1\n(1,201 skills)", BLUE),
+        ("M4", "Writes the questions",
+         "Produces openers, technical questions per skill, behavioural "
+         "questions and closers \u2014 then reorders so missing skills come first.",
+         "Google Gemini\n3.6 Flash", BLUE),
+    ], "Because ESCO is a published standard, \u201cthis skill is missing\u201d means "
+       "something a candidate could check.", """
+The first four parts turn two documents into a plan.
 
-The first four prepare the interview: read the CV, read the job advert, compare
-them to find the gaps, and write the questions.
+M1 and M2 read the CV and the job advert. Both use Gemini, asked to return a
+fixed structure. Models sometimes return broken data, so the client repairs it
+rather than failing the request \u2014 unglamorous, but it is the difference between
+a demo that works and one that dies in front of you.
 
-The middle group runs and watches the interview: the talking interviewer, the
-typed version, the tracker that remembers how each skill is going, and the three
-that watch attention, posture and tone of voice through the browser.
+M3 is the core of the project. It maps both skill lists onto ESCO, the EU's
+published skills taxonomy, using four matching steps that get gradually more
+forgiving. This is deliberately not machine learning: ESCO is already a curated
+hierarchy, and learning over it would add opacity while removing the one
+property that makes it defensible \u2014 that every skill traces to a published
+standard.
 
-The last group does the marking: the judge that scores each answer, the cheating
-check, the part that combines everything, and the part that writes the report.
+M4 writes the interview, then reorders it so the missing skills get asked first.
+That reordering is Objective 2, and it matters because every interview has a
+time budget and a question at the end never gets asked.
+""", accent=BLUE)
 
-Two things worth noticing. Numbers five and five-T are the same module with a
-different way of getting the answer in \u2014 speaking or typing \u2014 which is why the
-count is thirteen and not fourteen. And numbers seven, eight and ten all run
-inside the candidate's browser, which is how the privacy promise on the last
-slide is actually kept.
+    # ── 5. Modules: running the interview ────────────────────────────────
+    module_slide(d, "Running the interview", "Modules 5, 5t and 6a", [
+        ("M5", "Runs the spoken interview",
+         "Shows each question, speaks it aloud, listens to the answer, decides "
+         "whether to dig deeper, and saves the transcript.",
+         "LiveKit\n+ Deepgram Nova-3\n+ ElevenLabs", GREEN),
+        ("M5t", "Runs the typed interview",
+         "The same interview answered in a chat box. Produces an identical "
+         "transcript, so nothing afterwards knows which mode ran.",
+         "FastAPI", GREEN),
+        ("M6a", "Tracks how each skill is going",
+         "Keeps a live note on every skill \u2014 not asked, asked, answered well, "
+         "answered badly \u2014 which decides whether a follow-up is needed.",
+         "Plain Python\n(state machine)", GREEN),
+    ], "M5 and M5t are the same interview with a different way of answering \u2014 "
+       "which is why it is thirteen parts, not fourteen.", """
+The interview itself.
+
+M5 is the talking interviewer. LiveKit carries the audio call, Deepgram turns
+speech into text, and ElevenLabs is the voice \u2014 with Deepgram's own voice as a
+backup if that runs out of credit. It shows each question on screen before
+speaking it, so a candidate who mishears can read it.
+
+Two things I got wrong here and had to fix. The system checks the voice provider
+actually returns audio before starting, because an exhausted account accepts the
+connection and returns silence, which looks exactly like success. And the
+turn-taking timings had to be slowed right down: the defaults are tuned for
+chat, and an interview answer contains long pauses for thought.
+
+M5t is the same interview, typed. It matters more than it sounds: it produces an
+identical transcript, so every part after this point is shared. It also lets you
+demonstrate the whole system without any audio hardware at all.
+
+M6a keeps the running verdict on each skill that decides whether to follow up.
+""", accent=GREEN)
+
+    # ── 6. Modules: watching the interview ───────────────────────────────
+    module_slide(d, "Watching the interview", "Modules 7, 8 and 10", [
+        ("M7", "Watches attention",
+         "Finds 478 points on the face to work out where the head is pointing "
+         "and whether the eyes are on the screen.",
+         "MediaPipe\nFace Landmarker", GREEN),
+        ("M8", "Watches posture",
+         "Finds 33 points on the upper body to check whether the shoulders are "
+         "level and the person is upright rather than slouched.",
+         "MediaPipe\nPose Landmarker", GREEN),
+        ("M10", "Listens to tone of voice",
+         "Measures the sound, not the words: how steady the pitch is, how loud, "
+         "and how much is speech rather than pauses.",
+         "Web Audio API", GREEN),
+    ], "All three run inside the candidate's own browser. Video and audio never "
+       "leave their computer \u2014 only the resulting numbers are sent.", """
+Three parts watch how the interview went rather than what was said.
+
+M7 finds 478 points on the face and works out where the head is pointing and
+whether the eyes are on the screen. M8 finds 33 points on the upper body and
+checks posture. M10 listens to the sound of the voice \u2014 pitch steadiness,
+loudness, how much of the time is actual speech.
+
+The line at the bottom is the one I would emphasise. All three run inside the
+candidate's own browser using models downloaded once. The video and the audio
+never leave their machine; only the resulting numbers are sent. That is what
+makes the privacy claim real rather than a promise.
+
+Two limits I would state before you ask. None of this reads emotion \u2014 I removed
+a facial emotion classifier precisely because it could not be explained, and my
+Chapter 2 criticises HireVue for exactly that. And all three together are worth
+fifteen points out of a hundred in the final score, against fifty for what the
+candidate actually said. Nobody is marked on their face.
+""", accent=GREEN)
+
+    # ── 7. Modules: marking and reporting ────────────────────────────────
+    module_slide(d, "Marking and reporting", "Modules 6, 9, 11 and 12", [
+        ("M6", "Marks every answer \u2014 twice",
+         "Scores each answer on accuracy, completeness, clarity and relevance, "
+         "with the criteria in a different order each time. The gap between "
+         "the two marks says how far to trust it.",
+         "Gemini as judge\n(permuted order)", RUST),
+        ("M9", "Checks for cheating",
+         "Looks at tab switches, answers arriving too fast or too slow, and "
+         "answers that are suspiciously uniform in length.",
+         "scikit-learn\nIsolation Forest\n(trains itself)", RUST),
+        ("M11", "Adds everything up",
+         "Answers 50%, skills covered 20%, session integrity 15%, delivery "
+         "15% \u2014 with every contribution shown, not hidden.",
+         "Plain Python\n(fixed weights)", PURPLE),
+        ("M12", "Writes the report",
+         "Each answer and mark, how consistent the marking was, the integrity "
+         "verdict and the recommendation.",
+         "Plain Python", PURPLE),
+    ], "M6 is the research contribution: mark twice, and keep the disagreement "
+       "as a measure of how far to trust the mark.", """
+The marking, and this is where the research contribution sits.
+
+M6 is the important one. Research shows that if you change the order you present
+the marking criteria in, an AI judge gives a different score. Most people cite
+that as a reason not to trust AI marking. I read it as an instruction: mark every
+answer twice, with the criteria in a different order each time.
+
+Averaging cancels the effect of the order. But the average is not the interesting
+part \u2014 the gap between the two marks is. Eighty-two then eighty-one means it is
+sure. Seventy-one then forty-five means it is not, and the average of fifty-eight
+hides that completely. So the gap is kept, and a big gap sends that answer to a
+human instead of reporting a confident score.
+
+M9 checks the session behaved normally. It trains its own model of normal on
+first run, because labelled examples of cheating are not something anyone can
+ethically collect. It always names the behaviour that caused a flag.
+
+M11 combines everything on fixed published weights \u2014 half the score is what the
+candidate actually said. M12 writes it up with the working shown.
+""", accent=RUST)
+
+    # ── 8. Results ───────────────────────────────────────────────────────
+    s = d.slide("What testing found \u2014 two faults in my own system",
+                eyebrow="Results and impact", accent=RUST, notes="""
+I wrote 18 answers to a known quality \u2014 deliberately weak, average and excellent
+\u2014 and ran five experiments.
+
+The good news. It almost never puts a worse answer above a better one: 0.92 out
+of 1. As a way of ranking candidates against each other, it works.
+
+The first fault. Weak answers average 53. Deliberately average answers average
+92.8. Excellent ones 98.2. And the system calls anything 70 or above strong. So
+average and excellent get the same verdict. These marks are usable for comparing
+two candidates; they are not usable for deciding whether one candidate is good
+enough on their own. My report says exactly that.
+
+The second fault. I ask for four separate criteria. They move together at 0.85.
+It forms one overall impression and spreads it across all four. Telling the model
+not to do that did not stop it \u2014 and it weakens a claim I made in my own design
+chapter, that the breakdown explains which part of an answer fell short.
+
+And an honest non-result: the safety net never fired, because the two marks were
+only 2.2 points apart on average. I report that as a null result rather than
+dressing it up.
+
+The impact line is the one to land. Both faults are in my own system and my own
+testing found them. That is the entire argument for building it this way.
 """)
-    mods = [
-        ("M1", "Reads the CV", BLUE), ("M2", "Reads the job advert", BLUE),
-        ("M3", "Compares them, finds the missing skills", BLUE),
-        ("M4", "Writes the questions, gaps first", BLUE),
-        ("M5", "Runs the spoken interview", GREEN),
-        ("M5t", "Runs the typed interview", GREEN),
-        ("M6a", "Tracks how each skill is going", GREEN),
-        ("M7", "Watches attention (face)", GREEN),
-        ("M8", "Watches posture (body)", GREEN),
-        ("M10", "Listens to tone of voice", GREEN),
-        ("M6", "Marks each answer, twice", RUST),
-        ("M9", "Checks for cheating", RUST),
-        ("M11", "Adds everything up", PURPLE),
-        ("M12", "Writes the final report", PURPLE),
-    ]
-    y0 = s._content_top + Inches(0.12)
-    half = 7
-    for idx, (tag, what, col) in enumerate(mods):
-        col_i, row_i = divmod(idx, half)
-        x = MARGIN + col_i * Inches(6.3)
-        y = y0 + row_i * Inches(0.6)
-        d.text(s, tag, x, y, Inches(0.9), Inches(0.36), size=17, colour=col, bold=True)
-        d.text(s, what, x + Inches(0.95), y, Inches(4.85), Inches(0.36),
-               size=17, colour=INK)
-    d.panel(s, MARGIN, Inches(6.05), W - 2 * MARGIN, Inches(0.75), WASH)
-    d.text(s, "M5 and M5t are the same interview with a different way of "
-              "answering \u2014 which is why it is thirteen parts, not fourteen.",
-           MARGIN + Inches(0.42), Inches(6.26), W - 2 * MARGIN - Inches(0.84),
-           Inches(0.45), size=16, colour=INK, bold=True)
-
-    # ── 6. Tech stack ────────────────────────────────────────────────────
-    s = d.slide("What it is built with", eyebrow="Technology", notes="""
-What I actually used, and where the AI is.
-
-Three jobs use a language model: reading the two documents, writing the
-questions, and marking the answers. That is Google Gemini 3.6 Flash in every
-case. One model, so the behaviour is consistent and there is one thing to test.
-
-The spoken interview uses three services: LiveKit carries the audio call,
-Deepgram turns speech into text, and ElevenLabs is the interviewer's voice, with
-Deepgram's voice as a backup if that runs out of credit.
-
-The skill matching uses no AI at all, and that is deliberate. ESCO is already a
-carefully built list maintained as an EU standard. Learning something over the
-top of it would make it harder to explain and would throw away the one property
-that makes it defensible \u2014 that every skill traces back to a published standard.
-
-The camera and microphone work uses Google's MediaPipe, running inside the
-browser. The cheating check uses a scikit-learn model that trains itself on
-first run, because nobody can ethically collect real examples of cheating.
-
-And the app itself is a Python server with a React front end.
-
-The line at the bottom is the one to say out loud: video and audio never leave
-the candidate's computer. Only the resulting numbers do.
-""")
-    rows = [
-        ("Reading, writing questions, marking", "Google Gemini 3.6 Flash", BLUE),
-        ("Matching skills to a real standard", "ESCO (EU skills list) + NetworkX", BLUE),
-        ("Carrying the voice call", "LiveKit", GREEN),
-        ("Turning speech into text", "Deepgram Nova-3", GREEN),
-        ("The interviewer's voice", "ElevenLabs (Deepgram as backup)", GREEN),
-        ("Attention and posture, in the browser", "Google MediaPipe", GREEN),
-        ("Tone of voice, in the browser", "Web Audio API", GREEN),
-        ("Spotting unusual behaviour", "scikit-learn, trains itself", RUST),
-        ("The app itself", "Python + FastAPI, React front end", PURPLE),
-        ("Checking it still works", "72 automated tests", PURPLE),
-    ]
     y = s._content_top + Inches(0.1)
-    for what, tech, col in rows:
-        d.rule(s, MARGIN, y + Inches(0.14), Inches(0.16), col, thickness=Inches(0.055))
-        d.text(s, what, MARGIN + Inches(0.34), y, Inches(5.6), Inches(0.34),
-               size=16, colour=INK)
-        d.text(s, tech, MARGIN + Inches(6.2), y, W - MARGIN - Inches(6.4),
-               Inches(0.34), size=16, colour=col, bold=True)
-        y += Inches(0.42)
-    d.panel(s, MARGIN, y + Inches(0.08), W - 2 * MARGIN, Inches(0.72), WASH)
-    d.text(s, "The camera and microphone work happens on the candidate's own "
-              "computer. Only the resulting numbers are sent.",
-           MARGIN + Inches(0.42), y + Inches(0.28), W - 2 * MARGIN - Inches(0.84),
-           Inches(0.45), size=16, colour=INK, bold=True)
-
-    # ── 7. The main idea ─────────────────────────────────────────────────
-    s = d.slide("The main idea: mark it twice, and keep the disagreement",
-                eyebrow="What makes this research", accent=ACCENT, notes="""
-This is the idea the whole project rests on, and it is simple.
-
-Research has shown that when you use an AI to mark work, changing the order you
-show it the marking criteria changes the score it gives. Most people quote that
-as a reason not to trust AI marking.
-
-I read it as an instruction. If the order changes the score, then mark every
-answer twice, with the criteria in a different order each time. Averaging cancels
-out the effect of the order.
-
-But the average is not the interesting part. The gap between the two marks is.
-If it says 82 and then 81, it is sure. If it says 71 and then 45, it is not \u2014
-and the average of 58 hides that completely.
-
-So I keep the gap. A big gap means the mark cannot be trusted, and that answer
-goes to a human instead of being reported as a confident score.
-
-The claim is deliberately modest. I am not saying the AI is unbiased. I am
-saying that when it is unsure, the system admits it.
-""")
-    y = s._content_top + Inches(0.2)
-    d.text(s, "Every answer is marked twice, with the marking criteria shown "
-              "in a different order each time.",
-           MARGIN, y, W - 2 * MARGIN, Inches(0.5), size=20, colour=INK, line=1.3)
-    y += Inches(0.9)
-    for lead, body, col in (
-        ("The average", "cancels out the effect of the order.", MUTED),
-        ("The gap", "is the useful part. 82 then 81 means it is sure. 71 then 45 "
-                    "means it is not \u2014 and the average of 58 hides that.", ACCENT),
-        ("What happens next", "a big gap sends that answer to a human, instead "
-                              "of reporting a confident score.", BLUE),
-    ):
-        d.rule(s, MARGIN, y + Inches(0.17), Inches(0.2), col, thickness=Inches(0.06))
-        d.text(s, lead, MARGIN + Inches(0.42), y, Inches(2.6), Inches(0.4),
-               size=18, colour=col, bold=True)
-        d.text(s, body, MARGIN + Inches(3.15), y, W - 2 * MARGIN - Inches(3.3),
-               Inches(0.9), size=18, colour=INK, line=1.3)
-        y += Inches(1.05)
-    d.panel(s, MARGIN, Inches(5.85), W - 2 * MARGIN, Inches(0.9), WASH)
-    d.text(s, "I am not claiming the AI is unbiased. I am claiming that when it "
-              "is unsure, the system says so.",
-           MARGIN + Inches(0.45), Inches(6.1), W - 2 * MARGIN - Inches(0.9),
-           Inches(0.5), size=19, colour=INK, bold=True)
-
-    # ── 8. What testing found ────────────────────────────────────────────
-    s = d.slide("What I found when I tested it \u2014 two faults in my own system",
-                eyebrow="Results", accent=RUST, notes="""
-I wrote 18 answers to a known quality \u2014 deliberately weak, deliberately average,
-deliberately excellent \u2014 and ran five experiments. Here is what came back.
-
-The good news first. It almost never puts a worse answer above a better one. The
-agreement score is 0.92 out of 1. As a way of ranking candidates against each
-other, it works.
-
-Now the first fault. Look at the averages. Deliberately weak answers get 53.
-Deliberately average answers get 92.8. Excellent answers get 98.2. And the system
-calls anything 70 or above a strong answer.
-
-So average and excellent get exactly the same verdict. The marks are useful for
-comparing two candidates. They are not useful for deciding whether one candidate
-is good enough on their own. My report says exactly that, and proposes setting
-the thresholds from the scores actually observed instead of assuming the full
-range gets used.
-
-The second fault. I ask it to mark four things separately \u2014 accuracy,
-completeness, clarity, relevance. They move together at 0.85 out of 1. It forms
-one overall impression and spreads it across all four. That is a well-known
-effect in human marking too, and telling the model not to do it did not stop it.
-This matters because I had defended that four-part breakdown as an explanation
-for the candidate. It explains less than I claimed.
-
-And one honest non-result: the safety net for unreliable marks never actually
-triggered, because the two marks were only 2.2 points apart on average. I report
-that as a null result rather than dressing it up.
-
-The thing I would emphasise: both of these are faults in my own system, found by
-my own testing. That is the whole argument for building it this way.
-""")
-    y = s._content_top + Inches(0.08)
     d.stat(s, MARGIN, y, Inches(2.75), "0.92",
            "how well it ranks answers\n(1.0 would be perfect)", GREEN,
            height=Inches(1.4), value_size=36)
-    d.stat(s, MARGIN + Inches(3.0), y, Inches(2.75), f"{lv.get('medium', {}).get('mean', 0):.1f}",
+    d.stat(s, MARGIN + Inches(3.0), y, Inches(2.75),
+           f"{lv.get('medium', {}).get('mean', 0):.1f}",
            "what deliberately average\nanswers scored", RUST,
            height=Inches(1.4), value_size=36)
     d.stat(s, MARGIN + Inches(6.0), y, Inches(2.75),
            f"{e4.get('mean_inter_criterion_r', 0):.2f}",
-           "how closely the four marking\ncriteria move together", RUST,
+           "how closely the four\ncriteria move together", RUST,
            height=Inches(1.4), value_size=36)
     d.stat(s, MARGIN + Inches(9.0), y, Inches(2.85),
            f"{e2.get('mean_absolute_spread', 0):.1f}",
            "average gap between\nthe two markings", BLUE,
            height=Inches(1.4), value_size=36)
-    y += Inches(1.68)
+    y += Inches(1.7)
     for lead, body, col in (
         ("It ranks well.  ",
          "It almost never puts a worse answer above a better one.", GREEN),
-        ("Fault 1 \u2014 it is too generous.  ",
-         "The pass mark for a \u201cstrong\u201d answer is 70. Deliberately average "
-         "answers scored 92.8 \u2014 so average and excellent get the same verdict.",
-         RUST),
+        ("Fault 1 \u2014 too generous.  ",
+         "The pass mark for \u201cstrong\u201d is 70. Deliberately average answers scored "
+         "92.8, so average and excellent get the same verdict.", RUST),
         ("Fault 2 \u2014 the four criteria are not separate.  ",
          "It forms one impression and spreads it across all four, so the "
          "breakdown explains less than I had claimed.", RUST),
@@ -642,33 +598,29 @@ my own testing. That is the whole argument for building it this way.
     # ── 9. Reflection ────────────────────────────────────────────────────
     s = d.slide("What I changed, and what this project cannot claim",
                 eyebrow="Looking back honestly", accent=PURPLE, notes="""
-Where I departed from my proposal, and I want to be direct about it.
+Where I departed from my proposal.
 
-My proposal's headline idea was a second marker: a trained model to check the AI
-judge. I built it. Then I measured it, and removed it.
-
-Three reasons. Its training answers came from the same AI it was supposed to be
-checking, so the two agreeing tells you nothing about the world. A test showed it
-was really keying on how long an answer was, not how good it was. And adding a
-second unchecked marker gives the appearance of safety, not safety.
+My proposal's headline idea was a second marker \u2014 a trained model to check the AI
+judge. I built it, measured it, and removed it. Its training answers came from
+the same AI it was meant to check, so the two agreeing tells you nothing. A test
+showed it was really keying on answer length. And a second unchecked marker gives
+the appearance of safety, not safety.
 
 Removing it late felt like going backwards \u2014 it was the part that most looked
 like machine learning research. What changed my mind was realising I could not
 answer the obvious question: why does that agreement mean anything? Writing it up
 as a finding turned the weakest part of the project into one I can defend.
 
-I also replaced a planned emotion detector with a simpler measure of how someone
-speaks \u2014 loudness, steadiness, pauses. Every part of that can be inspected. An
-emotion label from a black box cannot. In a project about explaining itself, that
-swap makes it more consistent, not less.
+I also replaced a planned emotion detector with a measure of how someone speaks.
+Every part of that can be inspected; an emotion label from a black box cannot.
 
-Now what I cannot claim. Eighteen answers is a small test set. They were written,
-not spoken by real people. I have no human markers to compare against. I have not
-tested for bias across different groups of people, because that needs exactly the
-personal data I chose not to collect. And it runs one interview at a time.
+What I cannot claim. Eighteen answers is a small test set, and they were written
+rather than spoken. No human markers to compare against. No bias testing across
+groups, because that needs exactly the personal data I chose not to collect. And
+it runs one interview at a time.
 
-Measured against the EU AI Act: explaining itself and keeping a human in charge,
-it does well. Record keeping and bias testing, it does not.
+Against the EU AI Act: explaining itself and keeping a human in charge, it does
+well. Record keeping and bias testing, it does not.
 """)
     y = s._content_top + Inches(0.08)
     d.text(s, "What I changed, and why", MARGIN, y, Inches(5.8), Inches(0.34),
@@ -679,15 +631,15 @@ it does well. Record keeping and bias testing, it does not.
     left = [
         ("Removed the second marker. ",
          "Its training answers came from the same AI it was meant to check, so "
-         "agreement proved nothing. A test showed it was really measuring length."),
+         "agreement proved nothing. A test showed it measuring length."),
         ("Replaced the emotion detector. ",
-         "Now measures how someone speaks \u2014 loudness, steadiness, pauses. Every "
-         "part can be inspected; an emotion label cannot."),
+         "Now measures how someone speaks. Every part can be inspected; an "
+         "emotion label cannot."),
         ("Added the double marking. ",
          "Not in the proposal at all. It became the main contribution."),
     ]
     right = [
-        ("18 answers, and written not spoken. ", "A small test set."),
+        ("18 answers, written not spoken. ", "A small test set."),
         ("No human markers to compare against. ", "So no outside check."),
         ("No bias testing across groups. ",
          "It needs the personal data I chose not to collect."),
@@ -715,26 +667,24 @@ it does well. Record keeping and bias testing, it does not.
     # ── 10. Conclusion ───────────────────────────────────────────────────
     s = d.slide("What this project contributes", eyebrow="In closing",
                 accent=GREEN, notes="""
-To finish. Four things.
+Four things.
 
 A working platform that aims its questions using a published skills standard,
-interviews by voice or typing, and produces a report that shows its working.
+interviews by speaking or typing, and produces a report that shows its working.
 
-A clear measurement of how an AI marker behaves when it is actually deployed \u2014
-specifically, that it can rank answers well and still be badly calibrated. That
-distinction is where both of my faults came from.
+A clear measurement of how an AI marker behaves in practice \u2014 that it can rank
+answers well and still be far too generous. That distinction is where both faults
+came from.
 
 A documented negative result: comparing a trained model against the AI that
-supplied its training answers does not tell you anything, and I have the evidence
-for why.
+supplied its training answers proves nothing, and I have the evidence.
 
-And the whole test setup is in the submission, so every number I have shown you
-can be produced again.
+And the whole test setup is in the submission, so every number can be produced
+again.
 
 The wider point is deliberately modest. Being open about one marker \u2014 what it
 did, how sure it was, when a human should step in \u2014 is worth more than adding a
-second marker nobody has checked. Backup without independent checking looks like
-safety without being it.
+second marker nobody has checked.
 
 And the best evidence for that is what I said earlier: my own testing found two
 real faults in my own system. Something built to be examined can be shown to be
@@ -747,13 +697,13 @@ Thank you. I am happy to take questions.
     for lead, body in (
         ("A working platform  ",
          "that aims its questions using a published skills standard, interviews "
-         "by voice or typing, and shows its working."),
+         "by speaking or typing, and shows its working."),
         ("A clear measurement  ",
          "of how an AI marker behaves in practice \u2014 it can rank answers well and "
          "still mark them far too generously."),
         ("A documented negative result  ",
-         "checking an AI against a model trained on that same AI's answers proves "
-         "nothing, and here is the evidence."),
+         "checking an AI against a model trained on that same AI's answers "
+         "proves nothing, and here is the evidence."),
         ("A test setup anyone can rerun  ",
          "included in the submission, so every number here can be produced again."),
     ):
