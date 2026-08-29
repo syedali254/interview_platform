@@ -18,7 +18,6 @@ import atexit
 LIVEKIT_VERSION = os.environ.get("LIVEKIT_VERSION", "1.13.5")
 
 HERE = Path(__file__).resolve().parent
-BASE = HERE.parent.parent
 
 _system = platform.system().lower()
 _machine = platform.machine().lower()

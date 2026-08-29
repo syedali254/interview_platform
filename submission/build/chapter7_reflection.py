@@ -45,20 +45,19 @@ def chapter_7(doc, fig, stats, extra=None):
 
     h3(doc, "7.2.1  Removal of the trained-classifier evaluation track")
     para(doc,
-         "The proposal's central research contribution was a comparison between two answer "
-         "scorers: an LLM-as-Judge and a supervised classifier using Sentence-BERT embeddings and "
-         "XGBoost with SHAP explanations. That track was implemented, trained, measured and then "
-         "removed. This is the most significant change in the project and the reasoning is set "
-         "out in full.")
+         "The proposal's central contribution was a comparison between two answer scorers: an "
+         "LLM-as-Judge and a supervised classifier using Sentence-BERT embeddings and XGBoost "
+         "with SHAP explanations. That track was implemented, trained, measured and then removed. "
+         "This is the most significant change in the project, and the reasoning follows.")
     para(doc,
          "The first and decisive problem is that the comparison was circular by construction. The "
          "proposal sourced training labels by prompting a language model to generate answers at "
          "pre-defined quality levels, so the classifier's ground truth was the language model's "
-         "own opinion. Agreement between the two was guaranteed by the design, and disagreement "
-         "would have measured only the representational poverty of six surface features.")
+         "own opinion. Agreement was guaranteed by the design, and disagreement would have "
+         "measured only the poverty of six surface features.")
     para(doc,
          "The second problem is that the metric which would have given the comparison meaning was "
-         "unobtainable. Agreement with human ratings was the intended anchor, requiring the "
+         "unobtainable. Agreement with human ratings was the intended anchor, requiring a "
          "two-rater validation set the timeline could not accommodate (Section 3.4). Without a "
          "human gold standard the comparison reduces to two automated scorers disagreeing with no "
          "arbiter.")
@@ -103,9 +102,9 @@ def chapter_7(doc, fig, stats, extra=None):
     para(doc,
          "The proposal intended to fit the Isolation Forest baseline on pilot sessions with "
          "volunteers. No human participants were recruited, so the baseline is synthetic: four "
-         "hundred sessions drawn from distributions chosen to match the ranges the system "
-         "actually measures. This is defensible as a starting point and is honestly labelled in "
-         "the code, but it has a real consequence recorded in the next section.")
+         "hundred sessions drawn from distributions matching the ranges the system measures. This "
+         "is defensible as a starting point and honestly labelled in the code, but it has a "
+         "consequence recorded in the next section.")
 
     h2(doc, "7.3  Limitations")
     para(doc,
@@ -178,15 +177,14 @@ def chapter_7(doc, fig, stats, extra=None):
          "removed the ethical burden of collecting it and simultaneously removed the possibility "
          "of testing for the harm that matters most. A project of this length can reasonably "
          "choose the safer path, but it should not claim the resulting system has been shown to "
-         "be fair. It has been shown to be inspectable, which is a precondition for demonstrating "
-         "fairness rather than a substitute for it.")
+         "be fair. It has been shown to be inspectable, which is a precondition for fairness "
+         "rather than a substitute for it.")
     para(doc,
          "On data protection, in-browser analysis is a genuine data-minimisation measure: no "
          "biometric data leaves the device and only derived scalars are transmitted. It does not "
          "answer the deeper objection that inferring engagement from posture and gaze is "
          "intrusive, and that nervousness and evasion look alike to any such measure. Light "
-         "weighting and per-candidate calibration reduce the harm without resolving the "
-         "principle.")
+         "weighting and per-candidate calibration reduce the harm without resolving the principle.")
 
     h2(doc, "7.5  Personal reflection")
     para(doc,

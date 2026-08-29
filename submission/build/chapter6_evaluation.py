@@ -279,12 +279,11 @@ def chapter_6(doc, fig, stats, extra):
          f"{_fmt(e4['pairwise'][0]['r'])}; even the most independent pair, "
          f"{e4['pairwise'][-1]['pair']}, correlated at r = {_fmt(e4['pairwise'][-1]['r'])}.")
     para(doc,
-         "Some correlation is expected. Technically accurate answers do tend to be more complete, "
-         "since both follow from understanding the material, and no rubric should force them apart. "
-         "But correlations in this range indicate the four scores carry substantially less than "
-         "four pieces of information. The judge appears to form an overall impression and "
-         "distribute it across the criteria — the classic halo effect from the human rating "
-         "literature, evidently not eliminated by instructing a model against it.")
+         "Some correlation is expected: accurate answers tend to be more complete, and no rubric "
+         "should force them apart. But at this level the four scores carry substantially less "
+         "than four pieces of information. The judge forms an overall impression and distributes "
+         "it across the criteria — the halo effect from the human rating literature, not "
+         "eliminated by instructing a model against it.")
     para(doc,
          "This qualifies a claim made in Chapter 4. The per-criterion breakdown was defended as an "
          "explanation mechanism telling a candidate which aspect fell short. That defence is weaker "
@@ -330,24 +329,23 @@ def chapter_6(doc, fig, stats, extra):
          f"assembly. All {tests.get('count', 72)} pass. Two are direct regressions on the matching "
          f"failures described in Section 5.3.1.")
     para(doc,
-         "An end-to-end run exercises the full pipeline against a synthetic candidate and job "
-         "description with live model calls at every stage. It asserts that the graph builds, gap "
-         "analysis is coherent, questions are generated and ordered by priority, logistics "
-         "exchanges are excluded, rubric criteria stay in range and sum to the reported score, and "
-         "fusion contributions reconcile with the total. It passes.")
+         "An end-to-end run exercises the full pipeline against a synthetic candidate with live "
+         "model calls at every stage, asserting that the graph builds, questions are ordered by "
+         "priority, logistics exchanges are excluded, rubric criteria stay in range and sum to "
+         "the reported score, and fusion contributions reconcile with the total. It passes.")
 
     # ── 6.9 Worked example ───────────────────────────────────────────────
     h2(doc, "6.9  A worked example")
     para(doc,
-         "Aggregate statistics do not convey what the system produces. This traces one "
+         "Aggregate statistics do not convey what the system produces, so this traces one "
          "interview end to end. The candidate is a synthetic backend engineer with four years of "
-         "Python experience; the role is a senior backend position requiring Python, Kubernetes, "
-         "PostgreSQL, REST APIs, microservices and AWS.")
+         "Python; the role is a senior backend position requiring Python, Kubernetes, PostgreSQL, "
+         "REST APIs, microservices and AWS.")
     para(doc,
-         "The skill graph resolved the candidate's declared skills against the requirements and "
-         "returned a 50% match, correctly identifying Kubernetes and AWS as required skills absent "
-         "from the CV and promoting them to high-priority topics. The flattening step then moved "
-         "the Kubernetes question ahead of questions about skills already evidenced.")
+         "The skill graph returned a 50% match, correctly identifying Kubernetes and AWS as "
+         "required skills absent from the CV and promoting them to high-priority topics. The "
+         "flattening step then moved the Kubernetes question ahead of questions about skills "
+         "already evidenced.")
     rows = []
     for ex in (extra.get("worked_example", {}).get("exchanges") or []):
         scored = ex.get("score") is not None
@@ -365,12 +363,12 @@ def chapter_6(doc, fig, stats, extra):
           widths=[5.0, 3.0, 2.2, 3.0, 1.8, 2.4], font_size=9,
           caption="Table 11  Per-answer results from the worked example.")
     para(doc,
-         "Three points are worth drawing out. The greeting and sign-off were correctly excluded as "
-         "logistics, so they did not dilute the average. The candidate's admission that they had "
-         "not used Kubernetes scored 50 rather than zero, because the rubric credits accuracy "
-         "separately from completeness and an honest acknowledgement contains nothing incorrect. "
-         "And that answer carried the widest judge disagreement of the session at 10 points — the "
-         "only moderate-consistency score, on the only genuinely partial answer.")
+         "Three points are worth drawing out. Greeting and sign-off were correctly excluded as "
+         "logistics. The candidate's admission that they had not used Kubernetes scored 50 rather "
+         "than zero, because the rubric credits accuracy separately from completeness and an "
+         "honest acknowledgement contains nothing incorrect. And that answer carried the widest "
+         "judge disagreement of the session at 10 points — the only moderate-consistency score, "
+         "on the only genuinely partial answer.")
     para(doc,
          "That last observation runs against the null result in Section 6.4 and is the most "
          "interesting thing here. Where the machine-written corpus produced almost uniformly high "
