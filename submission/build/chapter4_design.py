@@ -1,6 +1,6 @@
 """Chapter 4 - System Design."""
 
-from document_toolkit import figure, h1, h2, para, table
+from document_toolkit import MODULE_COUNT, figure, h1, h2, para, table
 
 
 def chapter_4(doc, fig):
@@ -8,13 +8,13 @@ def chapter_4(doc, fig):
 
     h2(doc, "4.1  Architectural overview")
     para(doc,
-         "The system is decomposed into twelve modules across four sequential phases. The "
+         f"The system is decomposed into {MODULE_COUNT} modules across four sequential phases. The "
          "decomposition is not decorative: each module declares its input and output, "
          "communicates only through those, and can be developed, deferred or replaced without "
          "disturbing its neighbours — the property that allowed a whole evaluation track to be "
          "removed late in the project without touching the rest.")
     figure(doc, fig("fig01_architecture"),
-           "Figure 1  System architecture. Twelve modules across four sequential phases, with "
+           f"Figure 1  System architecture. {MODULE_COUNT.capitalize()} modules across four sequential phases, with "
            "the inter-phase data dependencies shown explicitly.")
     para(doc,
          "Phase 1 turns unstructured documents into a targeted interview plan, Phase 2 conducts "

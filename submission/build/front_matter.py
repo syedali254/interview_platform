@@ -2,7 +2,8 @@
 lists of figures and tables."""
 
 from docx.shared import Pt
-from document_toolkit import GREY, HEAD2, h2, page_break, para, toc_entry
+from document_toolkit import (AUTHOR, GREY, HEAD2, MODULE_COUNT, h2,
+                              page_break, para, toc_entry)
 from results import probe_cases as _probe_scores
 
 
@@ -26,6 +27,7 @@ def front_matter(doc, fig, stats=None, extra=None):
     para(doc, "Project Dissertation (Assessment 2)", align="center",
          size=Pt(11), colour=GREY)
     para(doc, space_after=44)
+    para(doc, AUTHOR, align="center", bold=True, size=Pt(14))
     para(doc, f"Student Number: {STUDENT_NUMBER}", align="center", bold=True, size=Pt(12))
     para(doc, "MSc Computer Science", align="center", size=Pt(11), colour=GREY)
     para(doc, "Academic Year 2025–26", align="center", size=Pt(11), colour=GREY)
@@ -49,7 +51,7 @@ def front_matter(doc, fig, stats=None, extra=None):
     para(doc,
          "This project designs, builds and evaluates a working interview platform that treats "
          "that unreliability as the central engineering problem rather than an acceptable cost. "
-         "The artefact comprises twelve modules across four phases. A candidate's CV and a job "
+         f"The artefact comprises {MODULE_COUNT} modules across four phases. A candidate's CV and a job "
          "description are parsed into structured profiles and mapped onto a knowledge graph built "
          "from the ESCO occupational taxonomy, which identifies skill gaps and orders the "
          "interview so that genuine gaps are probed before the time budget is spent. The "

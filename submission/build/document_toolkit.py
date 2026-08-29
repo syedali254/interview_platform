@@ -31,6 +31,12 @@ RULE = "C3CCD6"
 
 AUTHOR = "Abdul Wahab"
 
+# The module count, in one place. It was stated as "twelve" in the abstract
+# and Chapter 4 and "thirteen" in Chapter 4.2, Chapter 5 and the architecture
+# figure. Appendix A and the Chapter 5 table both list thirteen: M1-M12 with
+# M5t and M6a, and M7/M8 as one implementation unit.
+MODULE_COUNT = "thirteen"
+
 
 def new_document() -> Document:
     doc = Document()
