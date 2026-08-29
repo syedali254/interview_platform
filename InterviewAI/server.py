@@ -1,5 +1,10 @@
 """FastAPI backend for the InterviewAI platform.
 
+Every endpoint below is called by the interface. Six others once existed and
+were removed once nothing called them: a health check, session-state and
+transcript readers, a client-side transcript writer, and separate entry points
+for M9 and M11 that the assessment pipeline reaches directly instead.
+
 Pre-interview:
   POST /api/parse-cv           M1 — parse a CV from PDF or text
   POST /api/parse-jd           M2 — parse a job description
@@ -7,22 +12,17 @@ Pre-interview:
   POST /api/generate-questions M4 — generate questions from graph topics
 
 Interview:
+  POST /api/prewarm            start LiveKit early, while the candidate is
+                               still on the device-check screen
   POST /api/launch-interview   M5 — start the LiveKit voice session
   GET  /token                  LiveKit token; also spawns the agent process
   POST /api/stop-interview     tear down the agent and LiveKit server
-  POST /save_transcript        transcript written by the client
-  GET  /api/transcript         most recent saved transcript
+  POST /api/text-interview/*   M5t — start, answer, end the typed interview
 
 Assessment:
   POST /api/evaluate-session   M6 + M9 + M11 + M12 — score a whole interview
                                and return the final report
   POST /api/evaluate           M6 — score a single answer
-  POST /api/integrity          M9 — behavioural integrity for raw telemetry
-  POST /api/fusion-report      M11 — weighted fusion for supplied scores
-
-Misc:
-  GET  /api/session            current session state
-  GET  /api/health             health check
 """
 
 import json
@@ -47,14 +47,11 @@ from typing import Optional
 from dotenv import load_dotenv
 load_dotenv()
 
-from core.config import GEMINI_API_KEY
 from core.agents.cv_parser import parse_cv_text, parse_cv_pdf
 from core.agents.jd_parser import parse_job_description
 from core.agents.question_generator import generate_interview_questions, build_interview_flow
 from core.graph.skill_graph import build_graph
 from core.evaluator.answer_judge import evaluate_answer
-from core.evaluator.behavioural_integrity import assess_integrity
-from core.evaluator.score_fusion import compute_fusion_score
 
 app = FastAPI(title="InterviewAI API", version="2.0")
 
@@ -185,17 +182,6 @@ class SessionEvalInput(BaseModel):
     conversation: Optional[list] = None
     # Client-side behavioural telemetry for M9 + M11
     telemetry: Optional[dict] = None
-
-
-# ── Health ──
-@app.get("/api/health")
-def health():
-    return {
-        "status": "ok",
-        "gemini_configured": bool(GEMINI_API_KEY),
-        "session_has_cv": _session["cv_data"] is not None,
-        "session_has_jd": _session["jd_data"] is not None,
-    }
 
 
 # ── Step 1: Parse CV ──
@@ -408,20 +394,6 @@ async def api_stop_interview():
     return {"success": True}
 
 
-# ── Get Transcript ──
-@app.get("/api/transcript")
-async def api_get_transcript():
-    transcript_dir = Path(tempfile.gettempdir()) / "interviewai_transcripts"
-    if not transcript_dir.exists():
-        return {"found": False, "data": None}
-    files = list(transcript_dir.glob("*.json"))
-    if not files:
-        return {"found": False, "data": None}
-    latest = max(files, key=lambda f: f.stat().st_mtime)
-    data = json.loads(latest.read_text())
-    return {"found": True, "data": data}
-
-
 # ── Evaluate Answer ──
 @app.post("/api/evaluate")
 async def api_evaluate(body: EvalInput):
@@ -464,24 +436,6 @@ async def api_evaluate_session(body: SessionEvalInput):
         return {"success": True, "data": report}
     except Exception as e:
         raise HTTPException(500, str(e))
-
-
-# ── Get Session State ──
-@app.get("/api/session")
-async def api_session():
-    return {
-        "cv_parsed": _session["cv_data"] is not None,
-        "jd_parsed": _session["jd_data"] is not None,
-        "graph_built": _session["graph_data"] is not None,
-        "questions_generated": _session["questions"] is not None,
-        "interview_launched": _session["livekit_launched"],
-        "interview_url": _session["livekit_url"],
-        "cv_data": _session["cv_data"],
-        "jd_data": _session["jd_data"],
-        "graph_data": _session["graph_data"],
-        "questions": _session["questions"],
-        "report": _session["report"],
-    }
 
 
 # ── LiveKit token endpoint (used by client.html and React frontend) ──
@@ -529,49 +483,6 @@ async def get_token():
         "identity": identity,
         "agent_prewarmed": reused,
     }
-
-
-# ── Save transcript from client ──
-@app.post("/save_transcript")
-async def save_transcript_endpoint(data: dict):
-    transcript_dir = Path(tempfile.gettempdir()) / "interviewai_transcripts"
-    transcript_dir.mkdir(exist_ok=True)
-    session_id = data.get("session", f"client-{uuid.uuid4().hex[:8]}")
-    fp = transcript_dir / f"{session_id}.json"
-    fp.write_text(json.dumps(data, indent=2))
-    return {"saved": True, "path": str(fp)}
-
-
-# ── M9: Behavioral Integrity Assessment ──
-@app.post("/api/integrity")
-async def api_integrity(data: dict):
-    """Assess behavioral integrity of an interview session."""
-    try:
-        result = assess_integrity(data)
-        return {"success": True, "data": result}
-    except Exception as e:
-        raise HTTPException(500, str(e))
-
-
-# ── M11: Fusion Report ──
-@app.post("/api/fusion-report")
-async def api_fusion_report(data: dict):
-    """Generate weighted fusion report combining all module outputs."""
-    try:
-        answer_scores = data.get("answer_scores", [])
-        skill_match_pct = data.get("skill_match_pct", 0)
-        integrity_score = data.get("integrity_score", 100)
-        engagement_score = data.get("engagement_score", 75)
-
-        result = compute_fusion_score(
-            answer_scores=answer_scores,
-            skill_match_pct=skill_match_pct,
-            integrity_score=integrity_score,
-            engagement_score=engagement_score,
-        )
-        return {"success": True, "data": result}
-    except Exception as e:
-        raise HTTPException(500, str(e))
 
 
 # ── Serve React frontend (production) ──
