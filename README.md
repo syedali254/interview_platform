@@ -39,7 +39,7 @@ Friend-Project/
 │   └── SETUP.md             Setup and troubleshooting guide
 │
 └── submission/              Everything the university receives
-    ├── CMP7200_Project_Report.docx        The dissertation (Assessment 2)
+    ├── AI-Interview.docx                  The dissertation (Assessment 2)
     ├── CMP7200_Viva_Presentation.pptx     The presentation (Assessment 3)
     ├── AI_Interview_Final_Proposal.docx   The proposal (Assessment 1)
     ├── CMP7200_Assignment_Brief.pdf       What was asked for

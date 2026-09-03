@@ -3,7 +3,12 @@
     python build_report.py
 
 Renders every figure, reads the measured experiment statistics, assembles the
-document and writes CMP7200_Project_Report.docx alongside this script.
+document and writes CMP7200_Project_Report.docx into submission/.
+
+That is the generated draft, not the submission. The submitted dissertation
+is submission/AI-Interview.docx, which was finished by hand. This script
+deliberately does not write to that filename: running it would overwrite
+those edits. Regenerate here, then carry any changes across by hand.
 
 No result is typed into the prose by hand. Chapter 6 reads
 InterviewAI/experiments/results/statistics.json, so re-running the evaluation

@@ -89,7 +89,7 @@ FILES = [
     ("InterviewAI/data/esco/digitalSkillsCollection_en.csv", "The official EU list of 1,201 digital skills."),
     ("InterviewAI/data/esco/broaderRelationsSkillPillar.csv", "How those skills relate to each other."),
 
-    ("submission/CMP7200_Project_Report.docx", "The dissertation. The main piece of work."),
+    ("submission/AI-Interview.docx", "The dissertation. The main piece of work."),
     ("submission/CMP7200_Viva_Presentation.pptx", "The presentation for the oral exam."),
     ("submission/AI_Interview_Final_Proposal.docx", "The original project proposal."),
     ("submission/CMP7200_Assignment_Brief.pdf", "What the university asked for."),
